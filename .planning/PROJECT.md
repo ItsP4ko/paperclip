@@ -30,10 +30,10 @@ Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactam
 
 - [x] Dashboard "My Tasks" dedicado para usuarios humanos — Validated in Phase 01: identity-membership-my-tasks-foundation
 - [x] Filtro "assigned to me" en la vista de Issues existente — Validated in Phase 01: identity-membership-my-tasks-foundation
-- [ ] Un humano puede cambiar el estado de sus tareas asignadas
-- [ ] Un humano puede adjuntar archivos a una tarea
-- [ ] Un humano puede crear subtareas dentro de una tarea
-- [ ] Un humano puede reasignar una tarea a un agente de IA
+- [x] Un humano puede cambiar el estado de sus tareas asignadas — Validated in Phase 02: task-work-surface
+- [x] Un humano puede adjuntar archivos a una tarea — Validated in Phase 02: task-work-surface
+- [x] Un humano puede crear subtareas dentro de una tarea — Validated in Phase 02: task-work-surface
+- [x] Un humano puede reasignar una tarea a un agente de IA — Validated in Phase 02: task-work-surface
 - [x] El dueño de la empresa puede invitar usuarios humanos por email/link — Validated in Phase 01: identity-membership-my-tasks-foundation
 - [ ] El dueño puede asignar tareas a cualquier miembro (humano o IA) desde el dashboard
 - [x] Los miembros humanos aparecen en el org chart / listado de la empresa — Validated in Phase 01: identity-membership-my-tasks-foundation
@@ -74,4 +74,4 @@ La autenticación existe via better-auth. El sistema de invites/joins ya funcion
 | Flujo bidireccional humano ↔ IA | Un humano puede reasignar a un agente y viceversa | — Pending |
 
 ---
-*Last updated: 2026-04-03 after initialization*
+*Last updated: 2026-04-03 after Phase 02: task-work-surface complete*
