@@ -46,6 +46,19 @@ export function suggestedCommentAssigneeValue(
   return assigneeValueFromSelection(issue);
 }
 
+export function resolveAssigneePatch(value: string): AssigneeSelection {
+  if (!value) return { assigneeAgentId: null, assigneeUserId: null };
+  if (value.startsWith("agent:")) {
+    const id = value.slice("agent:".length);
+    return { assigneeAgentId: id || null, assigneeUserId: null };
+  }
+  if (value.startsWith("user:")) {
+    const id = value.slice("user:".length);
+    return { assigneeAgentId: null, assigneeUserId: id || null };
+  }
+  return { assigneeAgentId: value || null, assigneeUserId: null };
+}
+
 export function parseAssigneeValue(value: string): AssigneeSelection {
   if (!value) {
     return { assigneeAgentId: null, assigneeUserId: null };

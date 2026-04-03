@@ -4,8 +4,45 @@ import {
   currentUserAssigneeOption,
   formatAssigneeUserLabel,
   parseAssigneeValue,
+  resolveAssigneePatch,
   suggestedCommentAssigneeValue,
 } from "./assignees";
+
+describe("resolveAssigneePatch", () => {
+  it("returns agent field for agent: prefix", () => {
+    expect(resolveAssigneePatch("agent:abc")).toEqual({ assigneeAgentId: "abc", assigneeUserId: null });
+  });
+
+  it("returns user field for user: prefix", () => {
+    expect(resolveAssigneePatch("user:xyz")).toEqual({ assigneeAgentId: null, assigneeUserId: "xyz" });
+  });
+
+  it("returns both null for empty string", () => {
+    expect(resolveAssigneePatch("")).toEqual({ assigneeAgentId: null, assigneeUserId: null });
+  });
+
+  it("returns both null for agent: with empty id", () => {
+    expect(resolveAssigneePatch("agent:")).toEqual({ assigneeAgentId: null, assigneeUserId: null });
+  });
+
+  it("returns both null for user: with empty id", () => {
+    expect(resolveAssigneePatch("user:")).toEqual({ assigneeAgentId: null, assigneeUserId: null });
+  });
+
+  it("treats raw string as legacy agent id", () => {
+    expect(resolveAssigneePatch("raw-legacy-id")).toEqual({ assigneeAgentId: "raw-legacy-id", assigneeUserId: null });
+  });
+});
+
+describe("parseAssigneeValue", () => {
+  it("parses agent: prefix", () => {
+    expect(parseAssigneeValue("agent:abc")).toEqual({ assigneeAgentId: "abc", assigneeUserId: null });
+  });
+
+  it("parses user: prefix", () => {
+    expect(parseAssigneeValue("user:xyz")).toEqual({ assigneeAgentId: null, assigneeUserId: "xyz" });
+  });
+});
 
 describe("assignee selection helpers", () => {
   it("encodes and parses agent assignees", () => {
