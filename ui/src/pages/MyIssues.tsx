@@ -17,34 +17,31 @@ export function MyIssues() {
   const { setBreadcrumbs } = useBreadcrumbs();
 
   useEffect(() => {
-    setBreadcrumbs([{ label: "My Issues" }]);
+    setBreadcrumbs([{ label: "My Tasks" }]);
   }, [setBreadcrumbs]);
 
   const { data: issues, isLoading, error } = useQuery({
-    queryKey: queryKeys.issues.list(selectedCompanyId!),
-    queryFn: () => issuesApi.list(selectedCompanyId!),
+    queryKey: queryKeys.issues.listAssignedToMe(selectedCompanyId!),
+    queryFn: () => issuesApi.list(selectedCompanyId!, { assigneeUserId: "me" }),
     enabled: !!selectedCompanyId,
   });
 
   if (!selectedCompanyId) {
-    return <EmptyState icon={ListTodo} message="Select a company to view your issues." />;
+    return <EmptyState icon={ListTodo} message="Select a company to view your tasks." />;
   }
 
   if (isLoading) {
     return <PageSkeleton variant="list" />;
   }
 
-  // Show issues that are not assigned (user-created or unassigned)
-  const myIssues = (issues ?? []).filter(
-    (i) => !i.assigneeAgentId && !["done", "cancelled"].includes(i.status)
-  );
+  const myIssues = issues ?? [];
 
   return (
     <div className="space-y-4">
       {error && <p className="text-sm text-destructive">{error.message}</p>}
 
       {myIssues.length === 0 && (
-        <EmptyState icon={ListTodo} message="No issues assigned to you." />
+        <EmptyState icon={ListTodo} message="No tasks assigned to you." />
       )}
 
       {myIssues.length > 0 && (
