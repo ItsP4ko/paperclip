@@ -10,7 +10,7 @@ export function sidebarBadgeService(db: Db) {
   return {
     get: async (
       companyId: string,
-      extra?: { joinRequests?: number; unreadTouchedIssues?: number },
+      extra?: { joinRequests?: number; unreadTouchedIssues?: number; myTasks?: number },
     ): Promise<SidebarBadges> => {
       const actionableApprovals = await db
         .select({ count: sql<number>`count(*)` })
@@ -49,6 +49,7 @@ export function sidebarBadgeService(db: Db) {
         approvals: actionableApprovals,
         failedRuns,
         joinRequests,
+        myTasks: extra?.myTasks ?? 0,
       };
     },
   };
