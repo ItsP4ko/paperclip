@@ -19,7 +19,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TASKS-01**: Human user sees a dedicated "My Tasks" dashboard with issues assigned to them
 - [x] **TASKS-02**: MyIssues filter correctly uses `assigneeUserId=me` (fix existing bug)
 - [ ] **TASKS-03**: "Assigned to me" filter available in the main Issues list view
-- [ ] **TASKS-04**: Sidebar badge count reflects number of tasks assigned to the human user
+- [x] **TASKS-04**: Sidebar badge count reflects number of tasks assigned to the human user
 - [x] **TASKS-05**: My Tasks page is accessible from the main navigation sidebar
 
 ### Task Actions
@@ -92,7 +92,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TASKS-01 | Phase 1 | Complete |
 | TASKS-02 | Phase 1 | Complete |
 | TASKS-03 | Phase 2 | Pending |
-| TASKS-04 | Phase 1 | Pending |
+| TASKS-04 | Phase 1 | Complete |
 | TASKS-05 | Phase 1 | Complete |
 | ACTN-01 | Phase 2 | Pending |
 | ACTN-02 | Phase 2 | Pending |

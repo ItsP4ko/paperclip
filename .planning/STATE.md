@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Phase 1 UI-SPEC approved
-last_updated: "2026-04-03T19:04:00Z"
+status: active
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-04-03T19:10:21Z"
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -23,16 +23,16 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 
 ## Current Position
 
-Phase: 01 (identity-membership-my-tasks-foundation) — EXECUTING
-Plan: 3 of 3
+Phase: 01 (identity-membership-my-tasks-foundation) — COMPLETE
+Plan: 3 of 3 (all complete)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 1
-- Average duration: 6m 35s
-- Total execution time: 6m 35s
+- Total plans completed: 3
+- Average duration: ~5m 17s
+- Total execution time: ~15m 51s
 
 **By Phase:**
 
@@ -61,6 +61,8 @@ Recent decisions affecting current work:
 - [01-01]: badges?.myTasks undefined until Plan 03 ships backend field — SidebarNavItem hides badge when undefined (intentional)
 - [01-02]: listMembers explicit select block preserves all companyMemberships columns and adds userDisplayName/userEmail via LEFT JOIN
 - [01-02]: Human invite card placed inside existing Invites section after OpenClaw card (not a new top-level section)
+- [01-03]: myTasks count is NOT added to inbox sum — separate badge on My Tasks nav item only
+- [01-03]: myTasksCount guarded by req.actor.type === "board" && req.actor.userId — agents always receive 0
 
 ### Pending Todos
 
@@ -74,6 +76,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T19:04:00Z
-Stopped at: Completed 01-02-PLAN.md
-Resume file: .planning/phases/01-identity-membership-my-tasks-foundation/01-03-PLAN.md
+Last session: 2026-04-03T19:10:21Z
+Stopped at: Completed 01-03-PLAN.md
+Resume file: (Phase 01 complete — begin Phase 02)
