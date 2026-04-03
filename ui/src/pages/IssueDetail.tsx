@@ -55,6 +55,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Activity as ActivityIcon,
   Check,
@@ -64,9 +66,11 @@ import {
   EyeOff,
   Hexagon,
   ListTree,
+  Loader2,
   MessageSquare,
   MoreHorizontal,
   Paperclip,
+  Plus,
   Repeat,
   SlidersHorizontal,
   Trash2,
@@ -297,7 +301,12 @@ export function IssueDetail() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [optimisticComments, setOptimisticComments] = useState<OptimisticIssueComment[]>([]);
+  const [subtaskTitle, setSubtaskTitle] = useState("");
+  const [subtaskInputOpen, setSubtaskInputOpen] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [subtaskError, setSubtaskError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const humanBarFileInputRef = useRef<HTMLInputElement>(null);
   const lastMarkedReadIssueIdRef = useRef<string | null>(null);
 
   const { data: issue, isLoading, error } = useQuery({
@@ -634,6 +643,50 @@ export function IssueDetail() {
     mutationFn: (data: Record<string, unknown>) => issuesApi.update(issueId!, data),
     onSuccess: () => {
       invalidateIssue();
+    },
+  });
+
+  // HumanActionBar: status mutation (named separately for clarity)
+  const updateStatus = useMutation({
+    mutationFn: (status: string) => issuesApi.update(issueId!, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.issues.detail(issueId!) });
+    },
+  });
+
+  // HumanActionBar: file upload using issue.companyId
+  const humanBarUploadAttachment = useMutation({
+    mutationFn: (file: File) => {
+      if (!issue) throw new Error("Issue not loaded");
+      return issuesApi.uploadAttachment(issue.companyId, issueId!, file);
+    },
+    onSuccess: () => {
+      setUploadError(null);
+      queryClient.invalidateQueries({ queryKey: queryKeys.issues.attachments(issueId!) });
+      invalidateIssue();
+    },
+    onError: () => {
+      setUploadError("Upload failed. Check your connection and try again.");
+    },
+  });
+
+  // HumanActionBar: subtask creation using issue.companyId
+  const createSubtask = useMutation({
+    mutationFn: (title: string) => {
+      if (!issue) throw new Error("Issue not loaded");
+      return issuesApi.create(issue.companyId, { title, parentId: issueId!, status: "todo" });
+    },
+    onSuccess: () => {
+      setSubtaskTitle("");
+      setSubtaskInputOpen(false);
+      setSubtaskError(null);
+      queryClient.invalidateQueries({ queryKey: queryKeys.issues.detail(issueId!) });
+      if (selectedCompanyId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(selectedCompanyId) });
+      }
+    },
+    onError: () => {
+      setSubtaskError("Could not create subtask. Try again.");
     },
   });
 
@@ -1318,6 +1371,98 @@ export function IssueDetail() {
           }}
         />
       </div>
+
+      {/* HumanActionBar: only visible when the issue is assigned to the current user */}
+      {issue.assigneeUserId === currentUserId && currentUserId && (
+        <div className="flex items-center gap-2 py-2 border-t border-border">
+          {/* Status control */}
+          <StatusIcon
+            status={issue.status}
+            onChange={(status) => updateStatus.mutate(status)}
+            showLabel
+          />
+
+          {/* Attach file */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => humanBarFileInputRef.current?.click()}
+                disabled={humanBarUploadAttachment.isPending}
+              >
+                {humanBarUploadAttachment.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Paperclip className="h-3.5 w-3.5" />
+                )}
+                <span className="hidden sm:inline ml-1">Attach file</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Attach file</TooltipContent>
+          </Tooltip>
+          <input
+            ref={humanBarFileInputRef}
+            type="file"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                humanBarUploadAttachment.mutate(file);
+                e.target.value = "";
+              }
+            }}
+          />
+
+          {/* Add subtask */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setSubtaskInputOpen(true); setSubtaskError(null); }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline ml-1">Add subtask</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Add subtask</TooltipContent>
+          </Tooltip>
+        </div>
+      )}
+
+      {/* Upload error */}
+      {uploadError && (
+        <p className="text-xs text-destructive px-1">{uploadError}</p>
+      )}
+
+      {/* Subtask inline input */}
+      {subtaskInputOpen && (
+        <div className="flex items-center gap-2 py-2">
+          <Input
+            value={subtaskTitle}
+            onChange={(e) => setSubtaskTitle(e.target.value)}
+            placeholder="Subtask title"
+            disabled={createSubtask.isPending}
+            className={subtaskError ? "border-destructive" : ""}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && subtaskTitle.trim()) {
+                createSubtask.mutate(subtaskTitle.trim());
+              }
+              if (e.key === "Escape") {
+                setSubtaskInputOpen(false);
+                setSubtaskTitle("");
+                setSubtaskError(null);
+              }
+            }}
+            autoFocus
+          />
+          {createSubtask.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+        </div>
+      )}
+      {subtaskError && (
+        <p className="text-xs text-destructive px-1">{subtaskError}</p>
+      )}
 
       <PluginSlotOutlet
         slotTypes={["toolbarButton", "contextMenuItem"]}
