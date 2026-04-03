@@ -18,7 +18,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **TASKS-01**: Human user sees a dedicated "My Tasks" dashboard with issues assigned to them
 - [x] **TASKS-02**: MyIssues filter correctly uses `assigneeUserId=me` (fix existing bug)
-- [ ] **TASKS-03**: "Assigned to me" filter available in the main Issues list view
+- [x] **TASKS-03**: "Assigned to me" filter available in the main Issues list view
 - [x] **TASKS-04**: Sidebar badge count reflects number of tasks assigned to the human user
 - [x] **TASKS-05**: My Tasks page is accessible from the main navigation sidebar
 
@@ -38,8 +38,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Permissions
 
-- [ ] **PERM-01**: Human member can only mutate issues assigned to them (unless owner)
-- [ ] **PERM-02**: Owner can edit/assign any issue in the company
+- [x] **PERM-01**: Human member can only mutate issues assigned to them (unless owner)
+- [x] **PERM-02**: Owner can edit/assign any issue in the company
 
 ### Team Visibility
 
@@ -91,7 +91,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IDENT-04 | Phase 1 | Complete |
 | TASKS-01 | Phase 1 | Complete |
 | TASKS-02 | Phase 1 | Complete |
-| TASKS-03 | Phase 2 | Pending |
+| TASKS-03 | Phase 2 | Complete |
 | TASKS-04 | Phase 1 | Complete |
 | TASKS-05 | Phase 1 | Complete |
 | ACTN-01 | Phase 2 | Complete |
@@ -102,8 +102,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ASGN-01 | Phase 3 | Pending |
 | ASGN-02 | Phase 3 | Pending |
 | ASGN-03 | Phase 2 | Complete |
-| PERM-01 | Phase 2 | Pending |
-| PERM-02 | Phase 2 | Pending |
+| PERM-01 | Phase 2 | Complete |
+| PERM-02 | Phase 2 | Complete |
 | TEAM-01 | Phase 3 | Pending |
 | TEAM-02 | Phase 3 | Pending |
 

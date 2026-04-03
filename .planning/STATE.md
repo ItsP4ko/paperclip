@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-task-work-surface-02-02-PLAN.md
-last_updated: "2026-04-03T23:24:18.000Z"
+stopped_at: Completed 02-task-work-surface-02-03-PLAN.md
+last_updated: "2026-04-03T23:40:19.486Z"
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -47,6 +47,7 @@ Plan: 2 of 3
 
 *Updated after each plan completion*
 | Phase 02-task-work-surface P01 | 5 | 2 tasks | 3 files |
+| Phase 02-task-work-surface P03 | 11 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,8 @@ Recent decisions affecting current work:
 - [Phase 02-task-work-surface]: IssueProperties warning dialog fires only when: issue.assigneeAgentId set, status is in_progress, and new target is a human — prevents false positives for unassign or agent-to-agent reassignment
 - [02-02]: issue.companyId used directly (not selectedCompanyId) for HumanActionBar upload/subtask mutations — safe because issue is always loaded before HumanActionBar renders
 - [02-02]: humanBarFileInputRef added as second hidden file input — avoids colliding with existing fileInputRef used for drag-and-drop/markdown import zone
+- [Phase 02-task-work-surface]: Route test IDs must be UUIDs — router.param normalizer fires for any string matching [A-Z]+-\\d+ and calls svc.getByIdentifier
+- [Phase 02-task-work-surface]: 'Assigned to me' pill placed outside Filter popover as standalone toolbar row — one-click accessible without opening filter panel
 
 ### Pending Todos
 
@@ -81,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T23:24:18Z
-Stopped at: Completed 02-task-work-surface-02-02-PLAN.md
+Last session: 2026-04-03T23:40:19.484Z
+Stopped at: Completed 02-task-work-surface-02-03-PLAN.md
 Resume file: None
