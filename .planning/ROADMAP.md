@@ -28,12 +28,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Human sees a "My Tasks" page in the sidebar navigation showing only issues assigned to them (not all unassigned AI issues)
   4. Sidebar badge next to "My Tasks" shows the current count of tasks assigned to the human
   5. Members API returns display name and email for human members (join to auth_users)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Fix MyIssues filter bug and wire My Tasks page to `assigneeUserId=me` backend query
-- [ ] 01-02: Extend members API to join auth_users; expose invite link UI in CompanySettings
-- [ ] 01-03: Add myTasks badge count to sidebar-badges and link My Tasks route in App.tsx navigation
+- [ ] 01-01-PLAN.md — Fix MyIssues filter bug, register /my-tasks route, add My Tasks sidebar nav item
+- [ ] 01-02-PLAN.md — Extend members API with auth_users join; add human invite UI in CompanySettings
+- [ ] 01-03-PLAN.md — Add myTasks badge count to sidebar-badges type, service, and route
 
 ### Phase 2: Task Work Surface
 **Goal**: A human member can change task status, attach files, create subtasks, and hand off tasks to AI agents — without triggering errors or silent data loss
@@ -76,6 +76,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Identity, Membership & My Tasks Foundation | 0/3 | Not started | - |
+| 1. Identity, Membership & My Tasks Foundation | 0/3 | Planned | - |
 | 2. Task Work Surface | 0/3 | Not started | - |
 | 3. Owner Team Visibility | 0/3 | Not started | - |
