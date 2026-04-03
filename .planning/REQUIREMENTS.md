@@ -27,14 +27,14 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **ACTN-01**: Human can change the status of their assigned tasks (todo/in_progress/in_review/done)
 - [ ] **ACTN-02**: Human can attach files to their assigned tasks
 - [ ] **ACTN-03**: Human can create subtasks within their assigned tasks
-- [ ] **ACTN-04**: Human can reassign a task to an AI agent (bidirectional handoff)
-- [ ] **ACTN-05**: Reassignment sends both assigneeAgentId and assigneeUserId atomically (prevent 422)
+- [x] **ACTN-04**: Human can reassign a task to an AI agent (bidirectional handoff)
+- [x] **ACTN-05**: Reassignment sends both assigneeAgentId and assigneeUserId atomically (prevent 422)
 
 ### Assignment
 
 - [ ] **ASGN-01**: Owner can assign tasks to human members from issue creation/detail
 - [ ] **ASGN-02**: Assignee picker shows humans and AI agents in separate grouped sections
-- [ ] **ASGN-03**: UI warns when reassigning an in-progress AI task to a human (run interruption)
+- [x] **ASGN-03**: UI warns when reassigning an in-progress AI task to a human (run interruption)
 
 ### Permissions
 
@@ -97,11 +97,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ACTN-01 | Phase 2 | Pending |
 | ACTN-02 | Phase 2 | Pending |
 | ACTN-03 | Phase 2 | Pending |
-| ACTN-04 | Phase 2 | Pending |
-| ACTN-05 | Phase 2 | Pending |
+| ACTN-04 | Phase 2 | Complete |
+| ACTN-05 | Phase 2 | Complete |
 | ASGN-01 | Phase 3 | Pending |
 | ASGN-02 | Phase 3 | Pending |
-| ASGN-03 | Phase 2 | Pending |
+| ASGN-03 | Phase 2 | Complete |
 | PERM-01 | Phase 2 | Pending |
 | PERM-02 | Phase 2 | Pending |
 | TEAM-01 | Phase 3 | Pending |

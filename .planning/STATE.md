@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-04-03T19:18:29.449Z"
+stopped_at: Completed 02-task-work-surface-02-01-PLAN.md
+last_updated: "2026-04-03T23:23:31.320Z"
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-03)
 
 **Core value:** A human can receive, work on, and complete tasks inside Paperclip exactly as an AI agent does — without friction, from the web app.
-**Current focus:** Phase 01 — identity-membership-my-tasks-foundation
+**Current focus:** Phase 02 — task-work-surface
 
 ## Current Position
 
-Phase: 01 (identity-membership-my-tasks-foundation) — COMPLETE
-Plan: 3 of 3 (all complete)
+Phase: 02 (task-work-surface) — EXECUTING
+Plan: 1 of 3
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Plan: 3 of 3 (all complete)
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 02-task-work-surface P01 | 5 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,8 @@ Recent decisions affecting current work:
 - [01-02]: Human invite card placed inside existing Invites section after OpenClaw card (not a new top-level section)
 - [01-03]: myTasks count is NOT added to inbox sum — separate badge on My Tasks nav item only
 - [01-03]: myTasksCount guarded by req.actor.type === "board" && req.actor.userId — agents always receive 0
+- [Phase 02-task-work-surface]: resolveAssigneePatch is a semantic alias of parseAssigneeValue — clearer name for PATCH call sites to prevent 422 only-one-assignee errors
+- [Phase 02-task-work-surface]: IssueProperties warning dialog fires only when: issue.assigneeAgentId set, status is in_progress, and new target is a human — prevents false positives for unassign or agent-to-agent reassignment
 
 ### Pending Todos
 
@@ -76,6 +79,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T19:10:21Z
-Stopped at: Completed 01-03-PLAN.md
-Resume file: (Phase 01 complete — begin Phase 02)
+Last session: 2026-04-03T23:23:31.318Z
+Stopped at: Completed 02-task-work-surface-02-01-PLAN.md
+Resume file: None
