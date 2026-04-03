@@ -43,7 +43,7 @@ Declared values (multiples of 4 only):
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Icon-to-label gaps (`gap-1`), inline badge padding (`px-1`) |
-| sm | 8px | Compact row padding (`py-2`, `px-2`), property row vertical rhythm (`py-1.5`) |
+| sm | 8px | Compact row padding (`py-2`, `px-2`) |
 | md | 16px | Default section padding (`px-4`, `py-4`), card inner padding |
 | lg | 24px | Section breaks inside IssueDetail panel (`space-y-6` = 24px) |
 | xl | 32px | Page-level vertical spacing |
@@ -53,7 +53,7 @@ Declared values (multiples of 4 only):
 **Exceptions:**
 - EmptyState uses `py-16` (64px) — existing component; do not change.
 - Touch targets: coarse-pointer devices enforce `min-height: 44px` globally via `index.css` media query. All interactive elements in the human action bar must meet this automatically.
-- Property rows in IssueProperties use `py-1.5` (6px) — existing pattern; extend consistently for human-specific rows.
+- IssueProperties property rows retain their existing `py-1.5` styling; no changes are made to this component in Phase 2.
 
 ---
 
@@ -61,14 +61,16 @@ Declared values (multiples of 4 only):
 
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
-| Body | 14px (`text-sm`) | 400 (normal) | 1.5 | Default prose, property labels, list item text |
-| Caption | 12px (`text-xs`) | 400 (normal) | 1.4 | Timestamps, muted metadata, filter section labels |
-| Label | 14px (`text-sm`) | 500 (`font-medium`) | 1.5 | Section headings in sidebar panels, button text |
+| Body | 14px (`text-sm`) | 400 (`font-normal`) | 1.5 | Default prose, property labels, list item text |
+| Caption | 12px (`text-xs`) | 400 (`font-normal`) | 1.4 | Timestamps, muted metadata, filter section labels |
+| Label | 14px (`text-sm`) | 400 (`font-normal`) | 1.5 | Section headings in sidebar panels, button text, action bar headings |
 | Display | 20px (`text-xl`) | 700 (`font-bold`) | 1.2 | Issue title (`text-xl font-bold` — verified IssueDetail:1304) |
 
-**Declared weights:** 400 (normal) and 500/700 (medium/bold).
-For this phase use weight 500 (`font-medium`) for UI labels and action bar headings.
-Use 700 (`font-bold`) only for the issue title, matching existing IssueDetail pattern.
+**Declared weights:** 400 (`font-normal`) and 700 (`font-bold`) — exactly two.
+Use 400 for all body copy, labels, captions, and action bar headings.
+Use 700 only for the issue title, matching the existing IssueDetail pattern.
+
+**Primary visual anchor:** The issue title (`text-xl font-bold`) is the focal point of the IssueDetail view. The eye must land here first before scanning the HumanActionBar and the property sidebar. No other element in the view uses `text-xl font-bold`.
 
 **Editor / content body:** `0.875rem` (14px) at `line-height: 1.5` — from MDXEditor theme
 integration in `index.css`. The `paperclip-edit-in-place-content` class uses `0.9375rem`
@@ -149,7 +151,7 @@ Triggered when: `issue.assigneeAgentId !== null && issue.status === "in_progress
 Added to the IssuesList filter toolbar. Matches existing quick-filter pill style at line 443–446:
 
 ```
-className="px-2.5 py-1 text-xs rounded-full border transition-colors {active: bg-primary text-primary-foreground border-primary} {inactive: border-border text-muted-foreground hover:text-foreground hover:border-foreground/30}"
+className="px-2 py-1 text-xs rounded-full border transition-colors {active: bg-primary text-primary-foreground border-primary} {inactive: border-border text-muted-foreground hover:text-foreground hover:border-foreground/30}"
 ```
 
 Icon: `<User className="h-3.5 w-3.5 mr-1" />` inline before label text "Assigned to me".
