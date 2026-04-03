@@ -646,6 +646,24 @@ export function IssuesList({
         </div>
       </div>
 
+      {/* Assigned-to-me quick filter pill (TASKS-03) */}
+      {currentUserId && (
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-full border transition-colors ${
+              viewState.assignees.includes("__me")
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+            }`}
+            onClick={() => updateView({ assignees: toggleInArray(viewState.assignees, "__me") })}
+            aria-pressed={viewState.assignees.includes("__me")}
+          >
+            <User className="h-3.5 w-3.5" />
+            Assigned to me
+          </button>
+        </div>
+      )}
+
       {isLoading && <PageSkeleton variant="issues-list" />}
       {error && <p className="text-sm text-destructive">{error.message}</p>}
 
