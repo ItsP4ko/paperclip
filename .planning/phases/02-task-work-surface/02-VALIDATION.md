@@ -17,19 +17,20 @@ created: 2026-04-03
 
 | Property | Value |
 |----------|-------|
-| **Framework** | vitest (frontend) + jest (backend) |
-| **Config file** | `frontend/vite.config.ts` / `backend/jest.config.ts` |
-| **Quick run command** | `cd backend && npm test -- --testPathPattern="02-"` |
-| **Full suite command** | `cd backend && npm test && cd ../frontend && npm test` |
+| **Framework** | vitest (both frontend and backend) |
+| **Config file** | `ui/vitest.config.ts` / `server/vitest.config.ts` |
+| **Quick run command (UI)** | `pnpm --filter @paperclipai/ui vitest run` |
+| **Quick run command (server)** | `pnpm --filter @paperclipai/server vitest run` |
+| **Full suite command** | `pnpm vitest run` (from repo root) |
 | **Estimated runtime** | ~30 seconds |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `cd backend && npm test -- --testPathPattern="02-"`
-- **After every plan wave:** Run `cd backend && npm test && cd ../frontend && npm test`
-- **Before `/gsd:verify-work`:** Full suite must be green
+- **After every task commit:** Run `pnpm --filter @paperclipai/ui vitest run` and/or `pnpm --filter @paperclipai/server vitest run` depending on what changed
+- **After every plan wave:** Run both commands
+- **Before `/gsd:verify-work`:** Full suite must be green (`pnpm vitest run`)
 - **Max feedback latency:** 30 seconds
 
 ---
@@ -38,13 +39,10 @@ created: 2026-04-03
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 2-01-01 | 01 | 1 | ASGN-03 | unit | `cd backend && npm test -- --testPathPattern="setAssignee"` | ❌ W0 | ⬜ pending |
-| 2-01-02 | 01 | 1 | ACTN-04/ACTN-05 | unit | `cd frontend && npm test -- --testPathPattern="reassign"` | ❌ W0 | ⬜ pending |
-| 2-02-01 | 02 | 1 | ACTN-01 | unit | `cd frontend && npm test -- --testPathPattern="IssueDetail"` | ✅ | ⬜ pending |
-| 2-02-02 | 02 | 1 | ACTN-02 | integration | `cd backend && npm test -- --testPathPattern="attachment"` | ✅ | ⬜ pending |
-| 2-02-03 | 02 | 1 | ACTN-03 | integration | `cd backend && npm test -- --testPathPattern="subtask"` | ✅ | ⬜ pending |
-| 2-03-01 | 03 | 2 | PERM-01/PERM-02 | unit | `cd backend && npm test -- --testPathPattern="permission"` | ❌ W0 | ⬜ pending |
-| 2-03-02 | 03 | 2 | TASKS-03 | unit | `cd frontend && npm test -- --testPathPattern="assigned-to-me"` | ❌ W0 | ⬜ pending |
+| 2-01-01 | 01 | 1 | ASGN-03, ACTN-05 | unit | `pnpm --filter @paperclipai/ui vitest run ui/src/lib/assignees.test.ts --reporter=verbose` | ❌ W0 | ⬜ pending |
+| 2-02-01 | 02 | 1 | ACTN-01 | unit | `pnpm --filter @paperclipai/ui vitest run ui/src/components/__tests__/HumanActionBar.test.tsx --reporter=verbose` | ❌ W0 | ⬜ pending |
+| 2-03-01 | 03 | 2 | PERM-01/PERM-02 | integration | `pnpm --filter @paperclipai/server vitest run server/src/__tests__/issue-member-permission.test.ts --reporter=verbose` | ❌ W0 | ⬜ pending |
+| 2-03-02 | 03 | 2 | TASKS-03 | unit | `pnpm --filter @paperclipai/ui vitest run --reporter=verbose` | ✅ (full suite) | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -52,12 +50,11 @@ created: 2026-04-03
 
 ## Wave 0 Requirements
 
-- [ ] `backend/src/routes/__tests__/02-setAssignee.test.ts` — stubs for ASGN-03
-- [ ] `frontend/src/__tests__/02-reassign-warning.test.tsx` — stubs for ACTN-04/ACTN-05
-- [ ] `backend/src/routes/__tests__/02-permission-gate.test.ts` — stubs for PERM-01/PERM-02
-- [ ] `frontend/src/__tests__/02-assigned-to-me-filter.test.tsx` — stubs for TASKS-03
+- [ ] `ui/src/lib/assignees.test.ts` — unit tests for `resolveAssigneePatch` (ASGN-03/ACTN-05); created by Plan 02-01 Task 1 TDD
+- [ ] `ui/src/components/__tests__/HumanActionBar.test.tsx` — renders/hides HumanActionBar based on assignee match (ACTN-01); created by Plan 02-02 Task 1 TDD
+- [ ] `server/src/__tests__/issue-member-permission.test.ts` — integration tests for PERM-01/PERM-02 member gate; created by Plan 02-03 Task 1 TDD
 
-*Existing vitest/jest infrastructure covers the framework; no new install needed.*
+*Existing vitest infrastructure covers the framework; no new install needed.*
 
 ---
 
