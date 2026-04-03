@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Db } from "@paperclipai/db";
-import { and, eq, sql } from "drizzle-orm";
-import { joinRequests } from "@paperclipai/db";
+import { and, eq, inArray, not, sql } from "drizzle-orm";
+import { joinRequests, issues } from "@paperclipai/db";
 import { sidebarBadgeService } from "../services/sidebar-badges.js";
 import { accessService } from "../services/access.js";
 import { dashboardService } from "../services/dashboard.js";
@@ -34,8 +34,24 @@ export function sidebarBadgeRoutes(db: Db) {
         .then((rows) => Number(rows[0]?.count ?? 0))
       : 0;
 
+    let myTasksCount = 0;
+    if (req.actor.type === "board" && req.actor.userId) {
+      const myTasksRows = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(issues)
+        .where(
+          and(
+            eq(issues.companyId, companyId),
+            eq(issues.assigneeUserId, req.actor.userId),
+            not(inArray(issues.status, ["done", "cancelled"])),
+          )
+        );
+      myTasksCount = Number(myTasksRows[0]?.count ?? 0);
+    }
+
     const badges = await svc.get(companyId, {
       joinRequests: joinRequestCount,
+      myTasks: myTasksCount,
     });
     const summary = await dashboard.summary(companyId);
     const hasFailedRuns = badges.failedRuns > 0;
