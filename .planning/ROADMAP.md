@@ -31,9 +31,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Fix MyIssues filter bug, register /my-tasks route, add My Tasks sidebar nav item
-- [ ] 01-02-PLAN.md — Extend members API with auth_users join; add human invite UI in CompanySettings
-- [ ] 01-03-PLAN.md — Add myTasks badge count to sidebar-badges type, service, and route
+- [x] 01-01-PLAN.md — Fix MyIssues filter bug, register /my-tasks route, add My Tasks sidebar nav item
+- [x] 01-02-PLAN.md — Extend members API with auth_users join; add human invite UI in CompanySettings
+- [x] 01-03-PLAN.md — Add myTasks badge count to sidebar-badges type, service, and route
 
 ### Phase 2: Task Work Surface
 **Goal**: A human member can change task status, attach files, create subtasks, and hand off tasks to AI agents — without triggering errors or silent data loss
@@ -46,12 +46,12 @@ Plans:
   4. Human can reassign their task to an AI agent; when the issue was in-progress with an AI run, a warning appears before confirming and the AI's prior activity is surfaced as context
   5. Human member cannot mutate issues assigned to other users; owner can mutate any issue
   6. "Assigned to me" filter toggle is available and functional in the main Issues list view
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: Build `setAssignee(agentId | userId | null)` atomic client utility; add bidirectional reassignment UI with AI run interruption warning
-- [ ] 02-02: Add human action bar in IssueDetail (conditional on assigneeUserId === currentUserId); verify file attachment and subtask creation work for human actors
-- [ ] 02-03: Add human member permission gate in issues route (can only mutate own tasks); add "Assigned to me" filter to Issues.tsx
+- [ ] 02-01-PLAN.md — Build resolveAssigneePatch atomic utility; add reassignment warning dialog in IssueProperties
+- [ ] 02-02-PLAN.md — Add HumanActionBar in IssueDetail (status change, file attach, subtask creation)
+- [ ] 02-03-PLAN.md — Add member permission gate in PATCH /issues/:id; add "Assigned to me" toggle in IssuesList
 
 ### Phase 3: Owner Team Visibility
 **Goal**: Owner can see all human members alongside AI agents, assign tasks to any member, and get a workload summary across the full team
