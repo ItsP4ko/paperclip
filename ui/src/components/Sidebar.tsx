@@ -11,6 +11,7 @@ import {
   Boxes,
   Repeat,
   Settings,
+  ListTodo,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { SidebarSection } from "./SidebarSection";
@@ -20,6 +21,7 @@ import { SidebarAgents } from "./SidebarAgents";
 import { useDialog } from "../context/DialogContext";
 import { useCompany } from "../context/CompanyContext";
 import { heartbeatsApi } from "../api/heartbeats";
+import { sidebarBadgesApi } from "../api/sidebarBadges";
 import { queryKeys } from "../lib/queryKeys";
 import { useInboxBadge } from "../hooks/useInboxBadge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +38,11 @@ export function Sidebar() {
     refetchInterval: 10_000,
   });
   const liveRunCount = liveRuns?.length ?? 0;
+  const { data: badges } = useQuery({
+    queryKey: queryKeys.sidebarBadges(selectedCompanyId!),
+    queryFn: () => sidebarBadgesApi.get(selectedCompanyId!),
+    enabled: !!selectedCompanyId,
+  });
 
   function openSearch() {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
@@ -99,6 +106,7 @@ export function Sidebar() {
 
         <SidebarSection label="Work">
           <SidebarNavItem to="/issues" label="Issues" icon={CircleDot} />
+          <SidebarNavItem to="/my-tasks" label="My Tasks" icon={ListTodo} badge={badges?.myTasks} />
           <SidebarNavItem to="/routines" label="Routines" icon={Repeat} textBadge="Beta" textBadgeTone="amber" />
           <SidebarNavItem to="/goals" label="Goals" icon={Target} />
         </SidebarSection>
