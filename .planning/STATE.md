@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 status: unknown
 stopped_at: Phase 1 UI-SPEC approved
-last_updated: "2026-04-03T18:48:35.650Z"
+last_updated: "2026-04-03T19:04:00Z"
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
+  completed_plans: 2
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 ## Current Position
 
 Phase: 01 (identity-membership-my-tasks-foundation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -59,6 +59,8 @@ Recent decisions affecting current work:
 - [Init]: MVP without notifications — user checks tasks proactively via web app
 - [01-01]: Client-side assigneeAgentId/status filter removed; server-side assigneeUserId=me handles all filtering
 - [01-01]: badges?.myTasks undefined until Plan 03 ships backend field — SidebarNavItem hides badge when undefined (intentional)
+- [01-02]: listMembers explicit select block preserves all companyMemberships columns and adds userDisplayName/userEmail via LEFT JOIN
+- [01-02]: Human invite card placed inside existing Invites section after OpenClaw card (not a new top-level section)
 
 ### Pending Todos
 
@@ -72,6 +74,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T15:52:49.000Z
-Stopped at: Completed 01-01-PLAN.md
-Resume file: .planning/phases/01-identity-membership-my-tasks-foundation/01-02-PLAN.md
+Last session: 2026-04-03T19:04:00Z
+Stopped at: Completed 01-02-PLAN.md
+Resume file: .planning/phases/01-identity-membership-my-tasks-foundation/01-03-PLAN.md

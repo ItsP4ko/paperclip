@@ -76,6 +76,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Identity, Membership & My Tasks Foundation | 1/3 | In Progress|  |
+| 1. Identity, Membership & My Tasks Foundation | 2/3 | In Progress|  |
 | 2. Task Work Surface | 0/3 | Not started | - |
 | 3. Owner Team Visibility | 0/3 | Not started | - |
