@@ -24,9 +24,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Task Actions
 
-- [ ] **ACTN-01**: Human can change the status of their assigned tasks (todo/in_progress/in_review/done)
-- [ ] **ACTN-02**: Human can attach files to their assigned tasks
-- [ ] **ACTN-03**: Human can create subtasks within their assigned tasks
+- [x] **ACTN-01**: Human can change the status of their assigned tasks (todo/in_progress/in_review/done)
+- [x] **ACTN-02**: Human can attach files to their assigned tasks
+- [x] **ACTN-03**: Human can create subtasks within their assigned tasks
 - [x] **ACTN-04**: Human can reassign a task to an AI agent (bidirectional handoff)
 - [x] **ACTN-05**: Reassignment sends both assigneeAgentId and assigneeUserId atomically (prevent 422)
 
@@ -94,9 +94,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TASKS-03 | Phase 2 | Pending |
 | TASKS-04 | Phase 1 | Complete |
 | TASKS-05 | Phase 1 | Complete |
-| ACTN-01 | Phase 2 | Pending |
-| ACTN-02 | Phase 2 | Pending |
-| ACTN-03 | Phase 2 | Pending |
+| ACTN-01 | Phase 2 | Complete |
+| ACTN-02 | Phase 2 | Complete |
+| ACTN-03 | Phase 2 | Complete |
 | ACTN-04 | Phase 2 | Complete |
 | ACTN-05 | Phase 2 | Complete |
 | ASGN-01 | Phase 3 | Pending |
