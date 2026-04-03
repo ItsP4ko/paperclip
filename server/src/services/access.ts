@@ -4,6 +4,7 @@ import {
   companyMemberships,
   instanceUserRoles,
   principalPermissionGrants,
+  authUsers,
 } from "@paperclipai/db";
 import type { PermissionKey, PrincipalType } from "@paperclipai/shared";
 
@@ -77,8 +78,26 @@ export function accessService(db: Db) {
 
   async function listMembers(companyId: string) {
     return db
-      .select()
+      .select({
+        id: companyMemberships.id,
+        companyId: companyMemberships.companyId,
+        principalType: companyMemberships.principalType,
+        principalId: companyMemberships.principalId,
+        membershipRole: companyMemberships.membershipRole,
+        status: companyMemberships.status,
+        createdAt: companyMemberships.createdAt,
+        updatedAt: companyMemberships.updatedAt,
+        userDisplayName: authUsers.name,
+        userEmail: authUsers.email,
+      })
       .from(companyMemberships)
+      .leftJoin(
+        authUsers,
+        and(
+          eq(companyMemberships.principalType, "user"),
+          eq(companyMemberships.principalId, authUsers.id),
+        ),
+      )
       .where(eq(companyMemberships.companyId, companyId))
       .orderBy(sql`${companyMemberships.createdAt} desc`);
   }
