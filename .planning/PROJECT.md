@@ -28,15 +28,15 @@ Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactam
 
 <!-- New scope to build -->
 
-- [ ] Dashboard "My Tasks" dedicado para usuarios humanos
-- [ ] Filtro "assigned to me" en la vista de Issues existente
+- [x] Dashboard "My Tasks" dedicado para usuarios humanos — Validated in Phase 01: identity-membership-my-tasks-foundation
+- [x] Filtro "assigned to me" en la vista de Issues existente — Validated in Phase 01: identity-membership-my-tasks-foundation
 - [ ] Un humano puede cambiar el estado de sus tareas asignadas
 - [ ] Un humano puede adjuntar archivos a una tarea
 - [ ] Un humano puede crear subtareas dentro de una tarea
 - [ ] Un humano puede reasignar una tarea a un agente de IA
-- [ ] El dueño de la empresa puede invitar usuarios humanos por email/link
+- [x] El dueño de la empresa puede invitar usuarios humanos por email/link — Validated in Phase 01: identity-membership-my-tasks-foundation
 - [ ] El dueño puede asignar tareas a cualquier miembro (humano o IA) desde el dashboard
-- [ ] Los miembros humanos aparecen en el org chart / listado de la empresa
+- [x] Los miembros humanos aparecen en el org chart / listado de la empresa — Validated in Phase 01: identity-membership-my-tasks-foundation
 - [ ] Vista de equipo: ver qué tiene asignado cada miembro (humano + IA)
 
 ### Out of Scope
