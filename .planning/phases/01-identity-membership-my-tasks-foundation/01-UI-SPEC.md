@@ -59,6 +59,8 @@ Exceptions:
 
 All values measured from existing class usage. Body text is 13px in sidebar/nav contexts; 14px in content areas.
 
+Note: Sizes 12px, 13px, and 14px are each 1px apart — this reflects the existing codebase baseline. No new type sizes are introduced in Phase 1; the close steps are inherited, not designed.
+
 | Role | Size | Weight | Line Height | Tailwind | Usage |
 |------|------|--------|-------------|----------|-------|
 | Sidebar label | 13px | 500 (medium) | 1.5 | `text-[13px] font-medium` | All `SidebarNavItem` labels, "New Issue" button |
@@ -127,6 +129,8 @@ No new components need to be created for Phase 1. All surfaces are assembled fro
 ### 1. My Tasks Page (`/my-tasks`)
 
 Layout: matches existing `MyIssues.tsx` structure exactly. No layout changes.
+
+Primary visual anchor (populated state): the issue list's first `EntityRow` — the task title is the focal point of each row.
 
 ```
 ┌─────────────────────────────────────┐
@@ -203,7 +207,7 @@ No dialog or modal — inline display only, matching the existing OpenClaw snipp
 | Empty state — no tasks | "No tasks assigned to you." | EmptyState `message` prop (change from "No issues assigned to you.") |
 | Empty state — no company | "Select a company to view your tasks." | EmptyState `message` prop (change from "Select a company to view your issues.") |
 | Error state — load failure | "Failed to load tasks. Try refreshing the page." | `text-sm text-destructive` inline above the list |
-| Invite error | "Failed to generate invite link." | `text-sm text-destructive` below the button |
+| Invite error | "Failed to generate invite link. Please try again or refresh the page." | `text-sm text-destructive` below the button — includes remediation hint so the user knows what to do next |
 | Pending approval state (InviteLandingPage) | No change — existing copy handles this | Do not modify InviteLandingPage copy in Phase 1 |
 
 No destructive actions in Phase 1. No confirmation dialogs required.
@@ -237,7 +241,7 @@ No destructive actions in Phase 1. No confirmation dialogs required.
 | Idle | `Button size="sm"` with label "Generate Human Invite Link" |
 | Pending | Button `disabled`, label "Generating..." |
 | Success | URL display block appears inline; button returns to idle |
-| Error | `text-sm text-destructive` paragraph below button |
+| Error | `text-sm text-destructive` paragraph below button: "Failed to generate invite link. Please try again or refresh the page." |
 | URL copied | "Copied" with `Check` icon in green, disappears after 2s |
 
 ---
