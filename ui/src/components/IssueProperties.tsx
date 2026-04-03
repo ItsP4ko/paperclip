@@ -11,7 +11,9 @@ import { useCompany } from "../context/CompanyContext";
 import { queryKeys } from "../lib/queryKeys";
 import { useProjectOrder } from "../hooks/useProjectOrder";
 import { getRecentAssigneeIds, sortAgentsByRecency, trackRecentAssignee } from "../lib/recent-assignees";
-import { formatAssigneeUserLabel } from "../lib/assignees";
+import { formatAssigneeUserLabel, resolveAssigneePatch } from "../lib/assignees";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StatusIcon } from "./StatusIcon";
 import { PriorityIcon } from "./PriorityIcon";
 import { Identity } from "./Identity";
@@ -129,6 +131,10 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
   const [labelSearch, setLabelSearch] = useState("");
   const [newLabelName, setNewLabelName] = useState("");
   const [newLabelColor, setNewLabelColor] = useState("#6366f1");
+  const [pendingReassign, setPendingReassign] = useState<{
+    value: string;
+    agentName: string;
+  } | null>(null);
 
   const { data: session } = useQuery({
     queryKey: queryKeys.auth.session,
@@ -188,6 +194,27 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
       : [...ids, labelId];
     onUpdate({ labelIds: next });
   };
+
+  function handleAssigneeChange(patch: Record<string, unknown>) {
+    const isReassignToHuman = patch.assigneeUserId != null && patch.assigneeUserId !== null && patch.assigneeAgentId === null;
+    const hasActiveAiRun = !!issue.assigneeAgentId && issue.status === "in_progress";
+    if (isReassignToHuman && hasActiveAiRun) {
+      const currentAgent = agents?.find((a) => a.id === issue.assigneeAgentId);
+      const targetUserId = patch.assigneeUserId as string;
+      setPendingReassign({
+        value: `user:${targetUserId}`,
+        agentName: currentAgent?.name ?? "an AI agent",
+      });
+      return;
+    }
+    onUpdate(patch);
+  }
+
+  function confirmReassign() {
+    if (!pendingReassign) return;
+    onUpdate(resolveAssigneePatch(pendingReassign.value));
+    setPendingReassign(null);
+  }
 
   const agentName = (id: string | null) => {
     if (!id || !agents) return null;
@@ -350,7 +377,7 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
             "flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50",
             !issue.assigneeAgentId && !issue.assigneeUserId && "bg-accent"
           )}
-          onClick={() => { onUpdate({ assigneeAgentId: null, assigneeUserId: null }); setAssigneeOpen(false); }}
+          onClick={() => { handleAssigneeChange({ assigneeAgentId: null, assigneeUserId: null }); setAssigneeOpen(false); }}
         >
           No assignee
         </button>
@@ -361,7 +388,7 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
               issue.assigneeUserId === currentUserId && "bg-accent",
             )}
             onClick={() => {
-              onUpdate({ assigneeAgentId: null, assigneeUserId: currentUserId });
+              handleAssigneeChange({ assigneeAgentId: null, assigneeUserId: currentUserId });
               setAssigneeOpen(false);
             }}
           >
@@ -376,7 +403,7 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
               issue.assigneeUserId === issue.createdByUserId && "bg-accent",
             )}
             onClick={() => {
-              onUpdate({ assigneeAgentId: null, assigneeUserId: issue.createdByUserId });
+              handleAssigneeChange({ assigneeAgentId: null, assigneeUserId: issue.createdByUserId });
               setAssigneeOpen(false);
             }}
           >
@@ -397,7 +424,7 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
               "flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50",
               a.id === issue.assigneeAgentId && "bg-accent"
             )}
-            onClick={() => { trackRecentAssignee(a.id); onUpdate({ assigneeAgentId: a.id, assigneeUserId: null }); setAssigneeOpen(false); }}
+            onClick={() => { trackRecentAssignee(a.id); handleAssigneeChange({ assigneeAgentId: a.id, assigneeUserId: null }); setAssigneeOpen(false); }}
           >
             <AgentIcon icon={a.icon} className="shrink-0 h-3 w-3 text-muted-foreground" />
             {a.name}
@@ -489,6 +516,7 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
   );
 
   return (
+    <>
     <div className="space-y-4">
       <div className="space-y-1">
         <PropertyRow label="Status">
@@ -616,5 +644,25 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
         </PropertyRow>
       </div>
     </div>
+
+    <Dialog open={!!pendingReassign} onOpenChange={(open) => { if (!open) setPendingReassign(null); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Interrupt AI task?</DialogTitle>
+          <DialogDescription>
+            This task is currently running with {pendingReassign?.agentName}. Reassigning it to you will interrupt the active run. The agent's progress will remain visible in the activity log.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setPendingReassign(null)}>
+            Keep AI assigned
+          </Button>
+          <Button variant="destructive" onClick={confirmReassign}>
+            Reassign to me
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
