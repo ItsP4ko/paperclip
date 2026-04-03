@@ -1039,6 +1039,23 @@ export function issueRoutes(db: Db, storage: StorageService) {
       return;
     }
     assertCompanyAccess(req, existing.companyId);
+    // PERM-01/PERM-02: Human member can only mutate their own tasks (unless owner)
+    // TODO: replace with real auth — currently auth is a pass-through bypass in dev;
+    //   local_implicit source exits this gate early, so bypass sessions are unaffected.
+    if (req.actor.type === "board" && req.actor.userId) {
+      const isLocalOrAdmin = req.actor.source === "local_implicit" || req.actor.isInstanceAdmin;
+      if (!isLocalOrAdmin) {
+        const membership = await access.getMembership(
+          existing.companyId,
+          "user",
+          req.actor.userId,
+        );
+        const isOwner = membership?.membershipRole === "owner";
+        if (!isOwner && existing.assigneeUserId !== req.actor.userId) {
+          throw forbidden("Members can only mutate their own tasks");
+        }
+      }
+    }
     const assigneeWillChange =
       (req.body.assigneeAgentId !== undefined && req.body.assigneeAgentId !== existing.assigneeAgentId) ||
       (req.body.assigneeUserId !== undefined && req.body.assigneeUserId !== existing.assigneeUserId);
