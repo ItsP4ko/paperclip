@@ -56,6 +56,11 @@ export function CompanySettings() {
   const [snippetCopied, setSnippetCopied] = useState(false);
   const [snippetCopyDelightId, setSnippetCopyDelightId] = useState(0);
 
+  const [humanInviteUrl, setHumanInviteUrl] = useState<string | null>(null);
+  const [humanInviteError, setHumanInviteError] = useState<string | null>(null);
+  const [humanUrlCopied, setHumanUrlCopied] = useState(false);
+  const [humanCopyDelightId, setHumanCopyDelightId] = useState(0);
+
   const generalDirty =
     !!selectedCompany &&
     (companyName !== selectedCompany.name ||
@@ -155,6 +160,27 @@ export function CompanySettings() {
         err instanceof Error ? err.message : "Failed to create invite"
       );
     }
+  });
+
+  const humanInviteMutation = useMutation({
+    mutationFn: () =>
+      accessApi.createCompanyInvite(selectedCompanyId!, {
+        allowedJoinTypes: "human",
+      }),
+    onSuccess: (invite) => {
+      setHumanInviteError(null);
+      setHumanInviteUrl(invite.inviteUrl);
+      setHumanUrlCopied(false);
+      setHumanCopyDelightId(0);
+    },
+    onError: (err) => {
+      setHumanInviteUrl(null);
+      setHumanInviteError(
+        err instanceof Error
+          ? err.message
+          : "Failed to generate invite link. Please try again or refresh the page."
+      );
+    },
   });
 
   const syncLogoState = (nextLogoUrl: string | null) => {
@@ -528,6 +554,72 @@ export function CompanySettings() {
                     }}
                   >
                     {snippetCopied ? "Copied snippet" : "Copy snippet"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Human Invite */}
+        <div className="space-y-3 rounded-md border border-border px-4 py-4">
+          <span className="text-xs text-muted-foreground">
+            Invite a human member to this company.
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => humanInviteMutation.mutate()}
+              disabled={humanInviteMutation.isPending}
+            >
+              {humanInviteMutation.isPending
+                ? "Generating..."
+                : "Generate Human Invite Link"}
+            </Button>
+          </div>
+          {humanInviteError && (
+            <p className="text-sm text-destructive">
+              Failed to generate invite link. Please try again or refresh the page.
+            </p>
+          )}
+          {humanInviteUrl && (
+            <div className="rounded-md border border-border bg-muted/30 p-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs text-muted-foreground">
+                  Human Invite Link
+                </div>
+                {humanUrlCopied && (
+                  <span
+                    key={humanCopyDelightId}
+                    className="flex items-center gap-1 text-xs text-green-600 animate-pulse"
+                  >
+                    <Check className="h-3 w-3" />
+                    Copied
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 space-y-1.5">
+                <input
+                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 font-mono text-sm outline-none"
+                  value={humanInviteUrl}
+                  readOnly
+                />
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(humanInviteUrl);
+                        setHumanUrlCopied(true);
+                        setHumanCopyDelightId((prev) => prev + 1);
+                        setTimeout(() => setHumanUrlCopied(false), 2000);
+                      } catch {
+                        /* clipboard may not be available */
+                      }
+                    }}
+                  >
+                    {humanUrlCopied ? "Copied" : "Copy Link"}
                   </Button>
                 </div>
               </div>
