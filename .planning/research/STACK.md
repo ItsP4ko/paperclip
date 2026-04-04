@@ -1,210 +1,283 @@
-# Technology Stack: Human Agent Support
+# Stack Research: v1.1 Deployment & SaaS Readiness
 
-**Project:** Paperclip — Human Agents Milestone
-**Researched:** 2026-04-03
-**Scope:** What to add/use to extend existing stack for human task management
-
----
-
-## Orientation: What This Is NOT
-
-This milestone is **not** a new project. It is a UI + permission layer built on top of an already-working
-backend. The codebase audit found:
-
-- `assigneeUserId` already exists on the `issues` table (DB column `assignee_user_id`)
-- `companyMemberships` already stores `principalType: "user"` rows
-- `membershipRole: "owner"` concept already exists
-- `accessService.listMembers()` and `GET /companies/:companyId/members` already exist
-- `allowedJoinTypes: "human" | "agent" | "both"` already in invite system
-- `createIssueSchema` and `updateIssueSchema` already accept `assigneeUserId`
-- `PERMISSION_KEYS` already contains `tasks:assign`, `users:invite`, `users:manage_permissions`
-- `MyIssues` page already exists but uses incorrect filtering (filters on `!assigneeAgentId` instead
-  of `assigneeUserId === currentUserId`)
-- `issuesApi.list()` already supports `assigneeUserId` filter param
-
-**Conclusion:** ~80% of the required backend surface area already exists. The work is:
-1. Fix/extend existing UI (MyIssues filter logic, add it to routing/nav)
-2. Build a human member management UI in CompanySettings
-3. Add a team workload view (who has what assigned)
-4. Tighten permission checks for human actors on issue mutations
+**Project:** Paperclip — v1.1 Deployment & SaaS Readiness
+**Researched:** 2026-04-04
+**Scope:** New additions ONLY — what to add for Railway, Supabase, API Gateway, Redis
+**Confidence:** HIGH (verified against official docs and current npm registry)
 
 ---
 
-## Recommended Stack
+## Orientation: This Is an Additive Milestone
 
-### No New Frameworks — Zero Net-New Dependencies Needed
+The existing stack (React 19, Vite, Tailwind v4, shadcn/ui, Express 5, Drizzle ORM, BetterAuth,
+postgres.js) is already proven and is NOT being changed. This file documents only what gets ADDED
+for v1.1 deployment infrastructure.
 
-The constraint from PROJECT.md ("Mantener React 19 + Vite + Tailwind v4 + shadcn/ui — no introducir
-frameworks nuevos") is achievable. Every capability needed already exists in the stack.
-
-### Core Framework (Already In Place)
-
-| Technology | Version | Purpose | Notes |
-|------------|---------|---------|-------|
-| React | 19.0.0 | UI framework | Already installed |
-| Vite | 6.1.0 | Build / dev server | Already installed |
-| Tailwind CSS | 4.0.7 | Styling | Already installed via `@tailwindcss/vite` |
-| React Router DOM | 7.1.5 | Client-side routing | Already installed |
-| TanStack React Query | 5.x | Server state, caching, mutations | Already installed |
-
-**Confidence: HIGH** — direct inspection of `packages/db`, `server/src`, and `ui/src`.
-
-### Auth (Already In Place)
-
-| Technology | Version | Purpose | Notes |
-|------------|---------|---------|-------|
-| better-auth | 1.4.18 | Session management | Already in use |
-| `authApi.getSession()` | — | Current user context | Returns `{ user: { id, email, name } }` |
-
-The `queryKeys.auth.session` query already loads the current user in `App.tsx`. The `user.id` from
-this session is what gets matched against `assigneeUserId` on issues.
-
-**Do not** add a separate auth system, JWT layer, or user profile service. Pass `user.id` down from the
-existing session query.
-
-**Confidence: HIGH** — read `ui/src/api/auth.ts` and `ui/src/App.tsx` directly.
-
-### Database (Already In Place — Extend Only)
-
-| Technology | Version | Purpose | Notes |
-|------------|---------|---------|-------|
-| Drizzle ORM | 0.38.4 | Query builder | Already in use across server + db package |
-| PostgreSQL | — | Data store | Via `embedded-postgres` or external |
-
-Required schema changes are minimal:
-- No new tables needed for MVP
-- The `companyMemberships` table already stores user members
-- The `issues` table already has `assignee_user_id`
-
-**Confidence: HIGH** — read `packages/db/src/schema/company_memberships.ts` and
-`packages/db/src/schema/issues.ts` directly.
-
-### UI Components (Already In Place — Extend Only)
-
-| Technology | Version | Purpose | Notes |
-|------------|---------|---------|-------|
-| shadcn/ui | (via Radix UI) | Component primitives | Already installed |
-| Radix UI | — | Headless primitives | Already installed |
-| lucide-react | — | Icons | Already installed |
-
-Available shadcn components already present: `avatar`, `badge`, `button`, `card`, `checkbox`,
-`dialog`, `dropdown-menu`, `input`, `label`, `select`, `skeleton`, `tabs`, `tooltip`.
-
-The `avatar` component is available and should be used for human member display (initials fallback,
-no avatar upload needed for MVP).
-
-**Confidence: HIGH** — read `ui/src/components/ui/` directory directly.
-
-### Supporting Libraries (Already In Place)
-
-| Library | Purpose | Notes |
-|---------|---------|-------|
-| `@dnd-kit/core` + `@dnd-kit/sortable` | Drag-and-drop (if task reordering added) | Already present, use if needed |
-| `zod` 3.24.x | Request body validation (server) | Already in use in all route validators |
-| `clsx` + `tailwind-merge` | Class composition | Already in use |
-| `class-variance-authority` | Variant-based component styles | Already in use |
+**Critical finding:** The `@paperclipai/db` package already supports external Postgres via
+`DATABASE_URL` env var (see `packages/db/src/runtime-config.ts:221`). No DB-layer changes needed to
+connect to Supabase — just set the env var.
 
 ---
 
-## What NOT to Use
+## Recommended Stack Additions
 
-### Do Not Add a Separate Task/Project Management Library
+### Deployment Targets
 
-**Why not:** Libraries like `react-beautiful-dnd`, `@hello-pangea/dnd`, or dedicated "task board"
-packages add bundle weight and fight with the existing `@dnd-kit` setup already in the codebase.
-Extend existing issue list patterns using `EntityRow` + `FilterBar` components.
+| Platform | Purpose | Why |
+|----------|---------|-----|
+| Railway | Backend container host | Native Dockerfile support, zero-config detection, service-to-service variable references, Railway Redis addon available in same project |
+| Vercel | Frontend CDN | Zero-config Vite/React SPA deployment, global CDN, `VITE_` env var injection at build time |
 
-### Do Not Add a Notification Library
+**Railway vs alternatives:** Render requires manual Dockerfile config. Fly.io adds operational
+complexity. Railway's `${{ServiceName.VAR}}` reference syntax means the frontend on Vercel can
+reference the backend URL automatically if both are Railway services. But since frontend goes to
+Vercel, the backend `RAILWAY_PUBLIC_DOMAIN` gets set as `VITE_API_URL` in Vercel dashboard manually
+once — acceptable tradeoff.
 
-**Why not:** PROJECT.md explicitly excludes email/push notifications from MVP scope. The
-web-app-first approach means users check in proactively. Adding `react-hot-toast`, `sonner`, or
-similar for cross-session notifications is out of scope.
-
-### Do Not Add a Separate State Management Library
-
-**Why not:** TanStack Query 5 already handles all server state. The existing `CompanyContext` and
-`DialogContext` cover the minimal global UI state needed. Do not introduce Zustand, Jotai, or Redux
-for this milestone — the session user ID can be passed via the existing query pattern.
-
-### Do Not Add a New Form Library
-
-**Why not:** The existing pattern uses controlled React state + `useMutation` from TanStack Query for
-forms (confirmed in `CompanySettings.tsx`, `AgentConfigForm.tsx`). Adding React Hook Form or Formik
-would be inconsistent with the codebase style and create cognitive overhead. Follow the existing
-pattern.
-
-### Do Not Add a Real-Time Presence Layer
-
-**Why not:** The existing WebSocket layer (`ws` 8.x via `live-events-ws.ts`) handles live updates.
-"Online/offline" presence indicators for human members are out of scope for MVP. Do not add
-`Pusher`, `Ably`, or similar.
+**Confidence: HIGH** — Railway Dockerfile detection is documented at docs.railway.com/builds/dockerfiles.
+Vercel Vite support is documented at vercel.com/docs/frameworks/frontend/vite.
 
 ---
 
-## Gap Analysis: What Needs to Be Built vs Extended
+### Database: Supabase as Global Postgres
 
-### Frontend Gaps (UI work required)
+| Connection Type | Port | When to Use |
+|----------------|------|------------|
+| Direct Connection | 5432 | Preferred for Railway (persistent server, long-lived connection) |
+| Pooler — Session Mode | 5432 | Fallback if Railway VM doesn't support IPv6 |
+| Pooler — Transaction Mode | 6543 | Do NOT use — incompatible with Drizzle's prepared statements |
 
-| Gap | Current State | What to Build |
-|-----|--------------|--------------|
-| MyIssues filter logic | Filters on `!assigneeAgentId` (wrong) | Filter on `assigneeUserId === session.user.id` via existing `issuesApi.list({ assigneeUserId })` |
-| MyIssues route in nav | Page exists but not in `App.tsx` routes | Add `<Route path="my-tasks" element={<MyIssues />} />` and nav link |
-| Human member list in CompanySettings | Not present | Query `GET /companies/:id/members`, filter `principalType === "user"`, render with `avatar` + `badge` |
-| Assign-to-human in issue form | `NewIssueDialog` / `updateIssue` support `assigneeUserId` in API | Add a human assignee selector alongside the existing agent assignee selector |
-| Team workload view | Not present | New page or tab: list human members, each showing their open issues via `issuesApi.list({ assigneeUserId })` |
-| Invite human flow | `createCompanyInvite({ allowedJoinTypes: "human" })` exists in API | Add a UI trigger in CompanySettings that calls `accessApi.createCompanyInvite` with `allowedJoinTypes: "human"` |
+**Configuration required:** The existing `createDb()` in `packages/db/src/client.ts` uses
+`postgres(url)` which defaults prepared statements to ON. This is correct for direct connection and
+session-mode pooler. Do NOT use transaction-mode pooler URL (port 6543) without also adding
+`prepare: false` to the postgres client.
 
-### Backend Gaps (small surface area)
+**Recommendation:** Use the Supabase **direct connection** string (port 5432, IPv6). If Railway's
+network does not support IPv6 outbound (verify at deploy time), switch to the **pooler session mode**
+string (also port 5432, IPv4-compatible). No code change required between these two — only the
+connection string changes.
 
-| Gap | Current State | What to Build |
-|-----|--------------|--------------|
-| `GET /companies/:id/members` returns raw membership rows | Returns `companyMemberships` rows without user name/email | Join with `authUsers` table to return `{ id, userId, name, email, membershipRole }` |
-| Permission check for human updating issue status | `PATCH /issues/:id` exists; human actor path needs validation | Verify `assertAssignableUser` covers the human-actor status-change case; add test |
-| `tasks:assign` permission auto-grant for owner | Owners need to assign tasks to others | Ensure `membershipRole: "owner"` gets `tasks:assign` granted on join |
+**No new packages needed.** `postgres` and `drizzle-orm/postgres-js` are already installed.
 
-**Confidence: HIGH** — all gaps identified from direct code inspection, not inference.
+**Confidence: HIGH** — Supabase connection type guidance from supabase.com/docs/guides/database/connecting-to-postgres.
+Drizzle+Supabase integration verified at orm.drizzle.team/docs/connect-supabase.
 
 ---
 
-## Session User in Frontend: Access Pattern
+### Redis Cache Layer
 
-The current user's ID is available via the existing `queryKeys.auth.session` query. To use it in
-components, follow this pattern (consistent with how `App.tsx` already uses it):
+**Choice: Railway Redis addon (native TCP) over Upstash**
+
+Rationale: Backend runs as a persistent Express server on Railway — TCP connections are maintained,
+no serverless cold start issues. Upstash charges per-command (HTTP REST overhead + per-request cost)
+and is designed for serverless/edge. Railway Redis runs in the same private network as the backend
+container, giving sub-millisecond latency without egress costs.
+
+**Client library: `redis` (node-redis) v5**
+
+| Library | Version | Why |
+|---------|---------|-----|
+| `redis` | 5.11.0 | Official Redis client, full TypeScript support built-in, promise-based API, actively maintained by Redis Inc |
+
+Do NOT use `ioredis` for new code. It is in maintenance mode. The `redis` (node-redis) package is
+the official recommendation for new Node.js projects as of 2025–2026.
+
+```bash
+# In server/
+npm install redis
+```
+
+**Usage pattern (Express middleware):**
 
 ```typescript
-// In any component needing the current user
-const { data: session } = useQuery({
-  queryKey: queryKeys.auth.session,
-  queryFn: () => authApi.getSession(),
+import { createClient } from 'redis';
+
+const redis = createClient({ url: process.env.REDIS_URL });
+await redis.connect();
+
+// Cache-aside pattern for expensive DB reads
+async function getCached<T>(key: string, ttl: number, fetcher: () => Promise<T>): Promise<T> {
+  const cached = await redis.get(key);
+  if (cached) return JSON.parse(cached) as T;
+  const fresh = await fetcher();
+  await redis.set(key, JSON.stringify(fresh), { EX: ttl });
+  return fresh;
+}
+```
+
+**Important:** Always handle Redis errors gracefully. If Redis is down, fall through to the DB.
+The cache is an optimization, not a requirement for correctness.
+
+**Confidence: HIGH** — node-redis v5 is the official client, documented at redis.io/docs/latest/develop/clients/nodejs/.
+Railway Redis addon availability confirmed at railway.com.
+
+---
+
+### API Gateway: Express Middleware Stack (Not a Separate Gateway Process)
+
+**Choice: Inline Express middleware — NOT a standalone API gateway service**
+
+Rationale: Adding Kong, Nginx, or a dedicated gateway service adds operational complexity (another
+process to deploy and monitor) for a single-service backend with one client. The full protection
+set can be achieved with ~30 lines of Express middleware added to the existing server entrypoint.
+
+**Packages to add:**
+
+| Package | Version | Purpose | Why |
+|---------|---------|---------|-----|
+| `helmet` | 8.1.0 | HTTP security headers (HSTS, CSP, X-Frame-Options, X-Content-Type) | Industry standard, ~1.8M weekly downloads, zero config |
+| `express-rate-limit` | 7.x | Per-IP rate limiting with Redis store support | Prevents abuse, pairs with `rate-limit-redis` store |
+| `rate-limit-redis` | latest | Redis store for `express-rate-limit` | Makes rate limits persistent across restarts |
+
+```bash
+# In server/
+npm install helmet express-rate-limit rate-limit-redis
+```
+
+**CORS is already handled** by BetterAuth's built-in CORS configuration. Do not add a separate
+`cors` package — it will conflict with BetterAuth's cookie/session headers.
+
+**Middleware order** (add to Express entrypoint, before routes):
+
+```typescript
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
+
+// 1. Security headers first
+app.use(helmet());
+
+// 2. Rate limit after security headers
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500,                  // per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisStore({
+    sendCommand: (...args) => redis.sendCommand(args),
+  }),
 });
-const currentUserId = session?.user.id ?? null;
+app.use(limiter);
+
+// 3. Existing routes after
 ```
 
-Then filter issues with:
-```typescript
-issuesApi.list(companyId, { assigneeUserId: currentUserId })
-```
+**JWT validation is already handled** by BetterAuth session middleware. Do not add a separate JWT
+validation layer — it duplicates auth and can break the existing session model.
 
-This is the correct fix for `MyIssues.tsx` which currently does not use `assigneeUserId` at all.
+**Confidence: HIGH** — helmet v8.1.0 and express-rate-limit v7.x verified from npm registry searches.
+rate-limit-redis is the standard store documented in express-rate-limit docs.
 
 ---
 
-## Installation
+### Frontend Deployment: Vercel + vercel.json
 
-No new packages to install. All required functionality uses existing dependencies.
+**No new npm packages.** Vercel deployment is config-file driven.
+
+**Required files:**
+
+`ui/vercel.json` — SPA routing fix (without this, direct URL loads return 404):
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+**Environment variable naming** — Vite requires `VITE_` prefix for any variable exposed to the
+browser bundle:
+```
+VITE_API_URL=https://your-railway-backend.railway.app
+```
+
+Set this in the Vercel dashboard under Settings > Environment Variables. Do not put secrets in
+`VITE_` variables — they are compiled into the public JS bundle.
+
+**Confidence: HIGH** — Vercel Vite SPA configuration documented at vercel.com/docs/frameworks/frontend/vite.
+
+---
+
+### Railway Dockerfile Notes
+
+The existing `Dockerfile` already works. Two Railway-specific considerations:
+
+1. **PORT**: Railway injects `PORT` at runtime. The existing `Dockerfile` sets `PORT=3100` as a
+   default ENV. Railway will override this with its own value. The Express server must read
+   `process.env.PORT` — verify the server entrypoint does this (or add fallback: `|| 3100`).
+
+2. **Health check endpoint**: Add `GET /health` returning `200 { ok: true }` to the Express app.
+   Railway uses this to verify the container is ready before routing traffic.
+
+**No Dockerfile changes needed** beyond ensuring PORT is read from env. Railway auto-detects the
+existing Dockerfile at the repo root.
+
+**Confidence: HIGH** — Railway Dockerfile requirements from docs.railway.com/builds/dockerfiles.
+
+---
+
+## What NOT to Add
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `ioredis` | Maintenance mode; official Redis Node.js client is now `redis` (node-redis v5) | `redis` v5.11.0 |
+| Upstash Redis | HTTP-based, per-request pricing — designed for serverless, not persistent servers | Railway Redis addon (TCP, fixed pricing, same private network) |
+| Kong / Nginx / Envoy as gateway | Adds a second deployable service; full protection achievable with Express middleware | `helmet` + `express-rate-limit` |
+| Transaction-mode Supabase pooler | Incompatible with Drizzle prepared statements; adds hidden bugs | Direct connection or session-mode pooler URL |
+| `cors` npm package | BetterAuth already configures CORS; adding this causes conflict | BetterAuth built-in CORS |
+| Prisma | Already using Drizzle ORM; no reason to migrate | Stay on Drizzle 0.38.x |
+| Separate JWT validation middleware | BetterAuth already validates sessions; duplication creates auth surface conflicts | BetterAuth existing session middleware |
+
+---
+
+## Version Compatibility
+
+| Package | Version | Compatible With |
+|---------|---------|----------------|
+| `redis` (node-redis) | 5.11.0 | Node.js 18+, TypeScript 5.x — compatible with Express 5 |
+| `helmet` | 8.1.0 | Express 4.x and 5.x |
+| `express-rate-limit` | 7.x | Express 4.x and 5.x |
+| `rate-limit-redis` | latest | Requires `redis` v4+ or `ioredis` |
+| Supabase Postgres | — | `postgres` (postgres.js) 3.4.x already installed — direct compatible |
+
+---
+
+## Environment Variables Added (v1.1)
+
+| Variable | Where Set | Consumer |
+|----------|-----------|----------|
+| `DATABASE_URL` | Railway service env | Backend (`packages/db/src/runtime-config.ts:221`) |
+| `REDIS_URL` | Railway service env | Backend (new Redis client) |
+| `VITE_API_URL` | Vercel dashboard | Frontend (`import.meta.env.VITE_API_URL`) |
+| `BETTER_AUTH_SECRET` | Railway service env | BetterAuth (already needed, ensure it's set) |
+| `BETTER_AUTH_URL` | Railway service env | BetterAuth base URL for callbacks |
+
+---
+
+## Installation Summary
+
+```bash
+# In server/ — add these packages
+pnpm --filter @paperclipai/server add redis helmet express-rate-limit rate-limit-redis
+
+# Frontend — no new packages
+# Vercel — add ui/vercel.json (config file only)
+# Railway — no changes to Dockerfile required
+```
 
 ---
 
 ## Sources
 
-- Direct inspection: `packages/db/src/schema/company_memberships.ts`
-- Direct inspection: `packages/db/src/schema/issues.ts`
-- Direct inspection: `packages/shared/src/constants.ts` (PERMISSION_KEYS)
-- Direct inspection: `packages/shared/src/validators/issue.ts` (createIssueSchema, updateIssueSchema)
-- Direct inspection: `server/src/services/access.ts` (listMembers, listActiveUserMemberships)
-- Direct inspection: `server/src/routes/access.ts` (GET /companies/:id/members)
-- Direct inspection: `ui/src/api/access.ts` (createCompanyInvite with allowedJoinTypes)
-- Direct inspection: `ui/src/api/issues.ts` (assigneeUserId filter param)
-- Direct inspection: `ui/src/pages/MyIssues.tsx` (incorrect filter logic confirmed)
-- Direct inspection: `ui/src/components/ui/` (available shadcn components)
-- Direct inspection: `.planning/PROJECT.md` (constraints and scope)
+- [Railway Dockerfile docs](https://docs.railway.com/builds/dockerfiles) — Dockerfile detection, build caching, ARG behavior
+- [Railway Variables docs](https://docs.railway.com/variables) — PORT injection, service-to-service references
+- [Railway Express guide](https://docs.railway.com/guides/express) — DATABASE_URL pattern, health checks
+- [Supabase: Connecting to Postgres](https://supabase.com/docs/guides/database/connecting-to-postgres) — Direct vs pooler, port differences, IPv4/IPv6 — HIGH confidence
+- [Drizzle ORM + Supabase](https://orm.drizzle.team/docs/connect-supabase) — `prepare: false` requirement for transaction mode — HIGH confidence
+- [node-redis official docs](https://redis.io/docs/latest/develop/clients/nodejs/) — v5 API, createClient, connect() — HIGH confidence
+- [Vercel Vite framework docs](https://vercel.com/docs/frameworks/frontend/vite) — VITE_ prefix, SPA rewrites — HIGH confidence
+- [helmet npm](https://www.npmjs.com/package/helmet) — v8.1.0 latest — HIGH confidence
+- [express-rate-limit npm](https://www.npmjs.com/package/express-rate-limit) — v7.x latest — HIGH confidence
+- [Upstash vs Railway Redis comparison](https://www.buildmvpfast.com/compare/upstash-vs-redis-cloud) — serverless vs persistent tradeoffs — MEDIUM confidence (third-party)
+
+---
+*Stack research for: v1.1 Deployment & SaaS Readiness (Railway + Supabase + Redis + API Gateway)*
+*Researched: 2026-04-04*
