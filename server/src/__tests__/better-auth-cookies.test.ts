@@ -24,6 +24,7 @@ describe("createBetterAuthInstance cookie config", () => {
     originalBetterAuthSecret = process.env.BETTER_AUTH_SECRET;
     originalAgentJwtSecret = process.env.PAPERCLIP_AGENT_JWT_SECRET;
     originalPublicUrl = process.env.PAPERCLIP_PUBLIC_URL;
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -42,7 +43,6 @@ describe("createBetterAuthInstance cookie config", () => {
     } else {
       delete process.env.PAPERCLIP_PUBLIC_URL;
     }
-    vi.resetModules();
   });
 
   it("includes defaultCookieAttributes with sameSite=none and secure=true for HTTPS deployment", async () => {
@@ -64,7 +64,7 @@ describe("createBetterAuthInstance cookie config", () => {
 
     createBetterAuthInstance(mockDb, mockConfig);
 
-    expect(betterAuthMock).toHaveBeenCalled();
+    expect(betterAuthMock).toHaveBeenCalledOnce();
     const config = betterAuthMock.mock.calls[0]?.[0] as Record<string, unknown>;
     const advanced = config.advanced as Record<string, unknown> | undefined;
     const defaultCookieAttributes = advanced?.defaultCookieAttributes as Record<string, unknown> | undefined;
@@ -93,7 +93,7 @@ describe("createBetterAuthInstance cookie config", () => {
 
     createBetterAuthInstance(mockDb, mockConfig);
 
-    expect(betterAuthMock).toHaveBeenCalled();
+    expect(betterAuthMock).toHaveBeenCalledOnce();
     const config = betterAuthMock.mock.calls[0]?.[0] as Record<string, unknown>;
     const advanced = config.advanced as Record<string, unknown> | undefined;
 

@@ -1,4 +1,5 @@
 import express, { Router, type Request as ExpressRequest } from "express";
+import cors from "cors";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -86,6 +87,24 @@ export async function createApp(
 ) {
   const app = express();
 
+  const corsAllowedOrigins = opts.allowedHostnames.flatMap((h) => [
+    `https://${h}`,
+    `http://${h}`,
+  ]);
+
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (!origin || corsAllowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
+      credentials: true,
+    }),
+  );
+
   app.use(express.json({
     // Company import/export payloads can inline full portable packages.
     limit: "10mb",
@@ -137,7 +156,11 @@ export async function createApp(
 
   // Mount API routes
   const api = Router();
-  api.use(boardMutationGuard());
+  const guardAllowedOrigins = opts.allowedHostnames.flatMap((h) => [
+    `https://${h}`,
+    `http://${h}`,
+  ]);
+  api.use(boardMutationGuard({ allowedOrigins: guardAllowedOrigins }));
   api.use(
     "/health",
     healthRoutes(db, {

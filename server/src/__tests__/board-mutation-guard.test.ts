@@ -6,6 +6,7 @@ import { boardMutationGuard } from "../middleware/board-mutation-guard.js";
 function createApp(
   actorType: "board" | "agent",
   boardSource: "session" | "local_implicit" | "board_key" = "session",
+  allowedOrigins: string[] = [],
 ) {
   const app = express();
   app.use(express.json());
@@ -15,7 +16,7 @@ function createApp(
       : { type: "agent", agentId: "agent-1" };
     next();
   });
-  app.use(boardMutationGuard());
+  app.use(boardMutationGuard({ allowedOrigins }));
   app.post("/mutate", (_req, res) => {
     res.status(204).end();
   });
@@ -101,6 +102,24 @@ describe("boardMutationGuard", () => {
       .post("/mutate")
       .set("Host", "127.0.0.1")
       .set("X-Forwarded-Host", "10.90.10.20:3443")
+      .set("Origin", "https://evil.example.com")
+      .send({ ok: true });
+    expect(res.status).toBe(403);
+  });
+
+  it("allows board mutations from allowedOrigins external origin", async () => {
+    const app = createApp("board", "session", ["https://app.vercel.app"]);
+    const res = await request(app)
+      .post("/mutate")
+      .set("Origin", "https://app.vercel.app")
+      .send({ ok: true });
+    expect(res.status).toBe(204);
+  });
+
+  it("rejects board mutations from unlisted origin even when other origins are allowed", async () => {
+    const app = createApp("board", "session", ["https://app.vercel.app"]);
+    const res = await request(app)
+      .post("/mutate")
       .set("Origin", "https://evil.example.com")
       .send({ ok: true });
     expect(res.status).toBe(403);
