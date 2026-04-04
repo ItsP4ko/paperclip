@@ -11,7 +11,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **IDENT-01**: Owner can invite human users to the company via email/link from CompanySettings
 - [x] **IDENT-02**: Invited human can join the company through the invite landing page
-- [ ] **IDENT-03**: Human members appear in a members/team list within the company
+- [x] **IDENT-03**: Human members appear in a members/team list within the company
 - [x] **IDENT-04**: Backend returns human member display name and email (join auth_users in members API)
 
 ### My Tasks
@@ -87,7 +87,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | IDENT-01 | Phase 1 | Complete |
 | IDENT-02 | Phase 1 | Complete |
-| IDENT-03 | Phase 3 | Pending |
+| IDENT-03 | Phase 3 | Complete |
 | IDENT-04 | Phase 1 | Complete |
 | TASKS-01 | Phase 1 | Complete |
 | TASKS-02 | Phase 1 | Complete |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-task-work-surface-02-03-PLAN.md
-last_updated: "2026-04-03T23:44:42.090Z"
+stopped_at: Completed 03-owner-team-visibility-03-01-PLAN.md
+last_updated: "2026-04-04T00:30:35.347Z"
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 9
+  completed_plans: 7
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-03)
 
 **Core value:** A human can receive, work on, and complete tasks inside Paperclip exactly as an AI agent does — without friction, from the web app.
-**Current focus:** Phase 02 — task-work-surface
+**Current focus:** Phase 03 — owner-team-visibility
 
 ## Current Position
 
-Phase: 02 (task-work-surface) — EXECUTING
-Plan: 2 of 3
+Phase: 03 (owner-team-visibility) — EXECUTING
+Plan: 1 of 3
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Plan: 2 of 3
 *Updated after each plan completion*
 | Phase 02-task-work-surface P01 | 5 | 2 tasks | 3 files |
 | Phase 02-task-work-surface P03 | 11 | 2 tasks | 3 files |
+| Phase 03-owner-team-visibility P01 | 5min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,8 @@ Recent decisions affecting current work:
 - [02-02]: humanBarFileInputRef added as second hidden file input — avoids colliding with existing fileInputRef used for drag-and-drop/markdown import zone
 - [Phase 02-task-work-surface]: Route test IDs must be UUIDs — router.param normalizer fires for any string matching [A-Z]+-\\d+ and calls svc.getByIdentifier
 - [Phase 02-task-work-surface]: 'Assigned to me' pill placed outside Filter popover as standalone toolbar row — one-click accessible without opening filter panel
+- [Phase 03-owner-team-visibility]: resolveAssigneeName uses .slice(0,8) for ID truncation with agent-first lookup then user/Me/displayName/email/id fallback chain
+- [Phase 03-owner-team-visibility]: CompanyMember exported as standalone type before accessApi object to allow downstream import type without circular deps
 
 ### Pending Todos
 
@@ -84,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T23:40:19.484Z
-Stopped at: Completed 02-task-work-surface-02-03-PLAN.md
+Last session: 2026-04-04T00:30:35.341Z
+Stopped at: Completed 03-owner-team-visibility-03-01-PLAN.md
 Resume file: None
