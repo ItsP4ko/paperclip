@@ -1,3 +1,5 @@
+import { API_BASE } from "@/lib/api-base";
+
 export type DevServerHealthStatus = {
   enabled: true;
   restartRequired: boolean;
@@ -28,13 +30,14 @@ export type HealthStatus = {
 
 export const healthApi = {
   get: async (): Promise<HealthStatus> => {
-    const res = await fetch("/api/health", {
+    const res = await fetch(`${API_BASE}/health`, {
       credentials: "include",
       headers: { Accept: "application/json" },
     });
     if (!res.ok) {
       const payload = await res.json().catch(() => null) as { error?: string } | null;
-      throw new Error(payload?.error ?? `Failed to load health (${res.status})`);
+      const errMsg = typeof payload?.error === "string" ? payload.error : null;
+      throw new Error(errMsg ?? `Failed to load health (${res.status})`);
     }
     return res.json();
   },
