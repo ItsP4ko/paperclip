@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useNavigate, Link, Navigate, useBeforeUnload } from "@/lib/router";
+import { getWsHost } from "@/lib/api-base";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   agentsApi,
@@ -3564,7 +3565,7 @@ function LogViewer({ run, adapterType }: { run: HeartbeatRun; adapterType: strin
     const connect = () => {
       if (closed) return;
       const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      const url = `${protocol}://${window.location.host}/api/companies/${encodeURIComponent(run.companyId)}/events/ws`;
+      const url = `${protocol}://${getWsHost()}/api/companies/${encodeURIComponent(run.companyId)}/events/ws`;
       socket = new WebSocket(url);
 
       socket.onopen = () => {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getWsHost } from "@/lib/api-base";
 import { useQuery } from "@tanstack/react-query";
 import type { LiveEvent } from "@paperclipai/shared";
 import { instanceSettingsApi } from "../../api/instanceSettings";
@@ -186,7 +187,7 @@ export function useLiveRunTranscripts({
     const connect = () => {
       if (closed) return;
       const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      const url = `${protocol}://${window.location.host}/api/companies/${encodeURIComponent(companyId)}/events/ws`;
+      const url = `${protocol}://${getWsHost()}/api/companies/${encodeURIComponent(companyId)}/events/ws`;
       socket = new WebSocket(url);
 
       socket.onmessage = (message) => {

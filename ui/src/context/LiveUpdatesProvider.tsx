@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { getWsHost } from "@/lib/api-base";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { Agent, Issue, LiveEvent } from "@paperclipai/shared";
 import type { RunForIssue } from "../api/activity";
@@ -773,7 +774,7 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
     const connect = () => {
       if (closed) return;
       const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      const url = `${protocol}://${window.location.host}/api/companies/${encodeURIComponent(liveCompanyId)}/events/ws`;
+      const url = `${protocol}://${getWsHost()}/api/companies/${encodeURIComponent(liveCompanyId)}/events/ws`;
       const nextSocket = new WebSocket(url);
       socket = nextSocket;
 
