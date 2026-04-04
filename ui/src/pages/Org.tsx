@@ -17,15 +17,17 @@ function OrgTree({
   nodes,
   depth = 0,
   hrefFn,
+  companyId,
 }: {
   nodes: OrgNode[];
   depth?: number;
   hrefFn: (id: string) => string;
+  companyId: string;
 }) {
   return (
     <div>
       {nodes.map((node) => (
-        <OrgTreeNode key={node.id} node={node} depth={depth} hrefFn={hrefFn} />
+        <OrgTreeNode key={node.id} node={node} depth={depth} hrefFn={hrefFn} companyId={companyId} />
       ))}
     </div>
   );
@@ -35,13 +37,24 @@ function OrgTreeNode({
   node,
   depth,
   hrefFn,
+  companyId,
 }: {
   node: OrgNode;
   depth: number;
   hrefFn: (id: string) => string;
+  companyId: string;
 }) {
   const [expanded, setExpanded] = useState(true);
   const hasChildren = node.reports.length > 0;
+
+  const { data: agentIssues = [] } = useQuery({
+    queryKey: ["issues", companyId, "by-agent", node.id],
+    queryFn: () => issuesApi.list(companyId, { assigneeAgentId: node.id }),
+    enabled: !!companyId,
+  });
+  const openCount = agentIssues.filter(
+    (i) => i.status !== "done" && i.status !== "cancelled"
+  ).length;
 
   return (
     <div>
@@ -82,10 +95,11 @@ function OrgTreeNode({
         />
         <span className="font-medium flex-1">{node.name}</span>
         <span className="text-xs text-muted-foreground">{node.role}</span>
+        <span className="text-xs tabular-nums font-medium shrink-0">{openCount} open</span>
         <StatusBadge status={node.status} />
       </Link>
       {hasChildren && expanded && (
-        <OrgTree nodes={node.reports} depth={depth + 1} hrefFn={hrefFn} />
+        <OrgTree nodes={node.reports} depth={depth + 1} hrefFn={hrefFn} companyId={companyId} />
       )}
     </div>
   );
@@ -177,7 +191,7 @@ export function Org() {
             <h2 className="text-sm font-semibold text-muted-foreground">AI Agents</h2>
           </div>
           <div className="border border-border py-1">
-            <OrgTree nodes={data} hrefFn={(id) => `/agents/${id}`} />
+            <OrgTree nodes={data} hrefFn={(id) => `/agents/${id}`} companyId={selectedCompanyId!} />
           </div>
         </div>
       )}
