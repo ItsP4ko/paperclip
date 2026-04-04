@@ -217,6 +217,16 @@ function toJoinRequestResponse(row: typeof joinRequests.$inferSelect) {
   return safe;
 }
 
+export function resolveHumanJoinStatus(requestType: "human" | "agent"): {
+  status: "approved" | "pending_approval";
+  shouldAutoApprove: boolean;
+} {
+  if (requestType === "human") {
+    return { status: "approved", shouldAutoApprove: true };
+  }
+  return { status: "pending_approval", shouldAutoApprove: false };
+}
+
 type JoinDiagnostic = {
   code: string;
   level: "info" | "warn";
@@ -2313,6 +2323,8 @@ export function accessRoutes(
 
       const actorEmail =
         requestType === "human" ? await resolveActorEmail(db, req) : null;
+      const { status: joinStatus, shouldAutoApprove } =
+        resolveHumanJoinStatus(requestType);
       const created = !inviteAlreadyAccepted
         ? await db.transaction(async (tx) => {
             await tx
@@ -2326,13 +2338,13 @@ export function accessRoutes(
                 )
               );
 
-            const row = await tx
+            let row = await tx
               .insert(joinRequests)
               .values({
                 inviteId: invite.id,
                 companyId,
                 requestType,
-                status: "pending_approval",
+                status: joinStatus,
                 requestIp: requestIp(req),
                 requestingUserId:
                   requestType === "human"
@@ -2353,6 +2365,51 @@ export function accessRoutes(
               })
               .returning()
               .then((rows) => rows[0]);
+
+            if (shouldAutoApprove && row) {
+              const userId =
+                req.actor.type === "board" && req.actor.userId
+                  ? req.actor.userId
+                  : isLocalImplicit(req)
+                    ? "local-board"
+                    : null;
+              if (userId) {
+                await access.ensureMembership(
+                  companyId,
+                  "user",
+                  userId,
+                  "member",
+                  "active"
+                );
+                const grants = grantsFromDefaults(
+                  invite.defaultsPayload as Record<string, unknown> | null,
+                  "human"
+                );
+                await access.setPrincipalGrants(
+                  companyId,
+                  "user",
+                  userId,
+                  grants,
+                  userId
+                );
+                await tx
+                  .update(joinRequests)
+                  .set({
+                    status: "approved",
+                    approvedByUserId: userId,
+                    approvedAt: new Date(),
+                    updatedAt: new Date()
+                  })
+                  .where(eq(joinRequests.id, row.id));
+                row = {
+                  ...row,
+                  status: "approved",
+                  approvedByUserId: userId,
+                  approvedAt: new Date()
+                };
+              }
+            }
+
             return row;
           })
         : await db
@@ -2495,7 +2552,9 @@ export function accessRoutes(
               (requestType === "agent" ? "invite-anon" : "board"),
         action: inviteAlreadyAccepted
           ? "join.request_replayed"
-          : "join.requested",
+          : created?.status === "approved"
+            ? "join.auto_approved"
+            : "join.requested",
         entityType: "join_request",
         entityId: created.id,
         details: {
