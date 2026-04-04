@@ -32,8 +32,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Assignment
 
-- [ ] **ASGN-01**: Owner can assign tasks to human members from issue creation/detail
-- [ ] **ASGN-02**: Assignee picker shows humans and AI agents in separate grouped sections
+- [x] **ASGN-01**: Owner can assign tasks to human members from issue creation/detail
+- [x] **ASGN-02**: Assignee picker shows humans and AI agents in separate grouped sections
 - [x] **ASGN-03**: UI warns when reassigning an in-progress AI task to a human (run interruption)
 
 ### Permissions
@@ -99,8 +99,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ACTN-03 | Phase 2 | Complete |
 | ACTN-04 | Phase 2 | Complete |
 | ACTN-05 | Phase 2 | Complete |
-| ASGN-01 | Phase 3 | Pending |
-| ASGN-02 | Phase 3 | Pending |
+| ASGN-01 | Phase 3 | Complete |
+| ASGN-02 | Phase 3 | Complete |
 | ASGN-03 | Phase 2 | Complete |
 | PERM-01 | Phase 2 | Complete |
 | PERM-02 | Phase 2 | Complete |
