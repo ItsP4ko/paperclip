@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-04-04T05:48:41.446Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-04-04T05:49:21.371Z"
 progress:
   total_phases: 4
   completed_phases: 4
@@ -52,6 +52,7 @@ Plan: 1 of 2
 | Phase 03-owner-team-visibility P02 | 11min | 2 tasks | 3 files |
 | Phase 03-owner-team-visibility P03 | 2min | 1 tasks | 1 files |
 | Phase 04-online-deployment-multi-user-auth P01 | 3min | 1 tasks | 2 files |
+| Phase 04-online-deployment-multi-user-auth P02 | 4min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,7 @@ Recent decisions affecting current work:
 - [Phase 03-owner-team-visibility]: Breadcrumb updated from Org Chart to Team to reflect expanded scope covering both AI agents and human members
 - [Phase 04-online-deployment-multi-user-auth]: Auto-approval is mode-agnostic: runs in both local_trusted and authenticated modes per CONTEXT.md locked decision — no deploymentMode check added
 - [Phase 04-online-deployment-multi-user-auth]: resolveHumanJoinStatus exported as pure function for lightweight unit testing; userId resolved as req.actor.userId or local-board fallback via isLocalImplicit
+- [Phase 04-online-deployment-multi-user-auth]: resolvePostAcceptAction exported as pure function for testable navigation routing in InviteLanding — approved status navigates home, others show result cards
 
 ### Pending Todos
 
@@ -96,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T05:48:41.444Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-04-04T05:49:21.369Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
