@@ -74,4 +74,4 @@ La autenticación existe via better-auth. El sistema de invites/joins ya funcion
 | Flujo bidireccional humano ↔ IA | Un humano puede reasignar a un agente y viceversa | — Pending |
 
 ---
-*Last updated: 2026-04-04 after Phase 03: owner-team-visibility complete*
+*Last updated: 2026-04-04 after Phase 04: online-deployment-multi-user-auth complete — all 4 phases shipped*
