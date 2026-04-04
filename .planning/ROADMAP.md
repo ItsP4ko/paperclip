@@ -62,12 +62,12 @@ Plans:
   2. Assignee picker in issue creation, issue detail, and command palette shows humans and AI agents in distinct grouped sections with clear labels
   3. Owner can assign a new or existing issue to a human member from any of those surfaces
   4. Owner sees an open issue count per member (human and AI) on the team page
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Build `resolveAssigneeName(issue)` helper; extend Org.tsx with a separate "Team Members" section for humans
-- [ ] 03-02: Build unified grouped assignee picker (Team Members / AI Agents) for NewIssueDialog, IssueDetail, and CommandPalette
-- [ ] 03-03: Add per-member workload summary (open issue counts) to team page using issuesApi.list({ assigneeUserId })
+- [ ] 03-01-PLAN.md — Add resolveAssigneeName helper, CompanyMember type, accessApi.listMembers, and queryKeys.access.members
+- [ ] 03-02-PLAN.md — Extend InlineEntitySelector with groups prop; add grouped assignee picker to NewIssueDialog and IssueProperties
+- [ ] 03-03-PLAN.md — Add Team Members section with per-member workload counts to Org page
 
 ## Progress
 
