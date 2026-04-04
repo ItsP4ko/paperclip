@@ -70,17 +70,6 @@ Plans:
 - [ ] 03-02-PLAN.md — Extend InlineEntitySelector with groups prop; add grouped assignee picker to NewIssueDialog and IssueProperties
 - [ ] 03-03-PLAN.md — Add Team Members section with per-member workload counts to Org page
 
-## Progress
-
-**Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Identity, Membership & My Tasks Foundation | 3/3 | Complete   | 2026-04-03 |
-| 2. Task Work Surface | 2/3 | In Progress|  |
-| 3. Owner Team Visibility | 2/3 | In Progress|  |
-
 ### Phase 4: Online Deployment & Multi-User Auth
 **Goal**: Any user can open an invite link, auto-create account, and enter the app without manual approval. Authenticated deployment mode enabled for internet hosting.
 **Depends on**: Phase 1, 2, 3
@@ -90,3 +79,20 @@ Phases execute in numeric order: 1 → 2 → 3
 - [ ] Server runs in `authenticated` mode with BetterAuth
 - [ ] `// TODO: proper login/register` flag left for future iteration
 - [ ] Existing local_trusted mode still works unchanged
+**Plans**: 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Inline auto-approval for human invite accepts in server transaction + test
+- [ ] 04-02-PLAN.md — Update InviteLanding button label and onSuccess navigation for auto-approved joins
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 1 → 2 → 3 → 4
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. Identity, Membership & My Tasks Foundation | 3/3 | Complete   | 2026-04-03 |
+| 2. Task Work Surface | 2/3 | In Progress|  |
+| 3. Owner Team Visibility | 2/3 | In Progress|  |
+| 4. Online Deployment & Multi-User Auth | 0/2 | Planned | |
