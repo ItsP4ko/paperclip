@@ -70,14 +70,14 @@ Derived from existing codebase usage. These are the four active roles in the app
 | Role | Size | Tailwind | Weight | Weight class | Line Height |
 |------|------|----------|--------|--------------|-------------|
 | Body | 14px | text-sm | 400 regular | font-normal | 1.5 |
-| Label | 12px | text-xs | 500 medium | font-medium | 1.3 |
+| Label | 12px | text-xs | 600 semibold | font-semibold | 1.3 |
 | Heading | 15px | text-[15px] | 600 semibold | font-semibold | 1.75rem fixed |
 | Display | 20px | text-xl | 600 semibold | font-semibold | 1.2 |
 
 **Notes (source: index.css):**
 - Editor/markdown body: 15px (`0.9375rem`) at line-height 1.6 — reserved for `.paperclip-markdown` and `.paperclip-edit-in-place-content`. Do not apply outside those contexts.
 - MDXEditor placeholder: 14px (`0.875rem`) at line-height 1.5.
-- Only two weights are permitted project-wide: 400 (normal) and 600 (semibold). The 500 (medium) weight is used only for label/badge text.
+- Only two weights are permitted project-wide: 400 (font-normal) and 600 (font-semibold). No exceptions. The 500/medium weight is not permitted anywhere in the codebase.
 
 ---
 
