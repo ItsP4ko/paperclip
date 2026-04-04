@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "@/lib/router";
+import { Link, useNavigate, useParams } from "@/lib/router";
 import { accessApi } from "../api/access";
 import { authApi } from "../api/auth";
 import { healthApi } from "../api/health";
@@ -8,6 +8,22 @@ import { queryKeys } from "../lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import { AGENT_ADAPTER_TYPES } from "@paperclipai/shared";
 import type { AgentAdapterType, JoinRequest } from "@paperclipai/shared";
+
+/** Determine post-accept UI action based on mutation payload. Exported for testing. */
+export function resolvePostAcceptAction(payload: unknown): "navigate-home" | "show-bootstrap" | "show-join-result" {
+  if (payload && typeof payload === "object") {
+    if (
+      "status" in (payload as Record<string, unknown>) &&
+      (payload as { status: string }).status === "approved"
+    ) {
+      return "navigate-home";
+    }
+    if ("bootstrapAccepted" in (payload as Record<string, unknown>)) {
+      return "show-bootstrap";
+    }
+  }
+  return "show-join-result";
+}
 
 type JoinType = "human" | "agent";
 const joinAdapterOptions: AgentAdapterType[] = [...AGENT_ADAPTER_TYPES];
@@ -42,6 +58,7 @@ function readNestedString(value: unknown, path: string[]): string | null {
 
 export function InviteLandingPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const params = useParams();
   const token = (params.token ?? "").trim();
   const [joinType, setJoinType] = useState<JoinType>("human");
@@ -108,9 +125,12 @@ export function InviteLandingPage() {
       setError(null);
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.session });
       await queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
-      const asBootstrap =
-        payload && typeof payload === "object" && "bootstrapAccepted" in (payload as Record<string, unknown>);
-      setResult({ kind: asBootstrap ? "bootstrap" : "join", payload });
+      const action = resolvePostAcceptAction(payload);
+      if (action === "navigate-home") {
+        navigate("/", { replace: true });
+        return;
+      }
+      setResult({ kind: action === "show-bootstrap" ? "bootstrap" : "join", payload });
     },
     onError: (err) => {
       setError(err instanceof Error ? err.message : "Failed to accept invite");
@@ -322,7 +342,11 @@ export function InviteLandingPage() {
             ? "Submitting…"
             : invite.inviteType === "bootstrap_ceo"
               ? "Accept bootstrap invite"
-              : "Submit join request"}
+              : joinType === "human"
+                ? companyName
+                  ? `Join ${companyName}`
+                  : "Join"
+                : "Submit join request"}
         </Button>
       </div>
     </div>
