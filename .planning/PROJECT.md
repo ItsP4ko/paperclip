@@ -11,6 +11,7 @@ Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactam
 ## Current State
 
 **v1.0 shipped** (2026-04-04) — 4 phases, 11 plans, +1,468 lines across 26 files.
+**Phase 05 complete** (2026-04-04) — Cross-origin code preparation: CORS middleware, BetterAuth cross-origin cookies, centralized API base URL, Vercel SPA rewrite. Codebase ready for Vercel→Railway split deployment.
 
 Human agents are fully functional in `local_trusted` mode. The full invite → join → work → handoff cycle works end-to-end. Authenticated mode supports auto-approval for human joins.
 
@@ -47,7 +48,7 @@ Human agents are fully functional in `local_trusted` mode. The full invite → j
 
 <!-- v1.1 — Deployment & SaaS Readiness -->
 
-- [ ] Frontend deployed to CDN (Vercel)
+- [~] Frontend deployed to CDN (Vercel) — cross-origin code prepared (Phase 05), deployment pending (Phase 06)
 - [ ] Supabase as global database + Backend on Railway
 - [ ] API Gateway protecting backend
 - [ ] Redis cache layer for global database
@@ -101,4 +102,4 @@ v1.0 shipped. Tech stack: React 19 + Vite + Tailwind v4 + shadcn/ui (frontend), 
 | InlineEntitySelector groups prop | Reusar componente existente para grouped pickers | ✓ Good — NewIssueDialog uses it; IssueProperties uses bespoke popover |
 
 ---
-*Last updated: 2026-04-04 after v1.1 milestone started*
+*Last updated: 2026-04-04 after Phase 05 (cross-origin code preparation) complete*
