@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 03-owner-team-visibility-03-02-PLAN.md
-last_updated: "2026-04-04T00:44:17.975Z"
+stopped_at: Completed 03-owner-team-visibility-03-03-PLAN.md
+last_updated: "2026-04-04T00:48:00.724Z"
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -50,6 +50,7 @@ Plan: 1 of 3
 | Phase 02-task-work-surface P03 | 11 | 2 tasks | 3 files |
 | Phase 03-owner-team-visibility P01 | 5min | 2 tasks | 4 files |
 | Phase 03-owner-team-visibility P02 | 11min | 2 tasks | 3 files |
+| Phase 03-owner-team-visibility P03 | 2min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ Recent decisions affecting current work:
 - [Phase 03-owner-team-visibility]: CompanyMember exported as standalone type before accessApi object to allow downstream import type without circular deps
 - [Phase 03-owner-team-visibility]: InlineEntitySelector groups prop uses flatMap into allOptions to keep existing keyboard nav and search logic unchanged - only rendering path diverges
 - [Phase 03-owner-team-visibility]: IssueProperties uses inline JSX group for Team Members rather than InlineEntitySelector groups prop - bespoke popover with custom button styles and dedicated quick-assign buttons
+- [Phase 03-owner-team-visibility]: MemberWorkloadRow uses inline useQuery per row for workload counts — simple and correct for small teams, self-contained component
+- [Phase 03-owner-team-visibility]: Breadcrumb updated from Org Chart to Team to reflect expanded scope covering both AI agents and human members
 
 ### Pending Todos
 
@@ -90,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T00:44:17.973Z
-Stopped at: Completed 03-owner-team-visibility-03-02-PLAN.md
+Last session: 2026-04-04T00:48:00.722Z
+Stopped at: Completed 03-owner-team-visibility-03-03-PLAN.md
 Resume file: None

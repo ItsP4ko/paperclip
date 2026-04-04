@@ -43,8 +43,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Team Visibility
 
-- [ ] **TEAM-01**: Human members visible in a dedicated "Team Members" section (separate from AI org chart)
-- [ ] **TEAM-02**: Owner can see workload summary per member (human + AI) — open issue counts
+- [x] **TEAM-01**: Human members visible in a dedicated "Team Members" section (separate from AI org chart)
+- [x] **TEAM-02**: Owner can see workload summary per member (human + AI) — open issue counts
 
 ## v2 Requirements
 
@@ -104,8 +104,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ASGN-03 | Phase 2 | Complete |
 | PERM-01 | Phase 2 | Complete |
 | PERM-02 | Phase 2 | Complete |
-| TEAM-01 | Phase 3 | Pending |
-| TEAM-02 | Phase 3 | Pending |
+| TEAM-01 | Phase 3 | Complete |
+| TEAM-02 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 21 total
