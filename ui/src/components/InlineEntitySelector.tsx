@@ -9,6 +9,11 @@ export interface InlineEntityOption {
   searchText?: string;
 }
 
+export interface OptionGroup {
+  heading: string;
+  options: InlineEntityOption[];
+}
+
 interface InlineEntitySelectorProps {
   value: string;
   options: InlineEntityOption[];
@@ -23,6 +28,8 @@ interface InlineEntitySelectorProps {
   renderOption?: (option: InlineEntityOption, isSelected: boolean) => ReactNode;
   /** Skip the Portal so the popover stays in the DOM tree (fixes scroll inside Dialogs). */
   disablePortal?: boolean;
+  /** When provided, renders options in labelled groups instead of a flat list. */
+  groups?: OptionGroup[];
 }
 
 export const InlineEntitySelector = forwardRef<HTMLButtonElement, InlineEntitySelectorProps>(
@@ -40,6 +47,7 @@ export const InlineEntitySelector = forwardRef<HTMLButtonElement, InlineEntitySe
       renderTriggerValue,
       renderOption,
       disablePortal,
+      groups,
     },
     ref,
   ) {
@@ -51,8 +59,14 @@ export const InlineEntitySelector = forwardRef<HTMLButtonElement, InlineEntitySe
     const isPointerDownRef = useRef(false);
 
     const allOptions = useMemo<InlineEntityOption[]>(
-      () => [{ id: "", label: noneLabel, searchText: noneLabel }, ...options],
-      [noneLabel, options],
+      () => {
+        const base: InlineEntityOption[] = [{ id: "", label: noneLabel, searchText: noneLabel }];
+        if (groups) {
+          return [...base, ...groups.flatMap((g) => g.options)];
+        }
+        return [...base, ...options];
+      },
+      [noneLabel, options, groups],
     );
 
     const filteredOptions = useMemo(() => {
@@ -64,7 +78,19 @@ export const InlineEntitySelector = forwardRef<HTMLButtonElement, InlineEntitySe
       });
     }, [allOptions, query]);
 
-    const currentOption = options.find((option) => option.id === value) ?? null;
+    const currentOption = useMemo(
+      () => {
+        if (groups) {
+          for (const group of groups) {
+            const found = group.options.find((o) => o.id === value);
+            if (found) return found;
+          }
+          return null;
+        }
+        return options.find((option) => option.id === value) ?? null;
+      },
+      [options, groups, value],
+    );
 
     useEffect(() => {
       if (!open) return;
@@ -177,8 +203,8 @@ export const InlineEntitySelector = forwardRef<HTMLButtonElement, InlineEntitySe
           <div className="max-h-56 overflow-y-auto overscroll-contain py-1 touch-pan-y">
             {filteredOptions.length === 0 ? (
               <p className="px-2 py-2 text-xs text-muted-foreground">{emptyMessage}</p>
-            ) : (
-              filteredOptions.map((option, index) => {
+            ) : (() => {
+              const renderOptionButton = (option: InlineEntityOption, index: number) => {
                 const isSelected = option.id === value;
                 const isHighlighted = index === highlightedIndex;
                 return (
@@ -196,8 +222,36 @@ export const InlineEntitySelector = forwardRef<HTMLButtonElement, InlineEntitySe
                     <Check className={cn("ml-auto h-3.5 w-3.5 text-muted-foreground", isSelected ? "opacity-100" : "opacity-0")} />
                   </button>
                 );
-              })
-            )}
+              };
+
+              if (groups) {
+                const filteredIds = new Set(filteredOptions.map((o) => o.id));
+                const noneOption = filteredOptions.find((o) => o.id === "");
+                const noneIndex = noneOption ? filteredOptions.indexOf(noneOption) : -1;
+                return (
+                  <>
+                    {noneIndex >= 0 && renderOptionButton(noneOption!, noneIndex)}
+                    {groups.map((group) => {
+                      const visibleOptions = group.options.filter((o) => filteredIds.has(o.id));
+                      if (visibleOptions.length === 0) return null;
+                      return (
+                        <div key={group.heading}>
+                          <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                            {group.heading}
+                          </div>
+                          {visibleOptions.map((option) => {
+                            const globalIndex = filteredOptions.indexOf(option);
+                            return renderOptionButton(option, globalIndex);
+                          })}
+                        </div>
+                      );
+                    })}
+                  </>
+                );
+              }
+
+              return filteredOptions.map((option, index) => renderOptionButton(option, index));
+            })()}
           </div>
         </PopoverContent>
       </Popover>
