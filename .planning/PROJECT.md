@@ -45,7 +45,13 @@ Human agents are fully functional in `local_trusted` mode. The full invite → j
 
 ### Active
 
-(None — next milestone requirements TBD)
+<!-- v1.1 — Deployment & SaaS Readiness -->
+
+- [ ] Frontend deployed to CDN (Vercel)
+- [ ] Supabase as global database + Backend on Railway
+- [ ] API Gateway protecting backend
+- [ ] Redis cache layer for global database
+- [ ] End-to-end multi-user testing (invite → join → work → handoff)
 
 ### Out of Scope
 
@@ -54,6 +60,18 @@ Human agents are fully functional in `local_trusted` mode. The full invite → j
 - Time tracking — complejidad innecesaria para v1
 - App móvil — web-first
 - Roles granulares más allá de owner/member — simplificar para v1
+
+## Current Milestone: v1.1 Deployment & SaaS Readiness
+
+**Goal:** Deploy Paperclip para testing real multi-usuario y sentar las bases de arquitectura SaaS (frontend en CDN, backend en Railway, BD global en Supabase, API Gateway, Redis cache).
+
+**Target features:**
+- Frontend en Vercel (CDN) separado del backend
+- Backend en Railway con Dockerfile existente
+- Supabase como BD global (reemplaza embedded-postgres para datos globales)
+- API Gateway para proteger el backend
+- Redis como capa de cache para la BD global
+- Testing end-to-end del flujo completo: owner invita → usuario se registra → tareas → agentes → handoff
 
 ## Context
 
@@ -83,4 +101,4 @@ v1.0 shipped. Tech stack: React 19 + Vite + Tailwind v4 + shadcn/ui (frontend), 
 | InlineEntitySelector groups prop | Reusar componente existente para grouped pickers | ✓ Good — NewIssueDialog uses it; IssueProperties uses bespoke popover |
 
 ---
-*Last updated: 2026-04-04 after v1.0 milestone*
+*Last updated: 2026-04-04 after v1.1 milestone started*
