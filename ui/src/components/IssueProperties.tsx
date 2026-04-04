@@ -12,7 +12,7 @@ import { useCompany } from "../context/CompanyContext";
 import { queryKeys } from "../lib/queryKeys";
 import { useProjectOrder } from "../hooks/useProjectOrder";
 import { getRecentAssigneeIds, sortAgentsByRecency, trackRecentAssignee } from "../lib/recent-assignees";
-import { formatAssigneeUserLabel, resolveAssigneePatch } from "../lib/assignees";
+import { formatAssigneeUserLabel, resolveAssigneePatch, type AssigneeSelection } from "../lib/assignees";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StatusIcon } from "./StatusIcon";
@@ -207,8 +207,8 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
     onUpdate({ labelIds: next });
   };
 
-  function handleAssigneeChange(patch: Record<string, unknown>) {
-    const isReassignToHuman = patch.assigneeUserId != null && patch.assigneeUserId !== null && patch.assigneeAgentId === null;
+  function handleAssigneeChange(patch: AssigneeSelection) {
+    const isReassignToHuman = patch.assigneeUserId != null && patch.assigneeAgentId === null;
     const hasActiveAiRun = !!issue.assigneeAgentId && issue.status === "in_progress";
     if (isReassignToHuman && hasActiveAiRun) {
       const currentAgent = agents?.find((a) => a.id === issue.assigneeAgentId);
@@ -219,12 +219,12 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
       });
       return;
     }
-    onUpdate(patch);
+    onUpdate(patch as unknown as Record<string, unknown>);
   }
 
   function confirmReassign() {
     if (!pendingReassign) return;
-    onUpdate(resolveAssigneePatch(pendingReassign.value));
+    onUpdate(resolveAssigneePatch(pendingReassign.value) as unknown as Record<string, unknown>);
     setPendingReassign(null);
   }
 
