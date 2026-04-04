@@ -40,7 +40,10 @@ See: milestones/v1.0-ROADMAP.md for full phase details
   3. All three WebSocket URL constructions (LiveUpdatesProvider, useLiveRunTranscripts, AgentDetail) derive host from `VITE_API_URL`, not `window.location.host`
   4. BetterAuth cookie config emits `SameSite=None; Secure` — cross-origin session cookies will be accepted by browsers
   5. CORS middleware in `app.ts` accepts credentialed requests from the configured allowed origin; `BETTER_AUTH_SECRET` has no hardcoded fallback
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 05-01-PLAN.md — Backend cross-origin wiring (CORS, cookies, secret, mutation guard)
+- [ ] 05-02-PLAN.md — Frontend API/WS URL centralization and Vercel config
 
 ### Phase 6: Infrastructure Provisioning & Deployment
 **Goal**: Supabase, Railway, and Vercel are all live with correct env vars wired between them, and the backend responds to authenticated API requests from the Vercel frontend
@@ -86,7 +89,7 @@ See: milestones/v1.0-ROADMAP.md for full phase details
 | 2. Task Work Surface | v1.0 | 3/3 | Complete | 2026-04-04 |
 | 3. Owner Team Visibility | v1.0 | 3/3 | Complete | 2026-04-04 |
 | 4. Online Deployment & Multi-User Auth | v1.0 | 2/2 | Complete | 2026-04-04 |
-| 5. Cross-Origin Code Preparation | v1.1 | 0/TBD | Not started | - |
+| 5. Cross-Origin Code Preparation | v1.1 | 0/2 | Planning complete | - |
 | 6. Infrastructure Provisioning & Deployment | v1.1 | 0/TBD | Not started | - |
 | 7. End-to-End Verification | v1.1 | 0/TBD | Not started | - |
 | 8. API Hardening & Redis | v1.1 | 0/TBD | Not started | - |
