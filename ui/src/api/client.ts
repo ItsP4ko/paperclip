@@ -1,4 +1,5 @@
-const BASE = "/api";
+import { API_BASE } from "@/lib/api-base";
+const BASE = API_BASE;
 
 export class ApiError extends Error {
   status: number;
