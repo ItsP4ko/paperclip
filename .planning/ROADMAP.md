@@ -54,7 +54,11 @@ Plans:
   2. Railway container is running with `SERVE_UI=false`; `GET /health` returns 200 and Railway health checks pass
   3. Vercel deployment completes with `VITE_API_URL` pointing to Railway; direct-navigation to any route returns the app (not a 404)
   4. A user can sign up and log in from the Vercel frontend to the Railway backend — session cookie is set and persists across page refreshes
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 06-01-PLAN.md — Pool size cap for Supabase connection (code change)
+- [ ] 06-02-PLAN.md — Supabase provisioning and schema migration
+- [ ] 06-03-PLAN.md — Railway + Vercel deployment and auth verification
 
 ### Phase 7: End-to-End Verification
 **Goal**: The complete multi-user workflow (owner invites, user joins, task assigned, task worked, handoff to AI agent, real-time updates) is verified on the live deployment
@@ -90,6 +94,6 @@ Plans:
 | 3. Owner Team Visibility | v1.0 | 3/3 | Complete | 2026-04-04 |
 | 4. Online Deployment & Multi-User Auth | v1.0 | 2/2 | Complete | 2026-04-04 |
 | 5. Cross-Origin Code Preparation | 2/2 | Complete   | 2026-04-04 | - |
-| 6. Infrastructure Provisioning & Deployment | v1.1 | 0/TBD | Not started | - |
+| 6. Infrastructure Provisioning & Deployment | v1.1 | 0/3 | Not started | - |
 | 7. End-to-End Verification | v1.1 | 0/TBD | Not started | - |
 | 8. API Hardening & Redis | v1.1 | 0/TBD | Not started | - |
