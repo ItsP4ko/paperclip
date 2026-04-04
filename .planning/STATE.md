@@ -2,16 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Deployment & SaaS Readiness
-status: planning
-stopped_at: Phase 5 context gathered
-last_updated: "2026-04-04T16:37:49.279Z"
-last_activity: "2026-04-04 — v1.1 roadmap created (4 phases: 5-8)"
+status: unknown
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-04-04T17:25:52.152Z"
 progress:
   total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
 ---
 
 # Project State
@@ -21,16 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** A human can receive, work on, and complete tasks inside Paperclip exactly as an AI agent does — without friction, from the web app.
-**Current focus:** Phase 5 — Cross-Origin Code Preparation
+**Current focus:** Phase 05 — cross-origin-code-preparation
 
 ## Current Position
 
-Phase: 5 of 8 (Cross-Origin Code Preparation)
-Plan: — of — in current phase
-Status: Ready to plan
-Last activity: 2026-04-04 — v1.1 roadmap created (4 phases: 5-8)
-
-Progress: [░░░░░░░░░░] 0%
+Phase: 05 (cross-origin-code-preparation) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -47,6 +41,7 @@ Progress: [░░░░░░░░░░] 0%
 | v1.0 (1-4) | 11 | — | — |
 
 **Recent Trend:** —
+| Phase 05 P02 | 338 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -57,6 +52,8 @@ Progress: [░░░░░░░░░░] 0%
 - [v1.1 roadmap]: Phase 8 (hardening) deferred until Phase 7 smoke test passes — rate limits interfere with auth/CORS debugging.
 - [v1.1 research]: Use session-mode Supabase pooler (port 5432), not transaction-mode — Drizzle prepared statements break on port 6543.
 - [v1.1 research]: Use Railway Redis addon (private TCP), not Upstash — persistent server, not serverless.
+- [05-02]: All frontend API/WS calls centralized through api-base.ts — API_BASE for REST, getWsHost() for WebSocket; VITE_API_URL drives cross-origin targeting at build time.
+- [05-02]: Pre-existing TS error in IssueProperties.tsx (AssigneeSelection type mismatch) blocks tsc -b — out of scope for this plan, deferred.
 
 ### Pending Todos
 
@@ -69,6 +66,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-04T16:37:49.278Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-cross-origin-code-preparation/05-CONTEXT.md
+Last session: 2026-04-04T17:24:57Z
+Stopped at: Completed 05-02-PLAN.md
+Resume file: .planning/phases/05-cross-origin-code-preparation/05-02-SUMMARY.md

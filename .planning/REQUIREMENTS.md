@@ -9,10 +9,10 @@ Requirements for deployment & SaaS readiness. Each maps to roadmap phases.
 
 ### Deployment — Frontend (Vercel)
 
-- [ ] **DEPLOY-01**: Frontend deployed to Vercel as SPA with correct rewrite rules (no 404 on direct navigation)
-- [ ] **DEPLOY-02**: All API calls in frontend use configurable `VITE_API_URL` instead of relative paths
-- [ ] **DEPLOY-03**: WebSocket URLs in frontend point to backend host, not CDN host (3 files: LiveUpdatesProvider, useLiveRunTranscripts, AgentDetail)
-- [ ] **DEPLOY-04**: Frontend build succeeds on Vercel with correct environment variables
+- [x] **DEPLOY-01**: Frontend deployed to Vercel as SPA with correct rewrite rules (no 404 on direct navigation)
+- [x] **DEPLOY-02**: All API calls in frontend use configurable `VITE_API_URL` instead of relative paths
+- [x] **DEPLOY-03**: WebSocket URLs in frontend point to backend host, not CDN host (3 files: LiveUpdatesProvider, useLiveRunTranscripts, AgentDetail)
+- [x] **DEPLOY-04**: Frontend build succeeds on Vercel with correct environment variables
 
 ### Deployment — Backend (Railway)
 
@@ -82,10 +82,10 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DEPLOY-01 | Phase 5 | Pending |
-| DEPLOY-02 | Phase 5 | Pending |
-| DEPLOY-03 | Phase 5 | Pending |
-| DEPLOY-04 | Phase 5 | Pending |
+| DEPLOY-01 | Phase 5 | Complete |
+| DEPLOY-02 | Phase 5 | Complete |
+| DEPLOY-03 | Phase 5 | Complete |
+| DEPLOY-04 | Phase 5 | Complete |
 | DEPLOY-05 | Phase 6 | Pending |
 | DEPLOY-06 | Phase 5 | Pending |
 | DEPLOY-07 | Phase 6 | Pending |
