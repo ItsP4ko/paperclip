@@ -1,6 +1,7 @@
 import type { CompanyMember } from "../api/access";
 
 export interface AssigneeSelection {
+  [key: string]: string | null;
   assigneeAgentId: string | null;
   assigneeUserId: string | null;
 }
