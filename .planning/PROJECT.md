@@ -2,17 +2,26 @@
 
 ## What This Is
 
-Extensión de Paperclip para soportar agentes humanos reales junto a los agentes de IA. Los dueños de organizaciones pueden invitar personas, asignarles tareas desde un dashboard, y los humanos las gestionan (cambian estado, adjuntan archivos, crean subtareas, reasignan a agentes IA). Flujo bidireccional humano ↔ IA dentro del mismo sistema de issues.
+Extensión de Paperclip para soportar agentes humanos reales junto a los agentes de IA. Los dueños de organizaciones pueden invitar personas, asignarles tareas desde un dashboard, y los humanos las gestionan (cambian estado, adjuntan archivos, crean subtareas, reasignan a agentes IA). Flujo bidireccional humano ↔ IA dentro del mismo sistema de issues. Auto-approval en invites para onboarding sin fricción.
 
 ## Core Value
 
 Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactamente como lo hace un agente de IA — sin fricción, desde la web app.
 
+## Current State
+
+**v1.0 shipped** (2026-04-04) — 4 phases, 11 plans, +1,468 lines across 26 files.
+
+Human agents are fully functional in `local_trusted` mode. The full invite → join → work → handoff cycle works end-to-end. Authenticated mode supports auto-approval for human joins.
+
+**Known tech debt:** 9 items (see `milestones/v1.0-MILESTONE-AUDIT.md`). Key items:
+- Members endpoint requires `users:manage_permissions` grant — non-owner humans get 403 in authenticated mode
+- `resolveAssigneeName` helper exported but unused in production components
+- TS2345 compile error in `confirmReassign` path (runtime correct)
+
 ## Requirements
 
 ### Validated
-
-<!-- Existing capabilities in the codebase that we build upon -->
 
 - ✓ `assigneeUserId` ya existe en issues — se puede asignar a usuarios humanos — existing
 - ✓ `company_memberships` con `principalType: "user"` — usuarios pertenecen a empresas — existing
@@ -23,21 +32,20 @@ Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactam
 - ✓ Issues con estados (backlog/todo/in_progress/in_review/done) — existing
 - ✓ Subtareas (parent issue) — existing
 - ✓ Archivos adjuntos (assets) — existing
+- ✓ Dashboard "My Tasks" dedicado para usuarios humanos — v1.0
+- ✓ Filtro "assigned to me" en la vista de Issues existente — v1.0
+- ✓ Un humano puede cambiar el estado de sus tareas asignadas — v1.0
+- ✓ Un humano puede adjuntar archivos a una tarea — v1.0
+- ✓ Un humano puede crear subtareas dentro de una tarea — v1.0
+- ✓ Un humano puede reasignar una tarea a un agente de IA — v1.0
+- ✓ El dueño de la empresa puede invitar usuarios humanos por email/link — v1.0
+- ✓ El dueño puede asignar tareas a cualquier miembro (humano o IA) desde el dashboard — v1.0
+- ✓ Los miembros humanos aparecen en el org chart / listado de la empresa — v1.0
+- ✓ Vista de equipo: ver qué tiene asignado cada miembro (humano + IA) — v1.0
 
 ### Active
 
-<!-- New scope to build -->
-
-- [x] Dashboard "My Tasks" dedicado para usuarios humanos — Validated in Phase 01: identity-membership-my-tasks-foundation
-- [x] Filtro "assigned to me" en la vista de Issues existente — Validated in Phase 01: identity-membership-my-tasks-foundation
-- [x] Un humano puede cambiar el estado de sus tareas asignadas — Validated in Phase 02: task-work-surface
-- [x] Un humano puede adjuntar archivos a una tarea — Validated in Phase 02: task-work-surface
-- [x] Un humano puede crear subtareas dentro de una tarea — Validated in Phase 02: task-work-surface
-- [x] Un humano puede reasignar una tarea a un agente de IA — Validated in Phase 02: task-work-surface
-- [x] El dueño de la empresa puede invitar usuarios humanos por email/link — Validated in Phase 01: identity-membership-my-tasks-foundation
-- [x] El dueño puede asignar tareas a cualquier miembro (humano o IA) desde el dashboard — Validated in Phase 03: owner-team-visibility
-- [x] Los miembros humanos aparecen en el org chart / listado de la empresa — Validated in Phase 01: identity-membership-my-tasks-foundation
-- [x] Vista de equipo: ver qué tiene asignado cada miembro (humano + IA) — Validated in Phase 03: owner-team-visibility
+(None — next milestone requirements TBD)
 
 ### Out of Scope
 
@@ -49,11 +57,7 @@ Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactam
 
 ## Context
 
-Paperclip ya tiene la infraestructura base: `assigneeUserId` en issues, membresías de empresa con `principalType: "user"`, y validación de asignación. Lo que falta es principalmente UI y flujos de interacción para que los humanos puedan trabajar cómodamente dentro del sistema.
-
-El backend ya soporta la mayoría de operaciones necesarias (asignar issues a users, crear subtareas, adjuntar assets). El trabajo es mayormente frontend + ajustes de permisos + la experiencia del usuario humano.
-
-La autenticación existe via better-auth. El sistema de invites/joins ya funciona. El deployment mode `authenticated` ya maneja multi-usuario.
+v1.0 shipped. Tech stack: React 19 + Vite + Tailwind v4 + shadcn/ui (frontend), Express 5 + Drizzle ORM (backend), BetterAuth (auth). No schema migrations were needed — the existing `assigneeUserId` on issues and `principalType: "user"` in memberships supported the full feature set.
 
 ## Constraints
 
@@ -67,11 +71,16 @@ La autenticación existe via better-auth. El sistema de invites/joins ya funcion
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| MVP sin notificaciones | Reducir scope inicial, el usuario entra a la web app proactivamente | — Pending |
-| Invitación por el owner | Control de acceso claro, un dueño por empresa | — Pending |
-| Reusar sistema de issues | No crear entidad separada para "tareas humanas", usar el mismo sistema | — Pending |
-| Dashboard dedicado + filtro en Issues | Lo mejor de ambos mundos: vista rápida enfocada + acceso completo | — Pending |
-| Flujo bidireccional humano ↔ IA | Un humano puede reasignar a un agente y viceversa | — Pending |
+| MVP sin notificaciones | Reducir scope inicial, el usuario entra a la web app proactivamente | ✓ Good — kept scope tight |
+| Invitación por el owner | Control de acceso claro, un dueño por empresa | ✓ Good — simple access model |
+| Reusar sistema de issues | No crear entidad separada para "tareas humanas", usar el mismo sistema | ✓ Good — zero migrations needed |
+| Dashboard dedicado + filtro en Issues | Lo mejor de ambos mundos: vista rápida enfocada + acceso completo | ✓ Good — both surfaces functional |
+| Flujo bidireccional humano ↔ IA | Un humano puede reasignar a un agente y viceversa | ✓ Good — with warning dialog for AI interruption |
+| Auto-approval for human invites | Eliminar paso manual de aprobación para humanos | ✓ Good — frictionless onboarding |
+| resolveAssigneePatch atomic utility | Prevenir 422 errors por envío parcial de campos assignee | ✓ Good — all assignment paths use it |
+| Member permission gate in PATCH | Humanos solo pueden mutar sus propios issues (owner bypasses) | ✓ Good — simple, correct |
+| Inline HumanActionBar in IssueDetail | No crear componente separado — inline section gated on assigneeUserId | ✓ Good — minimal footprint |
+| InlineEntitySelector groups prop | Reusar componente existente para grouped pickers | ✓ Good — NewIssueDialog uses it; IssueProperties uses bespoke popover |
 
 ---
-*Last updated: 2026-04-04 after Phase 04: online-deployment-multi-user-auth complete — all 4 phases shipped*
+*Last updated: 2026-04-04 after v1.0 milestone*
