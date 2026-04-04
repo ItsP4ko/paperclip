@@ -13,8 +13,9 @@ This milestone adds human agents as first-class participants in Paperclip's exis
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Identity, Membership & My Tasks Foundation** - Human can join the company and see their assigned tasks (completed 2026-04-03)
-- [ ] **Phase 2: Task Work Surface** - Human can act on their tasks (status, files, subtasks, handoff to AI)
-- [ ] **Phase 3: Owner Team Visibility** - Owner can see and assign to a mixed human-AI team
+- [x] **Phase 2: Task Work Surface** - Human can act on their tasks (status, files, subtasks, handoff to AI) (completed 2026-04-04)
+- [x] **Phase 3: Owner Team Visibility** - Owner can see and assign to a mixed human-AI team (completed 2026-04-04)
+- [ ] **Phase 4: Online Deployment & Multi-User Auth** - Any user can open an invite link, auto-create account, and enter the app without manual approval. Authenticated mode enabled for internet hosting.
 
 ## Phase Details
 
@@ -79,3 +80,13 @@ Phases execute in numeric order: 1 → 2 → 3
 | 1. Identity, Membership & My Tasks Foundation | 3/3 | Complete   | 2026-04-03 |
 | 2. Task Work Surface | 2/3 | In Progress|  |
 | 3. Owner Team Visibility | 2/3 | In Progress|  |
+
+### Phase 4: Online Deployment & Multi-User Auth
+**Goal**: Any user can open an invite link, auto-create account, and enter the app without manual approval. Authenticated deployment mode enabled for internet hosting.
+**Depends on**: Phase 1, 2, 3
+**Requirements**: AUTH-01, AUTH-02, AUTH-03
+**Success Criteria**:
+- [ ] Invite link opens → user creates account → enters app immediately (no approval step)
+- [ ] Server runs in `authenticated` mode with BetterAuth
+- [ ] `// TODO: proper login/register` flag left for future iteration
+- [ ] Existing local_trusted mode still works unchanged
