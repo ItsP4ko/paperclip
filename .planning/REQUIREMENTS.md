@@ -17,9 +17,9 @@ Requirements for deployment & SaaS readiness. Each maps to roadmap phases.
 ### Deployment — Backend (Railway)
 
 - [ ] **DEPLOY-05**: Backend deployed to Railway using existing Dockerfile with `SERVE_UI=false`
-- [ ] **DEPLOY-06**: Health check endpoint (`GET /health`) responds correctly for Railway container readiness
+- [x] **DEPLOY-06**: Health check endpoint (`GET /health`) responds correctly for Railway container readiness
 - [ ] **DEPLOY-07**: All required environment variables configured in Railway (DATABASE_URL, BETTER_AUTH_SECRET, PAPERCLIP_DEPLOYMENT_MODE, etc.)
-- [ ] **DEPLOY-08**: Backend reads `PORT` from environment (Railway overrides at runtime)
+- [x] **DEPLOY-08**: Backend reads `PORT` from environment (Railway overrides at runtime)
 
 ### Deployment — Database (Supabase)
 
@@ -29,10 +29,10 @@ Requirements for deployment & SaaS readiness. Each maps to roadmap phases.
 
 ### Cross-Origin Auth & Security
 
-- [ ] **AUTH-01**: CORS middleware configured to allow Vercel frontend origin with credentials
-- [ ] **AUTH-02**: BetterAuth cookies set to `SameSite=None; Secure` for cross-origin auth
-- [ ] **AUTH-03**: `PAPERCLIP_ALLOWED_HOSTNAMES` includes Vercel domain so boardMutationGuard accepts requests
-- [ ] **AUTH-04**: `BETTER_AUTH_SECRET` set to a secure random value (no fallback to hardcoded dev secret)
+- [x] **AUTH-01**: CORS middleware configured to allow Vercel frontend origin with credentials
+- [x] **AUTH-02**: BetterAuth cookies set to `SameSite=None; Secure` for cross-origin auth
+- [x] **AUTH-03**: `PAPERCLIP_ALLOWED_HOSTNAMES` includes Vercel domain so boardMutationGuard accepts requests
+- [x] **AUTH-04**: `BETTER_AUTH_SECRET` set to a secure random value (no fallback to hardcoded dev secret)
 - [ ] **AUTH-05**: User can sign up and log in from Vercel-hosted frontend to Railway-hosted backend
 
 ### API Hardening
@@ -87,16 +87,16 @@ Deferred to future release. Tracked but not in current roadmap.
 | DEPLOY-03 | Phase 5 | Complete |
 | DEPLOY-04 | Phase 5 | Complete |
 | DEPLOY-05 | Phase 6 | Pending |
-| DEPLOY-06 | Phase 5 | Pending |
+| DEPLOY-06 | Phase 5 | Complete |
 | DEPLOY-07 | Phase 6 | Pending |
-| DEPLOY-08 | Phase 5 | Pending |
+| DEPLOY-08 | Phase 5 | Complete |
 | DEPLOY-09 | Phase 6 | Pending |
 | DEPLOY-10 | Phase 6 | Pending |
 | DEPLOY-11 | Phase 6 | Pending |
-| AUTH-01 | Phase 5 | Pending |
-| AUTH-02 | Phase 5 | Pending |
-| AUTH-03 | Phase 5 | Pending |
-| AUTH-04 | Phase 5 | Pending |
+| AUTH-01 | Phase 5 | Complete |
+| AUTH-02 | Phase 5 | Complete |
+| AUTH-03 | Phase 5 | Complete |
+| AUTH-04 | Phase 5 | Complete |
 | AUTH-05 | Phase 6 | Pending |
 | HARD-01 | Phase 8 | Pending |
 | HARD-02 | Phase 8 | Pending |

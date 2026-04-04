@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Deployment & SaaS Readiness
 status: unknown
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-04-04T17:25:52.152Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-04-04T17:26:33.201Z"
 progress:
   total_phases: 4
   completed_phases: 1
@@ -42,6 +42,7 @@ Plan: 2 of 2
 
 **Recent Trend:** —
 | Phase 05 P02 | 338 | 2 tasks | 8 files |
+| Phase 05 P01 | 7 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -54,6 +55,7 @@ Plan: 2 of 2
 - [v1.1 research]: Use Railway Redis addon (private TCP), not Upstash — persistent server, not serverless.
 - [05-02]: All frontend API/WS calls centralized through api-base.ts — API_BASE for REST, getWsHost() for WebSocket; VITE_API_URL drives cross-origin targeting at build time.
 - [05-02]: Pre-existing TS error in IssueProperties.tsx (AssigneeSelection type mismatch) blocks tsc -b — out of scope for this plan, deferred.
+- [Phase 05]: cors package chosen over hand-rolled CORS headers; CORS and boardMutationGuard both use opts.allowedHostnames; BetterAuth SameSite=None via advanced.defaultCookieAttributes
 
 ### Pending Todos
 
@@ -66,6 +68,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-04T17:24:57Z
-Stopped at: Completed 05-02-PLAN.md
-Resume file: .planning/phases/05-cross-origin-code-preparation/05-02-SUMMARY.md
+Last session: 2026-04-04T17:26:22.333Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None
