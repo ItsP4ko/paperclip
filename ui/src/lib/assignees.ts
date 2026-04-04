@@ -1,3 +1,5 @@
+import type { CompanyMember } from "../api/access";
+
 export interface AssigneeSelection {
   assigneeAgentId: string | null;
   assigneeUserId: string | null;
@@ -92,4 +94,21 @@ export function formatAssigneeUserLabel(
   if (currentUserId && userId === currentUserId) return "Me";
   if (userId === "local-board") return "Board";
   return userId.slice(0, 5);
+}
+
+export function resolveAssigneeName(
+  issue: { assigneeAgentId: string | null; assigneeUserId: string | null },
+  agents: Array<{ id: string; name: string }> | undefined,
+  members: CompanyMember[] | undefined,
+  currentUserId: string | null | undefined,
+): string | null {
+  if (issue.assigneeAgentId) {
+    return agents?.find((a) => a.id === issue.assigneeAgentId)?.name ?? null;
+  }
+  if (issue.assigneeUserId) {
+    if (currentUserId && issue.assigneeUserId === currentUserId) return "Me";
+    const member = members?.find((m) => m.principalId === issue.assigneeUserId);
+    return member?.userDisplayName ?? member?.userEmail ?? issue.assigneeUserId.slice(0, 8);
+  }
+  return null;
 }

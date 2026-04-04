@@ -94,6 +94,19 @@ type CompanyInviteCreated = {
   inviteMessage?: string | null;
 };
 
+export type CompanyMember = {
+  id: string;
+  companyId: string;
+  principalType: string;
+  principalId: string;
+  membershipRole: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  userDisplayName: string | null;
+  userEmail: string | null;
+};
+
 export const accessApi = {
   createCompanyInvite: (
     companyId: string,
@@ -158,4 +171,7 @@ export const accessApi = {
 
   cancelCliAuthChallenge: (id: string, token: string) =>
     api.post<{ cancelled: boolean; status: string }>(`/cli-auth/challenges/${id}/cancel`, { token }),
+
+  listMembers: (companyId: string) =>
+    api.get<CompanyMember[]>(`/companies/${companyId}/members`),
 };
