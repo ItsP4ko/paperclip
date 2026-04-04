@@ -7,6 +7,7 @@ import { agentsApi } from "../api/agents";
 import { authApi } from "../api/auth";
 import { issuesApi } from "../api/issues";
 import { projectsApi } from "../api/projects";
+import { accessApi } from "../api/access";
 import { useCompany } from "../context/CompanyContext";
 import { queryKeys } from "../lib/queryKeys";
 import { useProjectOrder } from "../hooks/useProjectOrder";
@@ -147,6 +148,17 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
     queryFn: () => agentsApi.list(companyId!),
     enabled: !!companyId,
   });
+
+  const { data: members } = useQuery({
+    queryKey: queryKeys.access.members(companyId!),
+    queryFn: () => accessApi.listMembers(companyId!),
+    enabled: !!companyId,
+  });
+
+  const humanMembers = useMemo(
+    () => (members ?? []).filter((m) => m.principalType === "user" && m.status === "active"),
+    [members],
+  );
 
   const { data: projects } = useQuery({
     queryKey: queryKeys.projects.list(companyId!),
@@ -410,6 +422,41 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
             <User className="h-3 w-3 shrink-0 text-muted-foreground" />
             {creatorUserLabel ? `Assign to ${creatorUserLabel}` : "Assign to requester"}
           </button>
+        )}
+        {humanMembers.filter(
+          (m) => m.principalId !== currentUserId && m.principalId !== issue.createdByUserId
+        ).length > 0 && (
+          <>
+            <div className="px-2 py-1 text-xs font-semibold text-muted-foreground mt-1">Team Members</div>
+            {humanMembers
+              .filter((m) => m.principalId !== currentUserId && m.principalId !== issue.createdByUserId)
+              .filter((m) => {
+                if (!assigneeSearch.trim()) return true;
+                const q = assigneeSearch.toLowerCase();
+                const haystack = `${m.userDisplayName ?? ""} ${m.userEmail ?? ""}`.toLowerCase();
+                return haystack.includes(q);
+              })
+              .map((m) => (
+                <button
+                  key={m.principalId}
+                  className={cn(
+                    "flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50",
+                    issue.assigneeUserId === m.principalId && "bg-accent",
+                  )}
+                  onClick={() => {
+                    handleAssigneeChange({ assigneeAgentId: null, assigneeUserId: m.principalId });
+                    setAssigneeOpen(false);
+                  }}
+                >
+                  <User className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  {m.userDisplayName ?? m.userEmail ?? m.principalId.slice(0, 8)}
+                </button>
+              ))
+            }
+          </>
+        )}
+        {sortedAgents.length > 0 && (
+          <div className="px-2 py-1 text-xs font-semibold text-muted-foreground mt-1">AI Agents</div>
         )}
         {sortedAgents
           .filter((a) => {

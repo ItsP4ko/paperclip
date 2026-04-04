@@ -52,7 +52,8 @@ import { extractProviderIdWithFallback } from "../lib/model-utils";
 import { issueStatusText, issueStatusTextDefault, priorityColor, priorityColorDefault } from "../lib/status-colors";
 import { MarkdownEditor, type MarkdownEditorRef, type MentionOption } from "./MarkdownEditor";
 import { AgentIcon } from "./AgentIconPicker";
-import { InlineEntitySelector, type InlineEntityOption } from "./InlineEntitySelector";
+import { InlineEntitySelector, type InlineEntityOption, type OptionGroup } from "./InlineEntitySelector";
+import { accessApi } from "../api/access";
 
 const DRAFT_KEY = "paperclip:issue-draft";
 const DEBOUNCE_MS = 800;
@@ -310,6 +311,12 @@ export function NewIssueDialog() {
   const { data: agents } = useQuery({
     queryKey: queryKeys.agents.list(effectiveCompanyId!),
     queryFn: () => agentsApi.list(effectiveCompanyId!),
+    enabled: !!effectiveCompanyId && newIssueOpen,
+  });
+
+  const { data: members } = useQuery({
+    queryKey: queryKeys.access.members(effectiveCompanyId!),
+    queryFn: () => accessApi.listMembers(effectiveCompanyId!),
     enabled: !!effectiveCompanyId && newIssueOpen,
   });
 
@@ -788,20 +795,35 @@ export function NewIssueDialog() {
         ? ISSUE_THINKING_EFFORT_OPTIONS.opencode_local
       : ISSUE_THINKING_EFFORT_OPTIONS.claude_local;
   const recentAssigneeIds = useMemo(() => getRecentAssigneeIds(), [newIssueOpen]);
-  const assigneeOptions = useMemo<InlineEntityOption[]>(
-    () => [
+  const assigneeGroups = useMemo<OptionGroup[]>(() => {
+    const humanOptions: InlineEntityOption[] = [
       ...currentUserAssigneeOption(currentUserId),
-      ...sortAgentsByRecency(
-        (agents ?? []).filter((agent) => agent.status !== "terminated"),
-        recentAssigneeIds,
-      ).map((agent) => ({
-        id: assigneeValueFromSelection({ assigneeAgentId: agent.id }),
-        label: agent.name,
-        searchText: `${agent.name} ${agent.role} ${agent.title ?? ""}`,
-      })),
-    ],
-    [agents, currentUserId, recentAssigneeIds],
-  );
+      ...(members ?? [])
+        .filter(
+          (m) =>
+            m.principalType === "user" &&
+            m.status === "active" &&
+            m.principalId !== currentUserId,
+        )
+        .map((m) => ({
+          id: assigneeValueFromSelection({ assigneeUserId: m.principalId }),
+          label: m.userDisplayName ?? m.userEmail ?? m.principalId.slice(0, 8),
+          searchText: `${m.userDisplayName ?? ""} ${m.userEmail ?? ""} human member`,
+        })),
+    ];
+    const agentOptions: InlineEntityOption[] = sortAgentsByRecency(
+      (agents ?? []).filter((agent) => agent.status !== "terminated"),
+      recentAssigneeIds,
+    ).map((agent) => ({
+      id: assigneeValueFromSelection({ assigneeAgentId: agent.id }),
+      label: agent.name,
+      searchText: `${agent.name} ${agent.role} ${agent.title ?? ""}`,
+    }));
+    return [
+      ...(humanOptions.length > 0 ? [{ heading: "Team Members", options: humanOptions }] : []),
+      ...(agentOptions.length > 0 ? [{ heading: "AI Agents", options: agentOptions }] : []),
+    ];
+  }, [agents, members, currentUserId, recentAssigneeIds]);
   const projectOptions = useMemo<InlineEntityOption[]>(
     () =>
       orderedProjects.map((project) => ({
@@ -1026,7 +1048,8 @@ export function NewIssueDialog() {
               <InlineEntitySelector
                 ref={assigneeSelectorRef}
                 value={assigneeValue}
-                options={assigneeOptions}
+                options={[]}
+                groups={assigneeGroups}
                 placeholder="Assignee"
                 disablePortal
                 noneLabel="No assignee"
