@@ -76,6 +76,7 @@ export interface Config {
   heartbeatSchedulerIntervalMs: number;
   companyDeletionEnabled: boolean;
   telemetryEnabled: boolean;
+  redisUrl: string | undefined;
 }
 
 export function loadConfig(): Config {
@@ -269,5 +270,6 @@ export function loadConfig(): Config {
     heartbeatSchedulerIntervalMs: Math.max(10000, Number(process.env.HEARTBEAT_SCHEDULER_INTERVAL_MS) || 30000),
     companyDeletionEnabled,
     telemetryEnabled: fileConfig?.telemetry?.enabled ?? true,
+    redisUrl: process.env.REDIS_URL?.trim() || undefined,
   };
 }
