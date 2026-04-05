@@ -175,7 +175,7 @@ export function Analytics() {
               <RefreshCw className={`h-3 w-3 mr-1.5 ${generateMutation.isPending ? "animate-spin" : ""}`} />
               Analyze
             </Button>
-            <Link to="cost-recommendations" className="text-xs text-muted-foreground hover:text-foreground">
+            <Link to="../cost-recommendations" className="text-xs text-muted-foreground hover:text-foreground">
               View all →
             </Link>
           </div>
