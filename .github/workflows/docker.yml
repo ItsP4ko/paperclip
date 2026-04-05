@@ -60,4 +60,4 @@ jobs:
     if: github.ref == 'refs/heads/master'
     steps:
       - name: Trigger Easypanel redeploy
-        run: curl -f -s -X POST "${{ secrets.EASYPANEL_DEPLOY_WEBHOOK }}"
+        run: curl -s --max-time 10 -X POST "${{ secrets.EASYPANEL_DEPLOY_WEBHOOK }}" || true
