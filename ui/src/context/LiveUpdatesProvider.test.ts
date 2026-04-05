@@ -12,6 +12,7 @@ describe("LiveUpdatesProvider issue invalidation", () => {
         invalidations.push(input);
       },
       getQueryData: () => undefined,
+      isMutating: () => 0,
     };
 
     __liveUpdatesTestUtils.invalidateActivityQueries(

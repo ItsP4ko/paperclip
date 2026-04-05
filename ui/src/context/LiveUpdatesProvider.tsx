@@ -490,15 +490,33 @@ function invalidateActivityQueries(
   const entityId = readString(payload.entityId);
 
   if (entityType === "issue") {
-    queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(companyId) });
+    // Guard: check if any issue-related optimistic mutation is in-flight.
+    // If so, skip issue list and detail invalidations to avoid clobbering optimistic cache values.
+    // Uses prefix matching: ["issue-status"] matches ["issue-status", "<any-issueId>"].
+    const isIssueMutating =
+      queryClient.isMutating({ mutationKey: ["issue-status"] }) > 0 ||
+      queryClient.isMutating({ mutationKey: ["issue-update"] }) > 0 ||
+      queryClient.isMutating({ mutationKey: ["create-subtask"] }) > 0;
+
+    if (!isIssueMutating) {
+      // Safe: no optimistic write in-flight — invalidate list normally
+      queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(companyId) });
+    }
+
+    // These filtered lists are not directly patched by optimistic writes — always safe
     queryClient.invalidateQueries({ queryKey: queryKeys.issues.listMineByMe(companyId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.issues.listTouchedByMe(companyId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.issues.listUnreadTouchedByMe(companyId) });
+
     if (entityId) {
       const details = readRecord(payload.details);
       const issueRefs = resolveIssueQueryRefs(queryClient, companyId, entityId, details);
       for (const ref of issueRefs) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.issues.detail(ref) });
+        if (!isIssueMutating) {
+          // Safe: no optimistic write in-flight — invalidate detail normally
+          queryClient.invalidateQueries({ queryKey: queryKeys.issues.detail(ref) });
+        }
+        // Non-optimistic keys — always safe to invalidate
         queryClient.invalidateQueries({ queryKey: queryKeys.issues.comments(ref) });
         queryClient.invalidateQueries({ queryKey: queryKeys.issues.activity(ref) });
         queryClient.invalidateQueries({ queryKey: queryKeys.issues.runs(ref) });
