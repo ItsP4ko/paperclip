@@ -1,17 +1,17 @@
 # Project Research Summary
 
-**Project:** Paperclip — v1.1 Deployment & SaaS Readiness
-**Domain:** Monolith split — Vite SPA on Vercel CDN + Express 5 on Railway + Supabase PostgreSQL + Redis + in-process API Gateway
-**Researched:** 2026-04-04
+**Project:** Paperclip — v1.2 Performance & Mobile Auth Fix
+**Domain:** SaaS task management — optimistic UI, aggressive caching, WebSocket optimization, cross-origin mobile auth
+**Researched:** 2026-04-05
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Paperclip v1.1 is not a rewrite — it is a deployment architecture migration. The existing Express 5 + Drizzle ORM + BetterAuth + React 19 stack remains unchanged; what changes is how it is deployed and served. The v1.0 monolith (Express serves both UI and API, embedded-postgres) splits into three layers: Vercel CDN hosts the static Vite build, Railway runs the Express API container using the existing Dockerfile, and Supabase replaces embedded-postgres as the shared global database. A Redis cache layer sits in front of Supabase for rate-limit state and optional query caching. All API Gateway concerns (CORS, rate limiting, security headers) are implemented as Express middleware in the existing server process — no separate gateway service is warranted at this scale.
+Paperclip v1.2 is a targeted performance and compatibility milestone layered onto an already-deployed SaaS stack. The core challenge is not introducing new technology — it is correctly wiring four independent optimization patterns (optimistic mutations, cache tuning, WebSocket keepalive, mobile auth) into a codebase that partially implements each one. All four goals are achievable with zero new npm dependencies by using capabilities already present in TanStack Query v5, `ws`, BetterAuth, and Vercel. The recommended implementation order is: WS compression fix first (single-line, immediately measurable), cache tuning second (zero risk), mobile auth third (highest integration complexity), and optimistic mutations last (most UI state to coordinate).
 
-The recommended approach is sequenced by hard dependencies: provision Supabase first (Railway needs DATABASE_URL at boot), deploy Railway second (Vercel needs the stable API URL at Vite build time), then deploy Vercel, then wire cross-domain env vars and redeploy Railway. This order prevents the most common failure mode — deploying the frontend before the backend URL is known, resulting in a bundle with an undefined VITE_API_BASE_URL. The minimal code changes required are: (1) fix three WebSocket URL constructions that use window.location.host, (2) update the API client base URL to use VITE_API_BASE_URL, (3) add CORS and rate-limit middleware to app.ts, and (4) configure BetterAuth cookies for cross-origin (SameSite=None; Secure).
+The principal risk is the interaction between the new optimistic update layer and the existing WebSocket-driven invalidation in `LiveUpdatesProvider`. The WS handler currently calls `invalidateActivityQueries` unconditionally on every `activity.logged` event — this fires a background refetch that can race with and overwrite in-flight optimistic values. This must be addressed with an `isMutating` guard before shipping any optimistic mutation. A secondary risk is applying a global `staleTime` increase without auditing per-query requirements: the "My Tasks" empty-state bug (a known v1.1 regression) must be diagnosed and fixed before any caching changes are applied, or the caching change will mask the root cause and make the bug harder to reproduce.
 
-The primary risks are cross-origin authentication failures, which are silent and confusing. SameSite=Lax cookies (the BetterAuth default) are silently blocked on cross-site requests — the user appears to log in but every subsequent request returns 401. The boardMutationGuard middleware has the same pattern: it accepts GET requests but returns 403 on all mutations from the Vercel origin. Both are env-var fixes with small code changes, but they must be done before end-to-end testing is possible. The Supabase connection mode is the other critical decision: the transaction-mode pooler (port 6543) breaks Drizzle's prepared statements; the session-mode pooler (port 5432) requires no code changes and is the correct choice for a long-lived Railway container.
+The mobile auth fix has two credible strategies: Strategy A (BetterAuth bearer plugin, code-only) and Strategy B (Vercel reverse proxy, config-only). Strategy B is cleaner for HTTP requests but cannot proxy WebSocket upgrades, leaving the WS connection still cross-origin and requiring a token fallback anyway. Strategy A solves both HTTP and WS in one pass and is the self-contained choice. Custom domain (`api.paperclipai.com` same eTLD+1 as `app.paperclipai.com`) eliminates the problem entirely at the infrastructure level and should be the long-term target, but the bearer plugin unblocks mobile users now without DNS propagation delays.
 
 ---
 
@@ -19,169 +19,164 @@ The primary risks are cross-origin authentication failures, which are silent and
 
 ### Recommended Stack
 
-The existing stack (React 19, Vite, Tailwind v4, shadcn/ui, Express 5, Drizzle ORM, BetterAuth, postgres.js) is fully retained. The only additions are deployment infrastructure packages. The `@paperclipai/db` package already supports external Postgres via DATABASE_URL — no DB-layer changes are needed to connect to Supabase beyond setting the environment variable and capping the postgres-js connection pool to `max: 5` (Supabase free tier allows 60 total connections).
+No new packages are required. All four v1.2 goals use APIs already available in the installed versions of `@tanstack/react-query@^5.90.21`, `ws@^8.19.0`, `better-auth@1.4.18`, and Vercel's config layer. The `main.tsx` QueryClient configuration needs two value changes (`staleTime`, `gcTime`). The WebSocket server needs one option added (`perMessageDeflate: false`). BetterAuth needs one plugin added (`bearer()`). The Vercel proxy approach requires editing `vercel.json` — but must address the WS auth gap separately.
 
-New packages added to `server/` only:
-- `redis` (node-redis v5.11.0): official Redis client, full TypeScript support, promise-based API — use this, not the maintenance-mode ioredis
-- `helmet` (v8.1.0): HTTP security headers with zero config, Express 4.x and 5.x compatible
-- `express-rate-limit` (v7.x): per-IP rate limiting with Redis store support
-- `rate-limit-redis`: Redis store for express-rate-limit, persists rate-limit state across restarts
+**Core technologies:**
+- `@tanstack/react-query v5`: Optimistic mutations via `onMutate`/`onError`/`onSettled` + `cancelQueries` before `setQueryData` — already installed, pattern already partially used in `IssueDetail.tsx`
+- `ws v8`: Disable `perMessageDeflate` on `WebSocketServer` — small JSON payloads gain latency improvement with zero bandwidth cost at Paperclip's scale
+- `better-auth`: Add `bearer()` plugin — enables `Set-Auth-Token` response header after sign-in, which clients use as `Authorization: Bearer` fallback when cookies are blocked
+- Vercel `vercel.json` rewrites: Proxy `/api/:path*` to the Easypanel backend — makes API calls same-origin, eliminating Safari ITP for HTTP; does NOT proxy WebSocket upgrades
 
-**Core technologies (additive only):**
-- Railway: backend container host — native Dockerfile detection, private Redis networking, auto-assigned public domain, PORT env injection
-- Vercel: frontend CDN — zero-config Vite/React SPA, VITE_ env var injection at build time, SPA routing via vercel.json rewrite
-- Supabase: global Postgres host — session-mode pooler (port 5432), drop-in compatible with existing Drizzle + postgres.js setup
-- Railway Redis addon: TCP Redis in same private network, fixed pricing, no HTTP overhead — preferred over Upstash for persistent servers
-- `helmet` + `express-rate-limit` + `cors`: in-process API gateway — no separate gateway service required at v1.1 scale
+**Critical version note:** TanStack Query `gcTime` must be set explicitly when `staleTime` is raised above the `gcTime` default (5 min). Setting `staleTime: 5min` with `gcTime: 5min` means entries expire from memory the moment they go stale, defeating the navigation cache benefit. The correct pairing is `staleTime: 5min` + `gcTime: 15min`.
 
-**What NOT to add:** ioredis (maintenance mode — use node-redis v5), Upstash (HTTP-based, designed for serverless not persistent servers), Kong/Nginx/Envoy as a separate gateway service, Supabase transaction-mode pooler without `prepare: false`, a separate `cors` npm package conflicts with BetterAuth if added naively, Supabase Auth (replacing BetterAuth is a massive rewrite), Supabase RLS (bypassed by Drizzle, creates competing auth systems).
+**What NOT to add:** `socket.io` (unnecessary abstraction over `ws`), `@tanstack/query-persist-client` (localStorage persistence adds stale-data bugs), `swr` (duplicates TanStack Query), `ioredis` (maintenance mode), JWT bearer tokens as primary auth (XSS-vulnerable localStorage), SSE replacing WebSocket (no improvement for the actual latency problem).
 
 ### Expected Features
 
-The milestone has a clear two-tier structure: P1 features must all work for multi-user end-to-end testing to be possible; P2 features add hardening and are deferred until the core deployment is verified stable.
+**Must have (table stakes — v1.2 launch blockers):**
+- Optimistic status change — most frequent action; the 300-800ms round-trip wait is visibly broken by modern standards
+- My Tasks page renders correctly — a known v1.1 regression; empty state despite having tasks destroys trust in the view
+- `staleTime` on issue lists (2-5 min) — eliminates loading spinner on most navigations without code complexity
+- Mobile login fix — iOS Safari and Android Chrome users currently cannot log in on the cross-origin deployed stack
+- WebSocket heartbeat (ping/pong, 25s client interval) — detects dead connections; current 30s server-only ping does not cover silent NAT/proxy drops from the client side
 
-**Must have (table stakes — P1, "deployed and testable"):**
-- Frontend on Vercel CDN — Vite build, SPA routing via vercel.json rewrite, VITE_API_BASE_URL pointing to Railway
-- Backend on Railway — existing Dockerfile, SERVE_UI=false, stable public URL, GET /health endpoint
-- Supabase as database — DATABASE_URL injected, session-mode pooler URL (port 5432), initial migrations applied manually by user
-- CORS configured — Railway explicitly allows Vercel origin with credentials, BetterAuth cookies work cross-origin
-- VITE_API_BASE_URL wired throughout frontend — all fetch calls and three WebSocket URL constructions updated
-- End-to-end smoke test passing — owner invites, user joins, task assigned, status changed, handoff to AI agent
+**Should have (v1.2 polish — add once core features are stable):**
+- Optimistic assignment change — same code pattern as status; ships naturally as a second iteration
+- Rollback error toast — silent revert is a UX failure; `useToast`/`pushToast` infrastructure already exists
+- `gcTime: 10-15 min` on issue detail — back-navigation feels instant
+- Narrow WS invalidation (`setQueryData` instead of `invalidateQueries` for known payload shapes) — reduces post-WS refetch traffic by ~80% for issue updates
 
-**Should have (hardening — P2, add after core deployment is stable):**
-- Rate limiting — express-rate-limit middleware; add after base deployment confirmed (limits interfere with debugging otherwise)
-- HTTP security headers — helmet middleware; zero-config, low risk, but defer to keep debugging scope small
-- Redis query cache — cache-aside for read-heavy list endpoints; add once Supabase query patterns are understood under real load
-- Redis BetterAuth session cache — reduces per-request DB latency; add after Redis is working for query cache
-
-**Defer (v2+):**
-- Preview deployment CORS — Vercel preview URLs (random subdomains) in BetterAuth trustedOrigins; needed for PR review workflow
-- S3-compatible file storage — replace local disk attachments; ephemeral Railway filesystem loses files on redeploy
-- Horizontal Railway scaling — multiple replicas require Redis-backed sessions
-- Custom domain — eliminates CORS complexity by using same-root domain with subdomains (app.paperclip.ai / api.paperclip.ai)
+**Defer to v1.3+:**
+- Hover-prefetch on issue list rows — low value, not fixing anything broken
+- Optimistic comment submission — `OptimisticIssueComment` infrastructure exists; wire through `useMutation` properly in a future milestone
+- Background sync on reconnect (targeted state-sync vs. broad invalidation)
+- PWA shell caching — independent from API caching; a separate Vite plugin integration
 
 ### Architecture Approach
 
-The target architecture separates concerns cleanly across three tiers with no shared process boundaries: Vercel CDN delivers static assets, Railway runs the Express API container with all gateway middleware inline, and Supabase provides the persistent data layer with Redis as an optional caching layer in the same Railway private network. The critical insight is that the Vite dev proxy (which makes local development same-origin) masks the cross-origin problem completely — developers working locally never see CORS errors, WebSocket construction problems, or cookie issues. Every cross-origin pitfall only manifests in production.
+The v1.2 architecture is entirely additive. The existing layered structure (Vercel/React → Easypanel/Express → Supabase/PG, with an in-process EventEmitter WS broadcast) is unchanged. Eight existing files are modified and one new utility file is created (`ui/src/lib/auth-token.ts` to encapsulate bearer token read/write/clear). The key architectural constraint is that optimistic cache writes and WS-driven cache invalidations operate on the same TanStack Query store — they must be coordinated, not treated as independent systems.
 
-**Major components:**
-1. Vercel CDN (ui/vercel.json + VITE_API_BASE_URL) — static SPA host with SPA routing fallback; VITE_ env vars baked into the JS bundle at Vite build time, not at runtime
-2. Railway Express container (SERVE_UI=false, existing Dockerfile) — API-only server with inline gateway middleware stack: cors → rateLimit → express.json → existing middleware chain
-3. Supabase PostgreSQL (session-mode pooler, port 5432) — drop-in replacement for embedded-postgres via DATABASE_URL; schema and migrations unchanged
-4. Railway Redis (private TCP, same project network) — rate-limit state store (required for multi-instance correctness); optional query cache for high-read endpoints
-5. BetterAuth cross-origin config (SameSite=None; Secure cookies + PAPERCLIP_ALLOWED_HOSTNAMES) — two env vars plus two lines of cookie config unlock cross-origin auth
+**Major components and their v1.2 changes:**
+1. `main.tsx` QueryClient — raise `staleTime` to 5 min and `gcTime` to 15 min; add per-query overrides for real-time data (`staleTime: 0` for `sidebarBadges`, `activeRun`, session)
+2. `IssueProperties.tsx` mutations — add `onMutate`/`onError` optimistic shell for status and assignee pickers; update both `issues.detail(id)` and `issues.list(companyId)` in `onMutate`
+3. `LiveUpdatesProvider.tsx` — add `isMutating` guard before WS-triggered `invalidateActivityQueries`; add app-level 25s `__ping` interval; add `setQueryData` fast-path for `issue.updated` events with known full payload; trigger broad `invalidateQueries` on reconnect when `reconnectAttempt > 0`
+4. `live-events-ws.ts` (server) — disable `perMessageDeflate`; reduce server ping to 15s; extend WS upgrade auth to validate user Bearer tokens (not only agent API keys)
+5. `better-auth.ts` (server) — add `bearer()` plugin
+6. `auth.ts` + `client.ts` (client) — extract `Set-Auth-Token` header post sign-in; inject `Authorization: Bearer` header when localStorage token present
+7. `MyIssues.tsx` — fix empty-state bug (add `enabled: !!userId` guard; verify `assigneeUserId=me` server filter)
+8. `auth-token.ts` (new) — single source of truth for bearer token storage; required before any other auth changes
 
-**Build order is determined by URL dependency chain:**
-Supabase provisioned → Railway deployed (gets public URL) → Vercel deployed (uses Railway URL at build time) → Railway env updated with Vercel origin → Railway redeploys → end-to-end validation.
-
-**Key architectural decisions:**
-- Use the `cors` npm package in Express (not a duplicate of BetterAuth CORS — BetterAuth's CORS only covers auth routes; the `cors` package covers all API routes)
-- PAPERCLIP_ALLOWED_HOSTNAMES env var already exists and is read by `deriveAuthTrustedOrigins()` — no new config infrastructure needed
-- An existing `/api/health` route may already exist (routes/health.js seen in ARCHITECTURE.md) — verify before adding a new one
+**Build order constraint:** `auth-token.ts` → server bearer plugin → client token extraction → WS bearer auth → caching config → optimistic mutations → WS fast-path → MyIssues bug fix → WS ping interval.
 
 ### Critical Pitfalls
 
-1. **WebSocket URLs built from window.location.host (3 specific files)** — In production, Vercel frontend constructs WebSocket URLs pointing at Vercel (wss://app.vercel.app/api/...) which Vercel cannot serve. Vercel does not support WebSockets at all. Fix: replace `window.location.host` with `new URL(import.meta.env.VITE_API_BASE_URL).host` in LiveUpdatesProvider.tsx (line 776), useLiveRunTranscripts.ts (line 189), and AgentDetail.tsx (line 3567). Hard blocker — live events stop working silently while REST calls succeed.
+1. **WS invalidation races optimistic update** — `invalidateActivityQueries` fires unconditionally on every `activity.logged` event, triggering a background refetch that can overwrite an in-flight optimistic value. Fix: gate WS-triggered invalidation with `queryClient.isMutating({ mutationKey: ['issues', 'update'] }) > 0`. Always `await queryClient.cancelQueries(queryKey)` in `onMutate` before `setQueryData`. Address in Phase 1 before any optimistic mutation ships.
 
-2. **API client uses relative /api path** — `ui/src/api/client.ts` has `const BASE = "/api"` which resolves to the Vercel CDN in production, returning 404 for all API calls. `ui/src/api/auth.ts` also uses literal `/api/auth/...` strings. Fix: `const BASE = (import.meta.env.VITE_API_BASE_URL ?? "") + "/api"`. When VITE_API_BASE_URL is unset in local dev, relative paths still work via the Vite proxy.
+2. **Concurrent rapid mutations cause visible flash** — `cancelQueries` only cancels fetches, not sibling mutations. Double-clicking a status button creates a race where `onSettled` from mutation A triggers a refetch that overwrites mutation B's optimistic value. Fix: in `onSettled`, check `queryClient.isMutating({ mutationKey }) === 1` before calling `invalidateQueries` — only the last in-flight mutation for that entity should trigger the reconcile refetch.
 
-3. **BetterAuth SameSite=Lax blocks all cross-origin cookies** — Sign-in returns 200 but every subsequent authenticated request returns 401 because the session cookie is never sent. Fix requires both: (a) `advanced.defaultCookieAttributes: { sameSite: "none", secure: true }` in better-auth.ts, and (b) BETTER_AUTH_TRUSTED_ORIGINS env var set to the Vercel production URL. Both steps are required — either alone is insufficient.
+3. **Global staleTime increase breaks "My Tasks" and badge count** — raising `staleTime` globally is a blunt instrument. The My Tasks empty-state bug must be fixed first; increasing staleTime before the bug is fixed will suppress the background refetch that currently masks it. Use per-query staleTime overrides, never a single global value for all queries.
 
-4. **boardMutationGuard returns 403 for all mutations from the Vercel frontend** — GET requests succeed but POST/PATCH/DELETE return 403 because the guard matches request origin against the server's own hostname only. Fix: add the Vercel hostname to PAPERCLIP_ALLOWED_HOSTNAMES env var in Railway. No code changes needed — the config already reads and processes this env var.
+4. **iOS Safari ITP blocks cookies regardless of `SameSite=None`** — Safari enforces first-party classification at the eTLD+1 level; `SameSite=None; Secure` already set in production still fails on iOS if frontend and backend are on different registrable domains. Test on a real iPhone with default privacy settings — iOS Simulator does NOT enforce ITP. Public suffix platform domains cannot be made first-party; custom domain is required for a permanent fix.
 
-5. **Supabase transaction-mode pooler (port 6543) silently breaks Drizzle** — postgres.js sends prepared statements by default; transaction mode does not support prepared statements. Results in `PreparedStatementAlreadyExists` or `query is not prepared` errors in Railway logs. Fix: use session-mode pooler (port 5432) which requires no code changes. Only add `prepare: false` to createDb() in packages/db/src/client.ts if transaction mode is specifically required later.
+5. **WS reconnect misses events emitted during disconnect window** — in-process EventEmitter has no event buffer and no "last event ID." After reconnect, the frontend is silently behind. Fix: in the `onopen` handler when `reconnectAttempt > 0`, immediately call `invalidateQueries` for all high-priority company keys. This is the same location as the toast suppression logic (`RECONNECT_SUPPRESS_MS`).
 
-6. **BETTER_AUTH_SECRET left as "paperclip-dev-secret" in production** — The fallback in better-auth.ts uses this known string; anyone with the source code can forge valid session tokens. Railway startup produces no warning if the env var is absent. Fix: `openssl rand -base64 32` and set as BETTER_AUTH_SECRET in Railway before any public-facing deployment.
+6. **Optimistic rollback must be tested on the error path** — happy-path CI passes but rollback code is untested. Always implement full three-callback pattern (`onMutate` snapshot, `onError` rollback + toast, `onSettled` invalidate) and write an error-path test by mocking the API call to reject.
 
 ---
 
 ## Implications for Roadmap
 
-The research reveals a clear two-phase structure. All P1 features are atomically interdependent — they cannot be independently verified before the others are in place, so they belong in a single phase. P2 hardening features are genuinely independent of each other and can be built in any order after P1 is stable. The dependency chain forces a strict internal sequence within Phase 1, but the phase as a whole is deliverable in one iteration.
+Based on combined research, the natural phase structure follows the dependency graph and risk profile of each change. Features that are preconditions for other features come first; higher-risk integration changes come after simpler changes are verified in production.
 
-### Phase 1: Core Deployment Split
+### Phase 1: Optimistic UI Mutations
 
-**Rationale:** All P1 features are interdependent and must be deployed together before any end-to-end testing is possible. The URL dependency chain (Supabase URL → Railway deploy → Railway URL → Vercel deploy → Vercel URL → Railway CORS config → Railway redeploy) means this is one logical phase with a fixed internal sequence. Splitting it would create a phase that cannot be verified until the next phase completes — a false checkpoint. All critical pitfalls (Pitfalls 1-6) must also be resolved before the first deployment is meaningful.
+**Rationale:** This is the highest-visibility user-facing change and has the most complex interaction with the existing WS invalidation system. It must be implemented first so the WS-race pitfall is solved at the foundation before Phase 2's caching changes extend the window where races can occur. The My Tasks bug fix is a prerequisite for Phase 2's caching verification and belongs here.
 
-**Delivers:** A publicly accessible multi-user deployment where the full end-to-end smoke test is possible — owner invites user, user joins, task assigned to human, status changed, handoff to AI agent.
+**Delivers:** Status changes and assignment changes reflect immediately in the UI; rollback with error toast on failure; concurrent mutation flicker eliminated; My Tasks page renders correctly.
 
-**Addresses (P1 features from FEATURES.md):**
-- Frontend on Vercel CDN (vercel.json + VITE_API_BASE_URL)
-- Backend on Railway (SERVE_UI=false, GET /health endpoint)
-- Supabase as database (DATABASE_URL, session-mode pooler, manual migration run by user)
-- CORS and cross-origin BetterAuth session cookies configured
-- VITE_API_BASE_URL wired throughout frontend (API client.ts + auth.ts + 3 WebSocket URL files)
-- End-to-end smoke test execution and sign-off
+**Addresses:** Optimistic status change (P1), optimistic assignment change (P2), rollback error toast (P2), My Tasks page empty-state bug (P1).
 
-**Code changes (all small and targeted):**
-- `ui/src/api/client.ts` — update BASE URL to use VITE_API_BASE_URL
-- `ui/src/api/auth.ts` — update literal /api/auth strings
-- `ui/src/context/LiveUpdatesProvider.tsx` (line 776) — WebSocket URL from env
-- `ui/src/components/transcript/useLiveRunTranscripts.ts` (line 189) — WebSocket URL from env
-- `ui/src/pages/AgentDetail.tsx` (line 3567) — WebSocket URL from env
-- `server/src/app.ts` — mount cors + rateLimit middleware at top of stack (before existing middleware)
-- `server/src/auth/better-auth.ts` — add SameSite=None; Secure to cookie attributes
-- `packages/db/src/client.ts` — add `max: 5` to postgres-js pool constructor
-- NEW: `ui/vercel.json` — SPA routing rewrite rule
+**Avoids:** Pitfall 1 (WS race), Pitfall 3 (concurrent mutations), Pitfall 7 (incomplete rollback).
 
-**Avoids (all critical pitfalls from PITFALLS.md):**
-- WebSocket URLs pointing at Vercel (fix before any deployment)
-- API client resolving to Vercel CDN (fix alongside WebSocket URLs)
-- BetterAuth cookie blocking cross-origin sessions (env + code)
-- boardMutationGuard 403 on all mutations (PAPERCLIP_ALLOWED_HOSTNAMES env)
-- SERVE_UI=true serving stale Railway-bundled UI (SERVE_UI=false in Railway env)
-- BETTER_AUTH_SECRET left as default (generate and set before public access)
+**Key work:**
+- Add `isMutating` guard to `LiveUpdatesProvider`'s `invalidateActivityQueries`
+- Add `onMutate`/`onError`/`onSettled` to `IssueProperties.tsx` status and assignee mutations; update both detail and list caches in `onMutate`
+- Fix `MyIssues.tsx` empty-state bug (session-aware `enabled` guard + query key audit)
+- Write error-path test for each optimistic mutation
 
-### Phase 2: API Hardening
+### Phase 2: Aggressive Caching
 
-**Rationale:** Rate limiting, security headers, and Redis caching are genuine optimizations and protection layers — they do not affect correctness of the deployment. Adding them during Phase 1 would introduce debugging noise (rate limits block rapid manual testing) and premature cache key design (optimal cache strategy depends on observed Supabase query patterns). These features are genuinely independent of each other and can be built in any order within this phase.
+**Rationale:** Cannot be done safely until Phase 1 is complete. The My Tasks bug must be verified fixed before staleTime is changed — the staleTime change would suppress the background refetch that currently makes the bug intermittent, making it harder to confirm the fix. The `isMutating` guard must be in place or higher staleTime will extend the WS race window. Once Phase 1 is stable, cache tuning is low-risk and high-reward.
 
-**Delivers:** A production-hardened API layer resilient to abuse and performant under real user load. Redis also enables future horizontal Railway scaling with distributed rate-limit state.
+**Delivers:** Navigation between previously-visited list and detail pages is instant (no loading skeleton); revisiting an issue list within 5 minutes shows cached data without a spinner.
 
-**Addresses (P2 features from FEATURES.md):**
-- HTTP security headers (helmet — HSTS, CSP, X-Frame-Options, X-Content-Type)
-- Rate limiting (express-rate-limit + RedisStore — distributed, persistent across restarts)
-- Redis query cache (cache-aside pattern for read-heavy list endpoints)
-- Redis BetterAuth session cache (secondaryStorage adapter — reduces DB round-trip per authenticated request)
+**Addresses:** `staleTime` increase on issue lists, `gcTime` increase on issue detail, per-query overrides for real-time data.
 
-**Uses (from STACK.md):**
-- `redis` (node-redis v5.11.0) — TCP client for Railway Redis private network
-- `helmet` v8.1.0 — zero-config security headers, Express 5 compatible
-- `express-rate-limit` v7.x + `rate-limit-redis` — distributed rate limiting
+**Avoids:** Pitfall 2 (stale list after mutation), Pitfall 6 (global staleTime breaks features).
 
-**Avoids (from PITFALLS.md):**
-- Never cache BetterAuth session validation in Redis — must always hit DB to detect revoked sessions
-- Scope Redis cache keys per-company to prevent cascade invalidation on writes
-- Use short TTLs; never cache unbounded list queries (Redis string size limits)
+**Key work:**
+- Audit every `useQuery` call and assign per-query `staleTime` category (Infinity / 5min / 30s / 0)
+- Set `staleTime: 5min` + `gcTime: 15min` in `main.tsx` QueryClient
+- Set `staleTime: 0` overrides for `sidebarBadges`, `activeRun`, health check, session
+- Verify "My Tasks" renders correctly after staleTime change (regression gate)
 
-### Phase 3: Future (v1.2+ — Post-Milestone)
+### Phase 3: Mobile Cross-Origin Auth Fix
 
-**Rationale:** These items require architectural decisions that go beyond the v1.1 scope. Each is triggered by a specific growth event, not by the current multi-user testing goal.
+**Rationale:** Independent of Phases 1 and 2 in terms of code, but scheduled third because it has the highest integration risk (server change + client change + WS auth extension) and requires a real iOS device for verification. Shipping caching and optimistic updates first gives the team a stable baseline to verify mobile auth against.
 
-**Defers (from FEATURES.md v2+):**
-- Preview deployment CORS — Vercel preview random subdomain URLs in BetterAuth trustedOrigins; needed for PR review workflow but not for production testing
-- S3-compatible file storage — replace local disk attachments lost on Railway redeploy; not required for v1.1 smoke test (no file uploads in test plan)
-- Horizontal Railway scaling — requires Redis-backed sessions (not in-memory); defer until load justifies multiple instances
-- Custom domain — app.paperclip.ai → Vercel, api.paperclip.ai → Railway; eliminates CORS complexity but requires DNS management
+**Delivers:** iOS Safari and Android Chrome users can log in and maintain session on the cross-origin deployed stack; WS connection authenticated on mobile.
+
+**Addresses:** Mobile login fix (P1).
+
+**Avoids:** Pitfall 4 (iOS Safari ITP silent session loss).
+
+**Key work:**
+- Create `ui/src/lib/auth-token.ts` (bearer token encapsulation)
+- Add `bearer()` plugin to `server/src/auth/better-auth.ts`
+- Extract `Set-Auth-Token` header in `ui/src/api/auth.ts` after sign-in
+- Inject `Authorization: Bearer` header in `ui/src/api/client.ts` when token present
+- Extend WS upgrade auth in `live-events-ws.ts` to validate user Bearer tokens (critical gap — currently validates only agent API keys)
+- Verify on real iPhone with default Safari privacy settings (Simulator is insufficient)
+- Document custom domain as permanent fix path
+
+### Phase 4: WebSocket Optimization
+
+**Rationale:** The WS latency fix (`perMessageDeflate: false`) is a single-line server change and could ship at any time — but scheduling it last means it is verified independently without noise from other changes. The reconnect invalidation and narrow WS invalidation fast-path belong here.
+
+**Delivers:** Reduced per-message WS latency; dead connections detected within 30s; cache consistency restored after reconnect; ~80% reduction in post-WS refetch traffic for issue updates.
+
+**Addresses:** WS heartbeat (P1), reconnect event catch-up, narrow WS invalidation `setQueryData` fast-path (P2), `perMessageDeflate: false` (server config).
+
+**Avoids:** Pitfall 5 (missed events after reconnect).
+
+**Key work:**
+- `perMessageDeflate: false` on `WebSocketServer` in `live-events-ws.ts`
+- Reduce server ping interval from 30s to 15s
+- Add app-level 25s `__ping` client message in `LiveUpdatesProvider.tsx`
+- Add `invalidateQueries` block for all company keys in `onopen` when `reconnectAttempt > 0`
+- Audit `publishLiveEvent` payload completeness, then add `setQueryData` fast-path for `issue.updated` events with full payload
+- Verify before/after WS message latency on Easypanel deployment
 
 ### Phase Ordering Rationale
 
-- **Supabase before Railway deploy:** Railway container crashes on boot without a valid DATABASE_URL — embedded-postgres is unavailable in the cloud environment. Supabase must be provisioned and the connection string known before Railway deployment begins.
-- **Railway before Vercel deploy:** VITE_API_BASE_URL is baked into the Vite JS bundle at Vercel build time. If Railway URL is unknown, the env var is undefined in the production bundle and all API calls resolve to undefined — fails silently.
-- **Cross-domain env wiring after both platforms have URLs:** PAPERCLIP_ALLOWED_ORIGINS and PAPERCLIP_ALLOWED_HOSTNAMES require the Vercel URL, which is only known after Vercel deployment. This env update triggers a Railway redeploy — the final step before testing.
-- **Hardening phase only after smoke test passes:** Rate limits and Redis cache add variables that complicate debugging auth and CORS issues. Confirming the base deployment works first eliminates confounding factors.
-- **P3 deferred entirely:** All P3 items require new external service integrations (S3) or load-triggered scaling decisions that are premature at v1.1 multi-user testing scale.
+- Phase 1 must precede Phase 2: The `isMutating` guard prevents the WS race that becomes more problematic with longer staleTime. The My Tasks bug must be fixed and confirmed before staleTime changes can be safely assessed.
+- Phase 2 before Phase 3: Provides a stable, verified caching baseline. Mobile auth introduces a new auth code path — testing it against a known-good cache state reduces debug surface.
+- Phase 3 before Phase 4: WS auth extension (Phase 3) and WS latency fix (Phase 4) both touch `live-events-ws.ts`. Keeping them in separate phases avoids concurrent edits to the same file and ensures the auth change is independently verified before the server restart required by the latency fix.
+- Phase 4 partial parallelism: `perMessageDeflate: false` and the ping interval change are server-side config changes independent of bearer plugin work. They can ship as a hotfix to Phase 3 if WS latency is actively blocking users during mobile auth testing.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
 
-- **Phase 2 (Redis query cache):** Cache key design, TTL strategy, and write-invalidation pattern depend on actual query access patterns observed in Phase 1. The STACK.md documents the cache-aside pattern and suggests key formats, but the full key taxonomy should be designed from observed Phase 1 data. Flag for `/gsd:research-phase` before Phase 2 planning begins.
+- **Phase 3 (WS user Bearer token auth):** The `live-events-ws.ts` WS upgrade path validates tokens only against `agentApiKeys` — extending it to validate user session tokens requires careful reading of how BetterAuth resolves sessions from `Authorization` headers. The critical gap: the current path does not call `resolveBetterAuthSessionFromHeaders` for user tokens at all. This needs an implementation-time audit of the WS auth handler before coding begins.
 
-Phases with standard patterns (skip research-phase during planning):
+- **Phase 4 (narrow WS invalidation):** The `setQueryData` fast-path requires the server to include full entity snapshots in the `activity.logged` WS payload. `publishLiveEvent` in `server/src/services/live-events.ts` must be audited to determine which fields are currently in `details` — this is a server change if fields are missing, not just client-side work.
 
-- **Phase 1 (Core deployment):** All integration points are fully documented with code-verified findings and official sources. The exact files and line numbers that need changing are identified. Implementation is mechanical configuration plus targeted small code changes — no unknowns remain.
-- **Phase 2 (Rate limiting + security headers):** helmet and express-rate-limit are industry-standard Express packages with zero-config defaults. STACK.md documents exact versions and the complete middleware snippet. No further research needed.
+Phases with well-documented patterns (skip deeper research):
+
+- **Phase 1 (optimistic mutations):** TanStack Query v5 official docs cover the pattern exhaustively. The existing `IssueDetail.tsx` comment optimistic pattern is the working template. The `isMutating` guard is documented by the TanStack maintainer. No research needed.
+- **Phase 2 (caching config):** QueryClient `staleTime`/`gcTime` tuning is straightforward. Risk is organizational (audit per-query), not technical.
+- **Phase 4 perMessageDeflate + ping interval:** Both are single-value config changes in well-documented APIs. No research needed.
 
 ---
 
@@ -189,53 +184,54 @@ Phases with standard patterns (skip research-phase during planning):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All new packages verified from npm registry and official docs. Version compatibility confirmed against Express 5 and Node.js 18+. No ambiguity on package selection. |
-| Features | HIGH | P1/P2/P3 distinction is grounded in the hard dependency graph, not opinion. Platform-specific behavior notes verified against Railway, Vercel, and Supabase official docs. |
-| Architecture | HIGH | Existing codebase was directly read and inspected — findings are code-verified against specific files and line numbers, not inferred. All integration patterns confirmed by official documentation. |
-| Pitfalls | HIGH | Six of eight pitfalls are code-verified against specific file paths and line numbers in the existing codebase. The remaining two (API Gateway WebSocket stripping, Redis cache invalidation) are confirmed by official documentation. |
+| Stack | HIGH | All technology choices verified against official docs and current installed versions. Zero new packages — lower uncertainty than a net-new dependency audit. Exact code patterns provided for all four changes. |
+| Features | HIGH | Feature set well-defined by existing v1.1 gaps and user-reported pain points. P1/P2/P3 classification is defensible against real user impact. One moderate uncertainty: WS latency root cause may be Nginx proxy buffering on Easypanel rather than application code — verify before writing heartbeat code. |
+| Architecture | HIGH | Architecture research done against live codebase inspection with specific file and line citations throughout. Component responsibilities, build order, and integration points are concrete. One critical gap identified: WS user Bearer token auth path does not exist yet. |
+| Pitfalls | HIGH | All critical pitfalls are code-verified against specific lines in live files rather than inferred from documentation. The `isMutating` guard and concurrent mutation scenarios are confirmed from TkDodo (TanStack maintainer) blog post. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **BetterAuth cross-origin cookie attribute field names (MEDIUM confidence):** The exact BetterAuth config field for cross-origin cookies (`advanced.cookieOptions` vs `advanced.defaultCookieAttributes`) varies between BetterAuth versions. Community issues #2203, #4038, and #7657 confirm the behavior but show slightly different field names. Verify against the installed BetterAuth version in server/package.json before implementing. The behavioral requirement (SameSite=None; Secure) is certain; only the exact API field needs version verification.
+- **WS latency root cause verification:** Before writing application-level heartbeat code, check the Nginx proxy config on Easypanel for `proxy_buffering off` and `proxy_read_timeout 3600s`. The latency complaint may be a 2-line infra fix. If confirmed as Nginx, the heartbeat is still valuable for dead-connection detection but is not the latency fix. Verify Nginx config as the first step in Phase 4 planning.
 
-- **Railway IPv6 for Supabase direct connection (deploy-time verification):** Supabase direct connection (port 5432) uses IPv6. If Railway's network does not support IPv6 outbound, fall back to the session-mode pooler URL (also port 5432, IPv4-compatible). This is a deploy-time check — no code change between the two options, only the connection string differs.
+- **WS user Bearer token auth (critical):** The `live-events-ws.ts` upgrade handler validates tokens only against `agentApiKeys`. The BetterAuth session resolution path for user-issued bearer tokens is not wired here. If not addressed, mobile users can log in (HTTP works via bearer token) but receive no real-time updates (WS upgrade fails). Treat this as a Phase 3 acceptance criteria gate, not a follow-up item.
 
-- **Redis query cache key design (intentionally deferred):** STACK.md documents the cache-aside pattern and suggests key formats, but the full key taxonomy and invalidation strategy should be designed from Phase 1 observed access patterns. This gap is intentional — cache design that precedes observation is premature optimization.
+- **iOS Safari ITP testing requires real device:** iOS Simulator does not enforce ITP. Phase 3 acceptance criteria must require verification on a real iPhone with default privacy settings enabled. Chrome on iOS uses WebKit but has different tracking protection behavior — test both.
 
-- **Existing /api/health endpoint (verify before adding):** ARCHITECTURE.md notes a `routes/health.js` file may already exist. Verify before adding a new GET /health route to avoid duplicate route registration.
+- **`publishLiveEvent` payload completeness for narrow invalidation:** The `setQueryData` fast-path in Phase 4 depends on `activity.logged` events including full entity snapshots. Current investigation shows `details` carries partial data (status, assignee IDs) but not full `Issue` objects. Server-side payload expansion may be required before the fast-path can be safely implemented. Audit in Phase 4 planning before committing to `setQueryData` scope.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Railway Dockerfile docs](https://docs.railway.com/builds/dockerfiles) — Dockerfile detection, PORT injection, health check configuration
-- [Railway Variables docs](https://docs.railway.com/variables) — service-to-service references, env var injection
-- [Railway Express guide](https://docs.railway.com/guides/express) — DATABASE_URL pattern, health checks
-- [Railway SaaS Backend Architecture](https://docs.railway.com/guides/saas-backend) — Redis + Postgres + API service pattern
-- [Supabase: Connecting to Postgres](https://supabase.com/docs/guides/database/connecting-to-postgres) — session vs transaction pooler, port 5432 vs 6543, connection string formats
-- [Drizzle ORM + Supabase](https://orm.drizzle.team/docs/connect-supabase) — prepare: false requirement for transaction mode
-- [node-redis official docs](https://redis.io/docs/latest/develop/clients/nodejs/) — v5 API, createClient, connect()
-- [Vercel Vite framework docs](https://vercel.com/docs/frameworks/frontend/vite) — VITE_ prefix, SPA rewrites, build settings
-- [BetterAuth Options Reference](https://better-auth.com/docs/reference/options) — trustedOrigins, defaultCookieAttributes
-- [express-rate-limit GitHub](https://github.com/express-rate-limit/express-rate-limit) — rate limiting middleware
-- [helmet npm](https://www.npmjs.com/package/helmet) — v8.1.0 security headers, Express 5 compatibility
-- Existing codebase (directly read): `server/src/app.ts`, `server/src/auth/better-auth.ts`, `server/src/config.ts`, `packages/db/src/client.ts`, `ui/vite.config.ts`, `Dockerfile`, `ui/src/api/client.ts`, `ui/src/api/auth.ts`, `ui/src/context/LiveUpdatesProvider.tsx`, `ui/src/components/transcript/useLiveRunTranscripts.ts`, `ui/src/pages/AgentDetail.tsx`, `server/src/middleware/board-mutation-guard.ts`
+- [TanStack Query v5 Optimistic Updates — Official Docs](https://tanstack.com/query/v5/docs/react/guides/optimistic-updates) — `onMutate`/`onError`/`onSettled` pattern, `cancelQueries` before `setQueryData`
+- [TanStack Query v5 Important Defaults](https://tanstack.com/query/v5/docs/react/guides/important-defaults) — `staleTime` (0 default), `gcTime` (5 min default), `refetchOnWindowFocus` behavior
+- [TanStack Query Caching Guide](https://tanstack.com/query/latest/docs/framework/react/guides/caching) — `staleTime` vs `gcTime` interaction, stale-while-revalidate behavior
+- [TanStack Query Prefetching — Official Docs](https://tanstack.com/query/latest/docs/framework/react/guides/prefetching) — `queryClient.prefetchQuery` on hover pattern
+- [BetterAuth Bearer Plugin — Official Docs](https://better-auth.com/docs/plugins/bearer) — bearer() plugin setup, `Set-Auth-Token` response header, mobile fallback pattern
+- [BetterAuth Cookies — Official Docs](https://better-auth.com/docs/concepts/cookies) — `crossSubDomainCookies`, `defaultCookieAttributes`, reverse proxy recommendations
+- [Vercel Rewrites docs](https://vercel.com/docs/rewrites) — external origin proxy config, wildcard path forwarding, SPA catch-all ordering
+- [ws npm package](https://github.com/websockets/ws) — `perMessageDeflate` option and performance trade-offs
+- [WebKit ITP: Full Third-Party Cookie Blocking](https://webkit.org/blog/10218/full-third-party-cookie-blocking-and-more/) — confirmed ITP enforcement at eTLD+1 level
+- [WebSocket Heartbeat Patterns — Ably Best Practices](https://ably.com/topic/websocket-architecture-best-practices) — 25s heartbeat interval for load-balanced environments
+- [Nginx WebSocket Proxy — nginx.org official](http://nginx.org/en/docs/http/websocket.html) — Upgrade header passthrough, `proxy_read_timeout` for long-lived connections
+- Codebase direct inspection: `live-events-ws.ts`, `LiveUpdatesProvider.tsx`, `better-auth.ts`, `main.tsx`, `optimistic-issue-comments.ts`, `queryKeys.ts`, `live-events.ts` — high confidence, lines cited throughout research files
 
 ### Secondary (MEDIUM confidence)
-- [BetterAuth issue #2203](https://github.com/better-auth/better-auth/issues/2203) — trustedOrigins with Vercel preview deployments
-- [BetterAuth issue #4038](https://github.com/better-auth/better-auth/issues/4038) — cross-domain cookies not set in production
-- [BetterAuth issue #7657](https://github.com/better-auth/better-auth/issues/7657) — cross-origin auth broken with 1.4.x
-- [Railway Help Station — CORS Vercel to Railway](https://station.railway.com/questions/cors-issue-post-request-blocked-from-ve-6920650c) — CORS config confirmed by Railway employees
-- [BetterAuth not sending cookie in production on Railway](https://station.railway.com/questions/better-auth-in-production-not-sending-co-fea07157) — SameSite=None requirement confirmed
-- [Redis Cache-Aside Pattern](https://redis.io/tutorials/howtos/solutions/microservices/caching/) — cache-aside implementation guidance
-- [Express Redis Caching](https://oneuptime.com/blog/post/2026-02-02-express-redis-caching/view) — cache-aside pattern with Express middleware
+- [TkDodo — Concurrent Optimistic Updates in React Query](https://tkdodo.eu/blog/concurrent-optimistic-updates-in-react-query) — `isMutating` guard for concurrent mutation flicker (TanStack maintainer, authoritative)
+- [TkDodo — Using WebSockets with React Query](https://tkdodo.eu/blog/using-web-sockets-with-react-query) — WS invalidation + `staleTime: Infinity` pattern
+- [BetterAuth GitHub Issue #4038](https://github.com/better-auth/better-auth/issues/4038) — cross-domain cookie not set on production; custom domain as correct solution
+- [BetterAuth GitHub Discussion #2826](https://github.com/better-auth/better-auth/discussions/2826) — Safari ITP blocking cross-site cookies; public suffix domain failure
+- [ws GitHub Issue #756](https://github.com/websockets/ws/issues/756) — `perMessageDeflate` performance discussion (older, conclusions still applicable)
+- [TanStack Query Discussion #7932](https://github.com/TanStack/query/discussions/7932) — race condition with concurrent optimistic updates
+- [Better Auth Safari Issue #3743](https://github.com/better-auth/better-auth/issues/3743) — Safari iOS Invalid Origin signOut bug (open issue, workarounds only)
 
 ### Tertiary (LOW confidence)
-- [Upstash vs Railway Redis comparison](https://www.buildmvpfast.com/compare/upstash-vs-redis-cloud) — third-party; used only to confirm Railway Redis preference, not for technical decisions
+- [Cross-Site WebSocket Hijacking 2025 — IncludeSecurity](https://blog.includesecurity.com/2025/04/cross-site-websocket-hijacking-exploitation-in-2025/) — CSWSH via `SameSite=None` cookies; noted for WS Origin validation awareness
+- [React 19 useOptimistic hook — FreeCodeCamp](https://www.freecodecamp.org/news/how-to-use-the-optimistic-ui-pattern-with-the-useoptimistic-hook-in-react/) — React 19 native optimistic pattern; TanStack Query `useMutation onMutate` is preferred for apps already using TanStack Query
 
 ---
-*Research completed: 2026-04-04*
+*Research completed: 2026-04-05*
 *Ready for roadmap: yes*
