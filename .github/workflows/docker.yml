@@ -60,9 +60,4 @@ jobs:
     if: github.ref == 'refs/heads/master'
     steps:
       - name: Trigger Easypanel redeploy
-        run: |
-          curl -f -s -X POST \
-            -H "authorization: ${{ secrets.EASYPANEL_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{"json":{"projectName":"paperclip","serviceName":"paperclip-api"}}' \
-            "http://72.61.44.68:3000/api/trpc/services.app.deploy"
+        run: curl -f -s -X POST "${{ secrets.EASYPANEL_DEPLOY_WEBHOOK }}"
