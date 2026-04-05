@@ -21,7 +21,7 @@ function createTestApp(redisClient?: any, limitOverride?: number) {
   app.get("/test", (_req, res) => {
     res.status(200).json({ ok: true });
   });
-  app.get("/health", (_req, res) => {
+  app.get("/api/health", (_req, res) => {
     res.status(200).json({ status: "ok" });
   });
   return app;
@@ -56,14 +56,14 @@ describe("createRateLimiter", () => {
     expect(res.headers).toHaveProperty("ratelimit");
   });
 
-  it("GET /health is not rate-limited even after exceeding limit", async () => {
+  it("GET /api/health is not rate-limited even after exceeding limit", async () => {
     const app = createTestApp(undefined, 3);
     // Exhaust the limit on /test
     for (let i = 0; i < 4; i++) {
       await request(app).get("/test").set("X-Forwarded-For", "2.3.4.5");
     }
-    // /health should still return 200
-    const healthRes = await request(app).get("/health").set("X-Forwarded-For", "2.3.4.5");
+    // /api/health should still return 200
+    const healthRes = await request(app).get("/api/health").set("X-Forwarded-For", "2.3.4.5");
     expect(healthRes.status).toBe(200);
   });
 
