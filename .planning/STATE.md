@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Performance & Mobile Fix
-status: ready_to_plan
-stopped_at: Roadmap created — 4 phases defined (10-13), 17/17 requirements mapped
-last_updated: "2026-04-05T00:00:00.000Z"
+status: unknown
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-04-05T19:31:58.604Z"
 progress:
   total_phases: 4
   completed_phases: 0
@@ -19,20 +19,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-05)
 
 **Core value:** A human can receive, work on, and complete tasks inside Paperclip exactly as an AI agent does — without friction, from the web app.
-**Current focus:** Phase 10 — Optimistic UI Mutations
+**Current focus:** Phase 10 — optimistic-ui-mutations
 
 ## Current Position
 
-Phase: 10 of 13 (Optimistic UI Mutations)
-Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-04-05 — v1.2 roadmap created, 4 phases mapped
-
-Progress: [░░░░░░░░░░] 0%
+Phase: 10 (optimistic-ui-mutations) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0 (v1.2)
 - Average duration: —
 - Total execution time: —
@@ -44,6 +41,7 @@ Progress: [░░░░░░░░░░] 0%
 | - | - | - | - |
 
 *Updated after each plan completion*
+| Phase 10 P01 | 3m | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -54,6 +52,8 @@ Progress: [░░░░░░░░░░] 0%
 - [v1.1]: Redis optional with graceful degradation — no hard dependency
 - [v1.2]: Phase 10 before Phase 11 — isMutating guard must exist before staleTime is raised or WS race window widens
 - [v1.2]: MAUTH uses bearer() plugin strategy (not Vercel proxy) — solves both HTTP and WS auth in one pass
+- [10-01]: createOptimisticSubtaskStub omits "as Issue" cast — TypeScript satisfied structurally via all required fields
+- [10-01]: updateIssue patches both assignee and status optimistically via key-presence detection to cover all callers
 
 ### Pending Todos
 
@@ -67,6 +67,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05
-Stopped at: Roadmap created — ready to plan Phase 10
-Resume file: None
+Last session: 2026-04-05T19:32:00Z
+Stopped at: Completed 10-01-PLAN.md
+Resume file: .planning/milestones/v1.2-phases/10-optimistic-ui-mutations/10-01-SUMMARY.md
