@@ -793,7 +793,14 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
     const connect = () => {
       if (closed) return;
       const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      const url = `${protocol}://${getWsHost()}/api/companies/${encodeURIComponent(liveCompanyId)}/events/ws`;
+      let wsToken = "";
+      try {
+        const stored = localStorage.getItem("paperclip_session_token");
+        if (stored) wsToken = `?token=${encodeURIComponent(stored)}`;
+      } catch {
+        // localStorage unavailable — WS will attempt cookie auth
+      }
+      const url = `${protocol}://${getWsHost()}/api/companies/${encodeURIComponent(liveCompanyId)}/events/ws${wsToken}`;
       const nextSocket = new WebSocket(url);
       socket = nextSocket;
 
