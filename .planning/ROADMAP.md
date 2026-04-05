@@ -68,7 +68,10 @@ Plans:
   1. Knowledge Base, Cost Recommendations, and Pipelines routes are registered on the live Easypanel backend and return non-404 responses
   2. Sidebar links use company-prefixed paths (e.g., `/PAC/knowledge-base`) so navigation works correctly end-to-end
   3. E2E tests for Phase 3 (Owner Team Visibility), Phase 4 (Multi-User Auth), and Phase 5 (Cross-Origin) pass on the live deployment
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 11-01-PLAN.md — Migration + sidebar redirect fix + atomic commit
+- [ ] 11-02-PLAN.md — Deploy to Easypanel + route verification + E2E smoke tests
 
 ### Phase 12: Aggressive Caching
 **Goal**: Navigating between pages that have been visited before is instant, with no loading skeleton, and the My Tasks page renders assigned issues correctly
@@ -116,8 +119,8 @@ Plans:
 | 7. End-to-End Verification | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 8. API Hardening & Redis | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 9. Gap Closure — Rate-Limit Fix & E2E Completion | v1.1 | 2/2 | Complete | 2026-04-05 |
-| 10. Optimistic UI Mutations | v1.2 | 2/2 | Complete | 2026-04-05 |
-| 11. Backend Deploy Gaps | v1.2 | 0/? | Not started | - |
+| 10. Optimistic UI Mutations | v1.2 | Complete    | 2026-04-05 | 2026-04-05 |
+| 11. Backend Deploy Gaps | v1.2 | 0/2 | Planned | - |
 | 12. Aggressive Caching | v1.2 | 0/? | Not started | - |
 | 13. Mobile Cross-Origin Auth | v1.2 | 0/? | Not started | - |
 | 14. WebSocket Optimization | v1.2 | 0/? | Not started | - |
