@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 Human Agents MVP** — Phases 1-4 (shipped 2026-04-04)
 - ✅ **v1.1 Deployment & SaaS Readiness** — Phases 5-9 (shipped 2026-04-05)
-- 🚧 **v1.2 Performance & Mobile Fix** — Phases 10-13 (in progress)
+- 🚧 **v1.2 Performance & Mobile Fix** — Phases 10-14 (in progress)
 
 ## Phases
 
@@ -38,9 +38,10 @@ See: milestones/v1.1-ROADMAP.md for full phase details
 **Milestone Goal:** Make every interaction feel instant via optimistic UI and aggressive caching, and fix cross-origin auth so mobile browsers can log in.
 
 - [x] **Phase 10: Optimistic UI Mutations** - Status/assignment/subtask changes reflect immediately; rollback on failure; WS race guarded (completed 2026-04-05)
-- [ ] **Phase 11: Aggressive Caching** - Navigation between previously-visited pages is instant; My Tasks renders correctly
-- [ ] **Phase 12: Mobile Cross-Origin Auth** - iOS Safari and Android Chrome users can log in and maintain authenticated sessions
-- [ ] **Phase 13: WebSocket Optimization** - Dead connections detected and reconnected; per-message latency reduced; cache recovered after reconnect
+- [ ] **Phase 11: Backend Deploy Gaps** - Redeploy Easypanel backend with missing routes; fix sidebar routing; re-run E2E for phases 3, 4, 5
+- [ ] **Phase 12: Aggressive Caching** - Navigation between previously-visited pages is instant; My Tasks renders correctly
+- [ ] **Phase 13: Mobile Cross-Origin Auth** - iOS Safari and Android Chrome users can log in and maintain authenticated sessions
+- [ ] **Phase 14: WebSocket Optimization** - Dead connections detected and reconnected; per-message latency reduced; cache recovered after reconnect
 
 ## Phase Details
 
@@ -56,12 +57,22 @@ See: milestones/v1.1-ROADMAP.md for full phase details
   5. While a status or assignment mutation is in flight, a WebSocket `activity.logged` event does not overwrite the optimistic value
 **Plans:** 2/2 plans complete
 Plans:
-- [ ] 10-01-PLAN.md — Optimistic mutation utilities + rewire IssueDetail.tsx mutations
-- [ ] 10-02-PLAN.md — isMutating guard in LiveUpdatesProvider + human verification
+- [x] 10-01-PLAN.md — Optimistic mutation utilities + rewire IssueDetail.tsx mutations
+- [x] 10-02-PLAN.md — isMutating guard in LiveUpdatesProvider + human verification
 
-### Phase 11: Aggressive Caching
-**Goal**: Navigating between pages that have been visited before is instant, with no loading skeleton, and the My Tasks page renders assigned issues correctly
+### Phase 11: Backend Deploy Gaps
+**Goal**: Easypanel backend is redeployed with all routes active (Knowledge Base, Cost Recommendations, Pipelines), sidebar routing is fixed to use company-prefixed paths, and E2E verification for phases 3, 4, and 5 is re-run and passing
 **Depends on**: Phase 10
+**Requirements**: DEPLOY-01, DEPLOY-02, DEPLOY-03
+**Success Criteria** (what must be TRUE):
+  1. Knowledge Base, Cost Recommendations, and Pipelines routes are registered on the live Easypanel backend and return non-404 responses
+  2. Sidebar links use company-prefixed paths (e.g., `/PAC/knowledge-base`) so navigation works correctly end-to-end
+  3. E2E tests for Phase 3 (Owner Team Visibility), Phase 4 (Multi-User Auth), and Phase 5 (Cross-Origin) pass on the live deployment
+**Plans**: TBD
+
+### Phase 12: Aggressive Caching
+**Goal**: Navigating between pages that have been visited before is instant, with no loading skeleton, and the My Tasks page renders assigned issues correctly
+**Depends on**: Phase 11
 **Requirements**: CACHE-01, CACHE-02, CACHE-03, CACHE-04
 **Success Criteria** (what must be TRUE):
   1. User navigates away from an issue list and returns within 5 minutes — data appears instantly without a loading spinner
@@ -70,9 +81,9 @@ Plans:
   4. After a user performs any mutation (status change, assignment, subtask creation), the relevant list and detail pages reflect the updated data — no stale values shown
 **Plans**: TBD
 
-### Phase 12: Mobile Cross-Origin Auth
+### Phase 13: Mobile Cross-Origin Auth
 **Goal**: Users on iOS Safari and Android Chrome can log in to Paperclip and maintain an authenticated session, including real-time WebSocket updates
-**Depends on**: Phase 11
+**Depends on**: Phase 12
 **Requirements**: MAUTH-01, MAUTH-02, MAUTH-03, MAUTH-04, MAUTH-05
 **Success Criteria** (what must be TRUE):
   1. A user on iOS Safari with default privacy settings can sign in and stay logged in across page navigations
@@ -82,9 +93,9 @@ Plans:
   5. Navigating directly to a nested route (e.g., `/PAC/dashboard`) on Vercel loads the correct page instead of a 404
 **Plans**: TBD
 
-### Phase 13: WebSocket Optimization
+### Phase 14: WebSocket Optimization
 **Goal**: WebSocket connections are reliable — dead connections are detected and recovered, per-message latency is reduced, and the client cache is restored after a reconnect
-**Depends on**: Phase 12
+**Depends on**: Phase 13
 **Requirements**: WS-01, WS-02, WS-03
 **Success Criteria** (what must be TRUE):
   1. After a network drop or silent NAT timeout, the client detects the dead connection within 25 seconds and automatically reconnects without user action
@@ -105,7 +116,8 @@ Plans:
 | 7. End-to-End Verification | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 8. API Hardening & Redis | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 9. Gap Closure — Rate-Limit Fix & E2E Completion | v1.1 | 2/2 | Complete | 2026-04-05 |
-| 10. Optimistic UI Mutations | 2/2 | Complete   | 2026-04-05 | - |
-| 11. Aggressive Caching | v1.2 | 0/? | Not started | - |
-| 12. Mobile Cross-Origin Auth | v1.2 | 0/? | Not started | - |
-| 13. WebSocket Optimization | v1.2 | 0/? | Not started | - |
+| 10. Optimistic UI Mutations | v1.2 | 2/2 | Complete | 2026-04-05 |
+| 11. Backend Deploy Gaps | v1.2 | 0/? | Not started | - |
+| 12. Aggressive Caching | v1.2 | 0/? | Not started | - |
+| 13. Mobile Cross-Origin Auth | v1.2 | 0/? | Not started | - |
+| 14. WebSocket Optimization | v1.2 | 0/? | Not started | - |
