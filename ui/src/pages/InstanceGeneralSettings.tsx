@@ -1,13 +1,141 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PatchInstanceGeneralSettings } from "@paperclipai/shared";
-import { SlidersHorizontal, Terminal, Check, Copy, RefreshCw } from "lucide-react";
+import { SlidersHorizontal, Terminal, Check, Copy, RefreshCw, KeyRound, CircleCheck, CircleX, CircleDashed, LogIn } from "lucide-react";
 import { instanceSettingsApi } from "@/api/instanceSettings";
 import { Button } from "@/components/ui/button";
 import { API_BASE } from "@/lib/api-base";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { queryKeys } from "../lib/queryKeys";
 import { cn } from "../lib/utils";
+
+type AdapterAuthStatus = {
+  available: boolean;
+  loggedIn: boolean;
+  email?: string;
+  method?: string;
+  detail?: string;
+};
+
+type AdapterAuthInfo = {
+  type: string;
+  label: string;
+  loginLabel: string;
+};
+
+const ADAPTER_AUTH_LIST: AdapterAuthInfo[] = [
+  { type: "claude_local", label: "Claude Code", loginLabel: "claude auth login" },
+  { type: "gemini_local", label: "Gemini CLI", loginLabel: "gemini auth login" },
+  { type: "codex_local",  label: "Codex CLI",  loginLabel: "codex login" },
+];
+
+async function fetchAdapterAuthStatus(type: string): Promise<AdapterAuthStatus> {
+  const res = await fetch(`${API_BASE}/instance/adapter-auth/${type}/status`, { credentials: "include" });
+  if (!res.ok) throw new Error(`Failed to fetch auth status for ${type}`);
+  return res.json() as Promise<AdapterAuthStatus>;
+}
+
+async function triggerAdapterLogin(type: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/instance/adapter-auth/${type}/login`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`Failed to start login for ${type}`);
+}
+
+function AdapterAuthRow({ adapter }: { adapter: AdapterAuthInfo }) {
+  const [loginStarted, setLoginStarted] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [pollCount, setPollCount] = useState(0);
+
+  const statusQuery = useQuery({
+    queryKey: ["adapter-auth-status", adapter.type, pollCount],
+    queryFn: () => fetchAdapterAuthStatus(adapter.type),
+    retry: false,
+    staleTime: 0,
+  });
+
+  const refresh = useCallback(() => setPollCount((n) => n + 1), []);
+
+  // Poll every 3s after login is triggered
+  useEffect(() => {
+    if (!loginStarted || statusQuery.data?.loggedIn) return;
+    const id = setTimeout(refresh, 3000);
+    return () => clearTimeout(id);
+  }, [loginStarted, statusQuery.data?.loggedIn, pollCount, refresh]);
+
+  async function handleLogin() {
+    setLoginError(null);
+    try {
+      await triggerAdapterLogin(adapter.type);
+      setLoginStarted(true);
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : "Failed to start login");
+    }
+  }
+
+  const status = statusQuery.data;
+  const isLoading = statusQuery.isLoading;
+
+  function StatusBadge() {
+    if (isLoading) {
+      return <span className="text-xs text-muted-foreground">Checking...</span>;
+    }
+    if (!status?.available) {
+      return (
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          <CircleDashed className="h-3.5 w-3.5" />
+          Not installed
+        </span>
+      );
+    }
+    if (status.loggedIn) {
+      return (
+        <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-500">
+          <CircleCheck className="h-3.5 w-3.5" />
+          {status.email ? status.email : status.method === "api_key" ? "API key" : "Authenticated"}
+        </span>
+      );
+    }
+    return (
+      <span className="flex items-center gap-1 text-xs text-destructive">
+        <CircleX className="h-3.5 w-3.5" />
+        Not logged in
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-4 py-2">
+      <div className="min-w-0 space-y-0.5">
+        <div className="text-sm font-medium">{adapter.label}</div>
+        <StatusBadge />
+        {loginStarted && !status?.loggedIn && (
+          <p className="text-xs text-muted-foreground">
+            Complete login in your browser. Checking automatically...
+          </p>
+        )}
+        {loginError && (
+          <p className="text-xs text-destructive">{loginError}</p>
+        )}
+        {status?.detail && !status.loggedIn && (
+          <p className="text-xs text-muted-foreground">{status.detail}</p>
+        )}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={refresh} disabled={isLoading}>
+          <RefreshCw className={cn("h-3.5 w-3.5", isLoading && "animate-spin")} />
+        </Button>
+        {status?.available && !status?.loggedIn && (
+          <Button variant="outline" size="sm" onClick={handleLogin} disabled={loginStarted && !status?.loggedIn}>
+            <LogIn className="h-3.5 w-3.5" />
+            {loginStarted ? "Browser opened..." : "Login"}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const FEEDBACK_TERMS_URL = import.meta.env.VITE_FEEDBACK_TERMS_URL?.trim() || "https://paperclip.ing/tos";
 
@@ -342,6 +470,25 @@ export function InstanceGeneralSettings() {
             <code>"prompt"</code>. Unset and <code>"prompt"</code> both mean no default has been
             chosen yet.
           </p>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-border bg-card p-5">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold">Adapter Authentication</h2>
+            </div>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              Login to the AI adapters used to run agents on this machine. Clicking Login opens your browser to complete authentication.
+            </p>
+          </div>
+          <div className="divide-y divide-border">
+            {ADAPTER_AUTH_LIST.map((adapter) => (
+              <AdapterAuthRow key={adapter.type} adapter={adapter} />
+            ))}
+          </div>
         </div>
       </section>
     </div>
