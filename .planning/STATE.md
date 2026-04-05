@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Performance & Mobile Fix
 status: unknown
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-04-05T19:31:58.604Z"
+stopped_at: "Checkpoint: 10-02 Task 2 human-verify — awaiting user verification of 5 optimistic UI scenarios"
+last_updated: "2026-04-05T19:35:26.984Z"
 progress:
   total_phases: 4
   completed_phases: 0
@@ -42,6 +42,7 @@ Plan: 2 of 2
 
 *Updated after each plan completion*
 | Phase 10 P01 | 3m | 2 tasks | 3 files |
+| Phase 10 P02 | 8 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -54,6 +55,8 @@ Plan: 2 of 2
 - [v1.2]: MAUTH uses bearer() plugin strategy (not Vercel proxy) — solves both HTTP and WS auth in one pass
 - [10-01]: createOptimisticSubtaskStub omits "as Issue" cast — TypeScript satisfied structurally via all required fields
 - [10-01]: updateIssue patches both assignee and status optimistically via key-presence detection to cover all callers
+- [Phase 10]: Guard suppresses only issue list and detail keys — non-optimistic keys (comments, activity, runs, attachments) always invalidated
+- [Phase 10]: Three mutation key prefixes (issue-status, issue-update, create-subtask) match exactly the keys set in Plan 01 IssueDetail.tsx
 
 ### Pending Todos
 
@@ -67,6 +70,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T19:32:00Z
-Stopped at: Completed 10-01-PLAN.md
-Resume file: .planning/milestones/v1.2-phases/10-optimistic-ui-mutations/10-01-SUMMARY.md
+Last session: 2026-04-05T19:35:26.982Z
+Stopped at: Checkpoint: 10-02 Task 2 human-verify — awaiting user verification of 5 optimistic UI scenarios
+Resume file: None

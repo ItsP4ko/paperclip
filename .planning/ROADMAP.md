@@ -37,7 +37,7 @@ See: milestones/v1.1-ROADMAP.md for full phase details
 
 **Milestone Goal:** Make every interaction feel instant via optimistic UI and aggressive caching, and fix cross-origin auth so mobile browsers can log in.
 
-- [ ] **Phase 10: Optimistic UI Mutations** - Status/assignment/subtask changes reflect immediately; rollback on failure; WS race guarded
+- [x] **Phase 10: Optimistic UI Mutations** - Status/assignment/subtask changes reflect immediately; rollback on failure; WS race guarded (completed 2026-04-05)
 - [ ] **Phase 11: Aggressive Caching** - Navigation between previously-visited pages is instant; My Tasks renders correctly
 - [ ] **Phase 12: Mobile Cross-Origin Auth** - iOS Safari and Android Chrome users can log in and maintain authenticated sessions
 - [ ] **Phase 13: WebSocket Optimization** - Dead connections detected and reconnected; per-message latency reduced; cache recovered after reconnect
@@ -54,7 +54,7 @@ See: milestones/v1.1-ROADMAP.md for full phase details
   3. User creates a subtask and it appears in the subtask list before the server responds
   4. When a mutation fails (simulated network error), the UI reverts to the previous state and shows an error message
   5. While a status or assignment mutation is in flight, a WebSocket `activity.logged` event does not overwrite the optimistic value
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 10-01-PLAN.md — Optimistic mutation utilities + rewire IssueDetail.tsx mutations
 - [ ] 10-02-PLAN.md — isMutating guard in LiveUpdatesProvider + human verification
@@ -105,7 +105,7 @@ Plans:
 | 7. End-to-End Verification | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 8. API Hardening & Redis | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 9. Gap Closure — Rate-Limit Fix & E2E Completion | v1.1 | 2/2 | Complete | 2026-04-05 |
-| 10. Optimistic UI Mutations | 1/2 | In Progress|  | - |
+| 10. Optimistic UI Mutations | 2/2 | Complete   | 2026-04-05 | - |
 | 11. Aggressive Caching | v1.2 | 0/? | Not started | - |
 | 12. Mobile Cross-Origin Auth | v1.2 | 0/? | Not started | - |
 | 13. WebSocket Optimization | v1.2 | 0/? | Not started | - |
