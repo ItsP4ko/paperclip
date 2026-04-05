@@ -191,11 +191,11 @@ export function Analytics() {
                       {rec.severity}
                     </Badge>
                   </div>
-                  {rec.details?.agentName && (
+                  {rec.details?.agentName ? (
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       {rec.details.agentName as string}
                     </p>
-                  )}
+                  ) : null}
                 </div>
                 {rec.estimatedSavingsCents > 0 && (
                   <div className="flex items-center gap-1 text-xs text-green-600 shrink-0">
