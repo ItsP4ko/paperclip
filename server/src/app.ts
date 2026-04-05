@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import type { Db } from "@paperclipai/db";
 import type { DeploymentExposure, DeploymentMode } from "@paperclipai/shared";
 import type { StorageService } from "./storage/types.js";
-import { httpLogger, errorHandler, securityHeaders } from "./middleware/index.js";
+import { httpLogger, errorHandler, securityHeaders, createRateLimiter } from "./middleware/index.js";
 import type { RedisClientType } from "redis";
 import { actorMiddleware } from "./middleware/auth.js";
 import { boardMutationGuard } from "./middleware/board-mutation-guard.js";
@@ -108,6 +108,7 @@ export async function createApp(
   );
 
   app.use(securityHeaders);
+  app.use(createRateLimiter(opts.redisClient));
 
   app.use(express.json({
     // Company import/export payloads can inline full portable packages.
