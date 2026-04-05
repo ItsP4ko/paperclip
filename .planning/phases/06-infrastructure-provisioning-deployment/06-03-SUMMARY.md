@@ -32,7 +32,7 @@ patterns-established:
   - "Three-tier deployment: Vercel (CDN/SPA) → Easypanel VPS (API) → Supabase (DB)"
   - "Build-time env vars for Vite must be set before deploy, not after"
 
-requirements-completed: [DEPLOY-05, DEPLOY-07]
+requirements-completed: [DEPLOY-05, DEPLOY-07, AUTH-05]
 
 duration: N/A (human-action tasks)
 completed: 2026-04-04
@@ -51,7 +51,7 @@ completed: 2026-04-04
 ## Accomplishments
 - Easypanel backend deployed on VPS (72.61.44.68) with Docker, health checks passing at /api/health
 - Vercel frontend deployed with VITE_API_URL baked at build time pointing to Easypanel backend
-- Cross-origin auth configuration verified (CORS, trusted origins, cookie settings); full auth flow deferred to gap closure plan 06-05
+- Cross-origin auth verified end-to-end: sign-up, sign-in, and session persistence confirmed from Vercel frontend to Easypanel backend (verified in gap closure plan 06-05)
 - CORS and trusted origins properly configured between Vercel and Easypanel
 
 ## Task Commits

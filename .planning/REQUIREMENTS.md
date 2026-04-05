@@ -33,7 +33,7 @@ Requirements for deployment & SaaS readiness. Each maps to roadmap phases.
 - [x] **AUTH-02**: BetterAuth cookies set to `SameSite=None; Secure` for cross-origin auth
 - [x] **AUTH-03**: `PAPERCLIP_ALLOWED_HOSTNAMES` includes Vercel domain so boardMutationGuard accepts requests
 - [x] **AUTH-04**: `BETTER_AUTH_SECRET` set to a secure random value (no fallback to hardcoded dev secret)
-- [ ] **AUTH-05**: User can sign up and log in from Vercel-hosted frontend to Easypanel-hosted backend
+- [x] **AUTH-05**: User can sign up and log in from Vercel-hosted frontend to Easypanel-hosted backend
 
 ### API Hardening
 
@@ -97,7 +97,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | AUTH-02 | Phase 5 | Complete |
 | AUTH-03 | Phase 5 | Complete |
 | AUTH-04 | Phase 5 | Complete |
-| AUTH-05 | Phase 6 | Pending |
+| AUTH-05 | Phase 6 | Complete |
 | HARD-01 | Phase 8 | Pending |
 | HARD-02 | Phase 8 | Pending |
 | HARD-03 | Phase 8 | Pending |
@@ -118,4 +118,4 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-04-04*
-*Last updated: 2026-04-04 -- Phase 6 platform corrected to Easypanel; DEPLOY-05/07/09/10/11 marked complete*
+*Last updated: 2026-04-05 -- AUTH-05 marked complete; all Phase 6 requirements now [x]; verified via gap closure plan 06-05*
