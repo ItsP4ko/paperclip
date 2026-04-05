@@ -38,7 +38,7 @@ See: milestones/v1.1-ROADMAP.md for full phase details
 **Milestone Goal:** Make every interaction feel instant via optimistic UI and aggressive caching, and fix cross-origin auth so mobile browsers can log in.
 
 - [x] **Phase 10: Optimistic UI Mutations** - Status/assignment/subtask changes reflect immediately; rollback on failure; WS race guarded (completed 2026-04-05)
-- [ ] **Phase 11: Backend Deploy Gaps** - Redeploy Easypanel backend with missing routes; fix sidebar routing; re-run E2E for phases 3, 4, 5
+- [x] **Phase 11: Backend Deploy Gaps** - Redeploy Easypanel backend with missing routes; fix sidebar routing; re-run E2E for phases 3, 4, 5 (completed 2026-04-05)
 - [ ] **Phase 12: Aggressive Caching** - Navigation between previously-visited pages is instant; My Tasks renders correctly
 - [ ] **Phase 13: Mobile Cross-Origin Auth** - iOS Safari and Android Chrome users can log in and maintain authenticated sessions
 - [ ] **Phase 14: WebSocket Optimization** - Dead connections detected and reconnected; per-message latency reduced; cache recovered after reconnect
@@ -68,7 +68,7 @@ Plans:
   1. Knowledge Base, Cost Recommendations, and Pipelines routes are registered on the live Easypanel backend and return non-404 responses
   2. Sidebar links use company-prefixed paths (e.g., `/PAC/knowledge-base`) so navigation works correctly end-to-end
   3. E2E tests for Phase 3 (Owner Team Visibility), Phase 4 (Multi-User Auth), and Phase 5 (Cross-Origin) pass on the live deployment
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 11-01-PLAN.md — Migration + sidebar redirect fix + atomic commit
 - [ ] 11-02-PLAN.md — Deploy to Easypanel + route verification + E2E smoke tests
@@ -120,7 +120,7 @@ Plans:
 | 8. API Hardening & Redis | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 9. Gap Closure — Rate-Limit Fix & E2E Completion | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 10. Optimistic UI Mutations | v1.2 | Complete    | 2026-04-05 | 2026-04-05 |
-| 11. Backend Deploy Gaps | v1.2 | 0/2 | Planned | - |
+| 11. Backend Deploy Gaps | v1.2 | Complete    | 2026-04-05 | - |
 | 12. Aggressive Caching | v1.2 | 0/? | Not started | - |
 | 13. Mobile Cross-Origin Auth | v1.2 | 0/? | Not started | - |
 | 14. WebSocket Optimization | v1.2 | 0/? | Not started | - |
