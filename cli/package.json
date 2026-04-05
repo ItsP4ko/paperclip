@@ -1,13 +1,14 @@
 {
-  "name": "paperclipai",
+  "name": "relaycontrol",
   "version": "0.3.1",
-  "description": "Paperclip CLI — orchestrate AI agent teams to run a business",
+  "description": "Relay Control CLI — orchestrate AI agent teams to run a business",
   "type": "module",
   "bin": {
-    "paperclipai": "./dist/index.js"
+    "relaycontrol": "./dist/index.js"
   },
   "keywords": [
-    "paperclip",
+    "relaycontrol",
+    "relay-control",
     "ai",
     "agents",
     "orchestration",

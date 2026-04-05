@@ -267,7 +267,7 @@ export function renderFeedbackReport(input: {
 }): string {
   const lines: string[] = [];
   lines.push("");
-  lines.push(pc.bold(pc.magenta("Paperclip Feedback Report")));
+  lines.push(pc.bold(pc.magenta("Relay Control Feedback Report")));
   lines.push(pc.dim(new Date().toISOString()));
   lines.push(horizontalRule());
   lines.push(`${pc.dim("Server:")}  ${input.apiBase}`);

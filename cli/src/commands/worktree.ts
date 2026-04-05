@@ -1040,20 +1040,20 @@ async function runWorktreeInit(opts: WorktreeInitOptions): Promise<void> {
   }
   p.outro(
     pc.green(
-      `Worktree ready. Run Paperclip inside this repo and the CLI/server will use ${paths.instanceId} automatically.`,
+      `Worktree ready. Run Relay Control inside this repo and the CLI/server will use ${paths.instanceId} automatically.`,
     ),
   );
 }
 
 export async function worktreeInitCommand(opts: WorktreeInitOptions): Promise<void> {
   printPaperclipCliBanner();
-  p.intro(pc.bgCyan(pc.black(" paperclipai worktree init ")));
+  p.intro(pc.bgCyan(pc.black(" relaycontrol worktree init ")));
   await runWorktreeInit(opts);
 }
 
 export async function worktreeMakeCommand(nameArg: string, opts: WorktreeMakeOptions): Promise<void> {
   printPaperclipCliBanner();
-  p.intro(pc.bgCyan(pc.black(" paperclipai worktree:make ")));
+  p.intro(pc.bgCyan(pc.black(" relaycontrol worktree:make ")));
 
   const name = resolveWorktreeMakeName(nameArg);
   const startPoint = resolveWorktreeStartPoint(opts.startPoint);
@@ -1249,7 +1249,7 @@ function worktreePathHasUncommittedChanges(worktreePath: string): boolean {
 
 export async function worktreeCleanupCommand(nameArg: string, opts: WorktreeCleanupOptions): Promise<void> {
   printPaperclipCliBanner();
-  p.intro(pc.bgCyan(pc.black(" paperclipai worktree:cleanup ")));
+  p.intro(pc.bgCyan(pc.black(" relaycontrol worktree:cleanup ")));
 
   const name = resolveWorktreeMakeName(nameArg);
   const sourceCwd = process.cwd();
@@ -1477,7 +1477,7 @@ async function openConfiguredDb(configPath: string): Promise<OpenDbHandle> {
           ? ` Pending migrations: ${migrationState.pendingMigrations.join(", ")}.`
           : "";
       throw new Error(
-        `Database for ${configPath} is not up to date.${pending} Run \`pnpm db:migrate\` (or start Paperclip once) before using worktree merge history.`,
+        `Database for ${configPath} is not up to date.${pending} Run \`pnpm db:migrate\` (or start Relay Control once) before using worktree merge history.`,
       );
     }
     const db = createDb(connectionString) as ClosableDb;
@@ -2056,7 +2056,7 @@ function resolveWorktreeEndpointFromSelector(
     );
   }
   if (!matched.hasPaperclipConfig && !matched.isCurrent) {
-    throw new Error(`Resolved worktree "${selector}" does not look like a Paperclip worktree.`);
+    throw new Error(`Resolved worktree "${selector}" does not look like a Relay Control worktree.`);
   }
   return resolveEndpointFromChoice(matched);
 }
@@ -2073,7 +2073,7 @@ async function promptForSourceEndpoint(excludeWorktreePath?: string): Promise<Re
       hint: `${choice.worktree}${choice.isCurrent ? " (current)" : ""}`,
     }));
   if (choices.length === 0) {
-    throw new Error("No Paperclip worktrees were found. Run `paperclipai worktree:list` to inspect the repo worktrees.");
+    throw new Error("No Relay Control worktrees were found. Run `relaycontrol worktree:list` to inspect the repo worktrees.");
   }
   const selection = await p.select<string>({
     message: "Choose the source worktree to import from",
@@ -2500,7 +2500,7 @@ export async function worktreeMergeHistoryCommand(sourceArg: string | undefined,
       : await promptForSourceEndpoint(targetEndpoint.rootPath);
 
   if (path.resolve(sourceEndpoint.configPath) === path.resolve(targetEndpoint.configPath)) {
-    throw new Error("Source and target Paperclip configs are the same. Choose different --from/--to worktrees.");
+    throw new Error("Source and target Relay Control configs are the same. Choose different --from/--to worktrees.");
   }
 
   const scopes = parseWorktreeMergeScopes(opts.scope);
@@ -2590,11 +2590,11 @@ export async function worktreeMergeHistoryCommand(sourceArg: string | undefined,
 }
 
 export function registerWorktreeCommands(program: Command): void {
-  const worktree = program.command("worktree").description("Worktree-local Paperclip instance helpers");
+  const worktree = program.command("worktree").description("Worktree-local Relay Control instance helpers");
 
   program
     .command("worktree:make")
-    .description("Create ~/NAME as a git worktree, then initialize an isolated Paperclip instance inside it")
+    .description("Create ~/NAME as a git worktree, then initialize an isolated Relay Control instance inside it")
     .argument("<name>", "Worktree name — auto-prefixed with paperclip- if needed (created at ~/paperclip-NAME)")
     .option("--start-point <ref>", "Remote ref to base the new branch on (env: PAPERCLIP_WORKTREE_START_POINT)")
     .option("--instance <id>", "Explicit isolated instance id")
@@ -2627,14 +2627,14 @@ export function registerWorktreeCommands(program: Command): void {
 
   worktree
     .command("env")
-    .description("Print shell exports for the current worktree-local Paperclip instance")
+    .description("Print shell exports for the current worktree-local Relay Control instance")
     .option("-c, --config <path>", "Path to config file")
     .option("--json", "Print JSON instead of shell exports")
     .action(worktreeEnvCommand);
 
   program
     .command("worktree:list")
-    .description("List git worktrees visible from this repo and whether they look like Paperclip worktrees")
+    .description("List git worktrees visible from this repo and whether they look like Relay Control worktrees")
     .option("--json", "Print JSON instead of text output")
     .action(worktreeListCommand);
 

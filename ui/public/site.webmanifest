@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Paperclip",
-  "short_name": "Paperclip",
+  "name": "Relay Control",
+  "short_name": "Relay Control",
   "description": "AI-powered project management and agent coordination platform",
   "start_url": "/",
   "scope": "/",

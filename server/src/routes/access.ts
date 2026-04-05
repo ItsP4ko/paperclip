@@ -937,7 +937,7 @@ function buildOnboardingDiscoveryDiagnostics(input: {
     diagnostics.push({
       code: "openclaw_onboarding_private_loopback_bind",
       level: "warn",
-      message: "Paperclip is bound to loopback in authenticated/private mode.",
+      message: "Relay Control is bound to loopback in authenticated/private mode.",
       hint: "Run with a reachable bind host or use pnpm dev --tailscale-auth for private-network onboarding."
     });
   }

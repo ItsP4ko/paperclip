@@ -240,7 +240,7 @@ function canCreateBootstrapInviteImmediately(config: Pick<PaperclipConfig, "data
 
 export async function onboard(opts: OnboardOptions): Promise<void> {
   printPaperclipCliBanner();
-  p.intro(pc.bgCyan(pc.black(" paperclipai onboard ")));
+  p.intro(pc.bgCyan(pc.black(" relaycontrol onboard ")));
   const configPath = resolveConfigPath(opts.config);
   const instance = describeLocalInstancePaths(resolvePaperclipInstanceId());
   p.log.message(
@@ -266,9 +266,9 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
 
   if (existingConfig) {
     p.log.message(
-      pc.dim("Existing Paperclip install detected; keeping the current configuration unchanged."),
+      pc.dim("Existing Relay Control install detected; keeping the current configuration unchanged."),
     );
-    p.log.message(pc.dim(`Use ${pc.cyan("paperclipai configure")} if you want to change settings.`));
+    p.log.message(pc.dim(`Use ${pc.cyan("relaycontrol configure")} if you want to change settings.`));
 
     const jwtSecret = ensureAgentJwtSecret(configPath);
     const envFilePath = resolveAgentJwtEnvFile(configPath);
@@ -305,9 +305,9 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
 
     p.note(
       [
-        `Run: ${pc.cyan("paperclipai run")}`,
-        `Reconfigure later: ${pc.cyan("paperclipai configure")}`,
-        `Diagnose setup: ${pc.cyan("paperclipai doctor")}`,
+        `Run: ${pc.cyan("relaycontrol run")}`,
+        `Reconfigure later: ${pc.cyan("relaycontrol configure")}`,
+        `Diagnose setup: ${pc.cyan("relaycontrol doctor")}`,
       ].join("\n"),
       "Next commands",
     );
@@ -315,7 +315,7 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
     let shouldRunNow = opts.run === true || opts.yes === true;
     if (!shouldRunNow && !opts.invokedByRun && process.stdin.isTTY && process.stdout.isTTY) {
       const answer = await p.confirm({
-        message: "Start Paperclip now?",
+        message: "Start Relay Control now?",
         initialValue: true,
       });
       if (!p.isCancel(answer)) {
@@ -330,7 +330,7 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
       return;
     }
 
-    p.outro("Existing Paperclip setup is ready.");
+    p.outro("Existing Relay Control setup is ready.");
     return;
   }
 
@@ -388,7 +388,7 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
         await db.execute("SELECT 1");
         s.stop("Database connection successful");
       } catch {
-        s.stop(pc.yellow("Could not connect to database — you can fix this later with `paperclipai doctor`"));
+        s.stop(pc.yellow("Could not connect to database — you can fix this later with `relaycontrol doctor`"));
       }
     }
 
@@ -533,9 +533,9 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
 
   p.note(
     [
-      `Run: ${pc.cyan("paperclipai run")}`,
-      `Reconfigure later: ${pc.cyan("paperclipai configure")}`,
-      `Diagnose setup: ${pc.cyan("paperclipai doctor")}`,
+      `Run: ${pc.cyan("relaycontrol run")}`,
+      `Reconfigure later: ${pc.cyan("relaycontrol configure")}`,
+      `Diagnose setup: ${pc.cyan("relaycontrol doctor")}`,
     ].join("\n"),
     "Next commands",
   );
@@ -548,7 +548,7 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
   let shouldRunNow = opts.run === true || opts.yes === true;
   if (!shouldRunNow && !opts.invokedByRun && process.stdin.isTTY && process.stdout.isTTY) {
     const answer = await p.confirm({
-      message: "Start Paperclip now?",
+      message: "Start Relay Control now?",
       initialValue: true,
     });
     if (!p.isCancel(answer)) {
@@ -567,8 +567,8 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
     p.log.info(
       [
         "Bootstrap CEO invite will be created after the server starts.",
-        `Next: ${pc.cyan("paperclipai run")}`,
-        `Then: ${pc.cyan("paperclipai auth bootstrap-ceo")}`,
+        `Next: ${pc.cyan("relaycontrol run")}`,
+        `Then: ${pc.cyan("relaycontrol auth bootstrap-ceo")}`,
       ].join("\n"),
     );
   }

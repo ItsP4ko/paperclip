@@ -80,7 +80,7 @@ export async function configure(opts: {
   const configPath = resolveConfigPath(opts.config);
 
   if (!configExists(opts.config)) {
-    p.log.error("No config file found. Run `paperclipai onboard` first.");
+    p.log.error("No config file found. Run `relaycontrol onboard` first.");
     p.outro("");
     return;
   }

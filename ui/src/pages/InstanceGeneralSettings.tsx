@@ -144,7 +144,7 @@ export function InstanceGeneralSettings() {
             <h2 className="text-sm font-semibold">AI feedback sharing</h2>
             <p className="max-w-2xl text-sm text-muted-foreground">
               Control whether thumbs up and thumbs down votes can send the voted AI output to
-              Paperclip Labs. Votes are always saved locally.
+              Relay Control Labs. Votes are always saved locally.
             </p>
             {FEEDBACK_TERMS_URL ? (
               <a
