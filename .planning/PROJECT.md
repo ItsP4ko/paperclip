@@ -8,6 +8,16 @@ Extensión de Paperclip para soportar agentes humanos reales junto a los agentes
 
 Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactamente como lo hace un agente de IA — sin fricción, desde la web app.
 
+## Current Milestone: v1.2 Performance & Mobile Fix
+
+**Goal:** Make every interaction feel instant via optimistic UI and aggressive caching, and fix cross-origin auth so mobile browsers can log in.
+
+**Target features:**
+- Optimistic UI updates for status changes, assignments, and mutations
+- Aggressive client-side caching for lists and issue data
+- WebSocket real-time optimization (reduce latency on live deployment)
+- Mobile login fix (cross-origin cookie/session persistence on iOS/Android)
+
 ## Current State
 
 **v1.0 shipped** (2026-04-04) — Human agents MVP: My Tasks, invite flow, task work surface, bidirectional handoff.
@@ -53,7 +63,12 @@ The platform is live and functional for multi-user testing. All 28 v1.1 requirem
 
 ### Active
 
-(Next milestone — define with `/gsd:new-milestone`)
+- [ ] Optimistic UI: status changes reflect immediately in the UI while server processes in background
+- [ ] Optimistic UI: assignment/reassignment changes reflect immediately
+- [ ] Client-side cache for issue lists — navigation feels instant on revisit
+- [ ] WebSocket latency reduced — real-time updates arrive noticeably faster on live deployment
+- [ ] Mobile login fix — users can log in and maintain session on iOS Safari and Android Chrome
+- [ ] My Tasks page renders correctly (currently empty despite badge count)
 
 ### Out of Scope
 
@@ -99,4 +114,4 @@ Performance is a known concern — WebSocket updates are slow, general UI respon
 | Gap closure phase for audit gaps | Phase 9 addressed rate-limit bug + manual E2E verification | ✓ Good — all 28 requirements closed |
 
 ---
-*Last updated: 2026-04-05 after v1.1 milestone*
+*Last updated: 2026-04-05 after v1.2 milestone start*

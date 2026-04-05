@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Deployment & SaaS Readiness
-status: complete
-stopped_at: Milestone v1.1 complete — archived and tagged
-last_updated: "2026-04-05T18:30:00.000Z"
+milestone: v1.2
+milestone_name: Performance & Mobile Fix
+status: defining_requirements
+stopped_at: Milestone v1.2 started — defining requirements
+last_updated: "2026-04-05T00:00:00.000Z"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -19,29 +19,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-05)
 
 **Core value:** A human can receive, work on, and complete tasks inside Paperclip exactly as an AI agent does — without friction, from the web app.
-**Current focus:** Planning next milestone (v1.2)
+**Current focus:** Defining requirements for v1.2
 
 ## Current Position
 
-Milestone v1.1 complete. No active phases.
-
-## Performance Metrics
-
-**Velocity:**
-
-- v1.0: 4 phases, 11 plans (1 day)
-- v1.1: 5 phases, 13 plans (2 days)
-
-**Recent Trend:**
-| Phase 05 P01 | 7 | 2 tasks | 7 files |
-| Phase 05 P02 | 338 | 2 tasks | 8 files |
-| Phase 06 P04 | 185 | 3 tasks | 3 files |
-| Phase 06 P05 | 1 | 2 tasks | 2 files |
-| Phase 07 P01 | 1 | 2 tasks | 1 files |
-| Phase 08 P01 | 4 | 2 tasks | 10 files |
-| Phase 08 P02 | 4 | 2 tasks | 6 files |
-| Phase 09 P01 | 2 | 1 tasks | 2 files |
-| Phase 09 P02 | 15 | 2 tasks | 3 files |
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-05 — Milestone v1.2 started
 
 ## Accumulated Context
 
@@ -60,10 +45,4 @@ None.
 
 ### Blockers/Concerns
 
-None — milestone complete.
-
-## Session Continuity
-
-Last session: 2026-04-05
-Stopped at: Milestone v1.1 complete — archived and tagged
-Resume file: None
+None.
