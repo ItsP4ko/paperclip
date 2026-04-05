@@ -3,6 +3,7 @@ import type { IncomingHttpHeaders } from "node:http";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { toNodeHandler } from "better-auth/node";
+import { bearer } from "better-auth/plugins";
 import type { Db } from "@paperclipai/db";
 import {
   authAccounts,
@@ -96,6 +97,7 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins?
       requireEmailVerification: false,
       disableSignUp: config.authDisableSignUp,
     },
+    plugins: [bearer()],
     ...(isHttpOnly
       ? { advanced: { useSecureCookies: false } }
       : {
