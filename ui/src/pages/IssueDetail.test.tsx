@@ -265,10 +265,10 @@ describe("IssueDetail", () => {
     const capturedMutations: any[] = [];
     vi.mocked(useMutation).mockImplementation((options: unknown) => {
       capturedMutations.push(options);
-      return { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false } as ReturnType<typeof useMutation>;
+      return { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false } as unknown as ReturnType<typeof useMutation>;
     });
 
-    vi.mocked(useQueryClient).mockReturnValue(mockQueryClient as ReturnType<typeof useQueryClient>);
+    vi.mocked(useQueryClient).mockReturnValue(mockQueryClient as unknown as ReturnType<typeof useQueryClient>);
 
     const root = createRoot(container);
     act(() => {
