@@ -10,6 +10,7 @@ vi.mock("@/lib/router", () => ({
     <a className={className} {...props}>{children}</a>
   ),
   useLocation: () => ({ pathname: "/", search: "", hash: "" }),
+  useSearchParams: () => [new URLSearchParams(), vi.fn()],
   useNavigate: () => () => {},
 }));
 
@@ -24,7 +25,35 @@ vi.mock("../context/BreadcrumbContext", () => ({
 vi.mock("../api/issues", () => ({
   issuesApi: {
     list: vi.fn().mockResolvedValue([]),
+    update: vi.fn().mockResolvedValue({}),
   },
+}));
+
+vi.mock("../api/agents", () => ({
+  agentsApi: {
+    list: vi.fn().mockResolvedValue([]),
+  },
+}));
+
+vi.mock("../api/projects", () => ({
+  projectsApi: {
+    list: vi.fn().mockResolvedValue([]),
+  },
+}));
+
+vi.mock("../api/heartbeats", () => ({
+  heartbeatsApi: {
+    liveRunsForCompany: vi.fn().mockResolvedValue([]),
+  },
+}));
+
+vi.mock("../lib/issueDetailBreadcrumb", () => ({
+  createIssueDetailLocationState: () => ({}),
+}));
+
+// Mock IssuesList to avoid rendering complexity (useDialog, etc.)
+vi.mock("../components/IssuesList", () => ({
+  IssuesList: () => <div data-testid="issues-list" />,
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,18 +61,19 @@ vi.mock("../api/issues", () => ({
 
 import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "../context/CompanyContext";
-import { issuesApi } from "../api/issues";
-import { MyIssues } from "./MyIssues";
+import { Issues } from "./Issues";
 
 vi.mock("@tanstack/react-query", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-query")>();
   return {
     ...actual,
     useQuery: vi.fn(),
+    useMutation: vi.fn().mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn() }),
+    useQueryClient: vi.fn().mockReturnValue({ invalidateQueries: vi.fn() }),
   };
 });
 
-describe("MyIssues", () => {
+describe("Issues", () => {
   let container: HTMLDivElement;
 
   beforeEach(() => {
@@ -62,76 +92,33 @@ describe("MyIssues", () => {
     vi.clearAllMocks();
   });
 
-  it("calls issuesApi.list with assigneeUserId me", () => {
-    vi.mocked(useCompany).mockReturnValue({
-      selectedCompanyId: "company-1",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
-
-    let capturedQueryKey: unknown;
-    let capturedQueryFn: (() => unknown) | undefined;
-
-    vi.mocked(useQuery).mockImplementation((options) => {
-      capturedQueryKey = options.queryKey;
-      capturedQueryFn = options.queryFn as (() => unknown) | undefined;
-      return { data: undefined, isLoading: false, error: null } as ReturnType<typeof useQuery>;
-    });
-
-    const root = createRoot(container);
-    act(() => {
-      root.render(<MyIssues />);
-    });
-
-    expect(capturedQueryKey).toEqual(["issues", "company-1", "assigned-to-me"]);
-
-    // Invoke the queryFn and assert it calls issuesApi.list with the correct args
-    capturedQueryFn?.();
-    expect(issuesApi.list).toHaveBeenCalledWith("company-1", { assigneeUserId: "me" });
-
-    act(() => {
-      root.unmount();
-    });
-  });
-
-  it("shows empty company message when no company selected", () => {
-    vi.mocked(useCompany).mockReturnValue({
-      selectedCompanyId: null,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
-
-    const root = createRoot(container);
-    act(() => {
-      root.render(<MyIssues />);
-    });
-
-    expect(container.textContent).toContain("Select a company to view your tasks.");
-
-    act(() => {
-      root.unmount();
-    });
-  });
-
-  it("listAssignedToMe query passes staleTime 120_000", () => {
+  it("issues list query passes staleTime 120_000", () => {
     vi.mocked(useCompany).mockReturnValue({
       selectedCompanyId: "company-1",
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let capturedOptions: any;
+    const capturedCalls: any[] = [];
 
     vi.mocked(useQuery).mockImplementation((options) => {
-      capturedOptions = options;
+      capturedCalls.push(options);
       return { data: undefined, isLoading: false, error: null } as ReturnType<typeof useQuery>;
     });
 
     const root = createRoot(container);
     act(() => {
-      root.render(<MyIssues />);
+      root.render(<Issues />);
     });
 
-    expect(capturedOptions).toBeDefined();
-    expect(capturedOptions.staleTime).toBe(120_000);
+    // Find the issues.list call whose queryKey starts with ["issues", "company-1"]
+    const issuesListCall = capturedCalls.find((opts) => {
+      const key = opts.queryKey as unknown[];
+      return Array.isArray(key) && key[0] === "issues" && key[1] === "company-1" && key[2] === "participant-agent";
+    });
+
+    expect(issuesListCall).toBeDefined();
+    expect(issuesListCall.staleTime).toBe(120_000);
 
     act(() => {
       root.unmount();
