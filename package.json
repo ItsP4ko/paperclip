@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "agent": "pnpm --filter @paperclipai/server exec tsx ../scripts/agent-runner.ts",
     "dev": "pnpm --filter @paperclipai/server exec tsx ../scripts/dev-runner.ts watch",
     "dev:watch": "pnpm --filter @paperclipai/server exec tsx ../scripts/dev-runner.ts watch",
     "dev:once": "pnpm --filter @paperclipai/server exec tsx ../scripts/dev-runner.ts dev",
