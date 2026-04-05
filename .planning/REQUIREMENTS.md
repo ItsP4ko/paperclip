@@ -14,18 +14,18 @@ Requirements for deployment & SaaS readiness. Each maps to roadmap phases.
 - [x] **DEPLOY-03**: WebSocket URLs in frontend point to backend host, not CDN host (3 files: LiveUpdatesProvider, useLiveRunTranscripts, AgentDetail)
 - [x] **DEPLOY-04**: Frontend build succeeds on Vercel with correct environment variables
 
-### Deployment — Backend (Railway)
+### Deployment — Backend (Easypanel)
 
-- [ ] **DEPLOY-05**: Backend deployed to Railway using existing Dockerfile with `SERVE_UI=false`
+- [x] **DEPLOY-05**: Backend deployed to Easypanel using existing Dockerfile with `SERVE_UI=false`
 - [x] **DEPLOY-06**: Health check endpoint (`GET /health`) responds correctly for Railway container readiness
-- [ ] **DEPLOY-07**: All required environment variables configured in Railway (DATABASE_URL, BETTER_AUTH_SECRET, PAPERCLIP_DEPLOYMENT_MODE, etc.)
+- [x] **DEPLOY-07**: All required environment variables configured in Easypanel (DATABASE_URL, BETTER_AUTH_SECRET, PAPERCLIP_DEPLOYMENT_MODE, etc.)
 - [x] **DEPLOY-08**: Backend reads `PORT` from environment (Railway overrides at runtime)
 
 ### Deployment — Database (Supabase)
 
-- [ ] **DEPLOY-09**: Supabase PostgreSQL provisioned and schema migrated (manual SQL execution)
-- [ ] **DEPLOY-10**: Backend connects to Supabase via session-mode pooler (port 5432) with pool size cap
-- [ ] **DEPLOY-11**: Existing data model works on Supabase without schema changes
+- [x] **DEPLOY-09**: Supabase PostgreSQL provisioned and schema migrated (manual SQL execution)
+- [x] **DEPLOY-10**: Backend connects to Supabase via session-mode pooler (port 5432) with pool size cap
+- [x] **DEPLOY-11**: Existing data model works on Supabase without schema changes
 
 ### Cross-Origin Auth & Security
 
@@ -33,7 +33,7 @@ Requirements for deployment & SaaS readiness. Each maps to roadmap phases.
 - [x] **AUTH-02**: BetterAuth cookies set to `SameSite=None; Secure` for cross-origin auth
 - [x] **AUTH-03**: `PAPERCLIP_ALLOWED_HOSTNAMES` includes Vercel domain so boardMutationGuard accepts requests
 - [x] **AUTH-04**: `BETTER_AUTH_SECRET` set to a secure random value (no fallback to hardcoded dev secret)
-- [ ] **AUTH-05**: User can sign up and log in from Vercel-hosted frontend to Railway-hosted backend
+- [ ] **AUTH-05**: User can sign up and log in from Vercel-hosted frontend to Easypanel-hosted backend
 
 ### API Hardening
 
@@ -86,13 +86,13 @@ Deferred to future release. Tracked but not in current roadmap.
 | DEPLOY-02 | Phase 5 | Complete |
 | DEPLOY-03 | Phase 5 | Complete |
 | DEPLOY-04 | Phase 5 | Complete |
-| DEPLOY-05 | Phase 6 | Pending |
+| DEPLOY-05 | Phase 6 | Complete |
 | DEPLOY-06 | Phase 5 | Complete |
-| DEPLOY-07 | Phase 6 | Pending |
+| DEPLOY-07 | Phase 6 | Complete |
 | DEPLOY-08 | Phase 5 | Complete |
-| DEPLOY-09 | Phase 6 | Pending |
-| DEPLOY-10 | Phase 6 | Pending |
-| DEPLOY-11 | Phase 6 | Pending |
+| DEPLOY-09 | Phase 6 | Complete |
+| DEPLOY-10 | Phase 6 | Complete |
+| DEPLOY-11 | Phase 6 | Complete |
 | AUTH-01 | Phase 5 | Complete |
 | AUTH-02 | Phase 5 | Complete |
 | AUTH-03 | Phase 5 | Complete |
@@ -118,4 +118,4 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-04-04*
-*Last updated: 2026-04-04 — traceability mapped to phases 5-8*
+*Last updated: 2026-04-04 -- Phase 6 platform corrected to Easypanel; DEPLOY-05/07/09/10/11 marked complete*
