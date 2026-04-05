@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PatchInstanceGeneralSettings } from "@paperclipai/shared";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, Terminal, Check, Copy, RefreshCw } from "lucide-react";
 import { instanceSettingsApi } from "@/api/instanceSettings";
+import { Button } from "@/components/ui/button";
+import { API_BASE } from "@/lib/api-base";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { queryKeys } from "../lib/queryKeys";
 import { cn } from "../lib/utils";
@@ -13,6 +15,10 @@ export function InstanceGeneralSettings() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [cliLoading, setCliLoading] = useState(false);
+  const [cliError, setCliError] = useState<string | null>(null);
+  const [cliCommand, setCliCommand] = useState<string | null>(null);
+  const [cliCopied, setCliCopied] = useState(false);
 
   useEffect(() => {
     setBreadcrumbs([
@@ -36,6 +42,44 @@ export function InstanceGeneralSettings() {
       setActionError(error instanceof Error ? error.message : "Failed to update general settings.");
     },
   });
+
+  async function handleGenerateCliCommand() {
+    setCliLoading(true);
+    setCliError(null);
+    setCliCommand(null);
+    setCliCopied(false);
+    try {
+      const res = await fetch(`${API_BASE}/cli-setup/generate`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => null);
+        throw new Error(
+          (errBody as { error?: string } | null)?.error ?? `Request failed: ${res.status}`,
+        );
+      }
+      const data = await res.json() as {
+        token: string;
+        serverUrl: string;
+        expiresAt: string;
+        userEmail: string;
+      };
+      setCliCommand(`npx relaycontrol@latest connect --server "${data.serverUrl}" --token "${data.token}"`);
+    } catch (err) {
+      setCliError(err instanceof Error ? err.message : "Failed to generate setup command.");
+    } finally {
+      setCliLoading(false);
+    }
+  }
+
+  async function handleCopyCliCommand() {
+    if (!cliCommand) return;
+    await navigator.clipboard.writeText(cliCommand);
+    setCliCopied(true);
+    setTimeout(() => setCliCopied(false), 2000);
+  }
 
   if (generalQuery.isLoading) {
     return <div className="text-sm text-muted-foreground">Loading general settings...</div>;
@@ -72,6 +116,64 @@ export function InstanceGeneralSettings() {
           {actionError}
         </div>
       )}
+
+      <section className="rounded-xl border border-border bg-card p-5">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Terminal className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold">CLI Setup</h2>
+            </div>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              Connect your machine to this Relay Control instance.
+            </p>
+          </div>
+
+          {cliError && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {cliError}
+            </div>
+          )}
+
+          {!cliCommand ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={cliLoading}
+              onClick={handleGenerateCliCommand}
+            >
+              <Terminal className="h-3.5 w-3.5" />
+              {cliLoading ? "Generating..." : "Generate Setup Command"}
+            </Button>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs font-mono text-foreground select-all overflow-x-auto whitespace-nowrap">
+                  {cliCommand}
+                </code>
+                <Button variant="outline" size="sm" onClick={handleCopyCliCommand}>
+                  {cliCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                  {cliCopied ? "Copied!" : "Copy"}
+                </Button>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  className="text-xs text-muted-foreground underline hover:text-foreground"
+                  onClick={handleGenerateCliCommand}
+                >
+                  <RefreshCw className="inline h-3 w-3 mr-1" />
+                  Regenerate
+                </button>
+                <span className="text-xs text-muted-foreground">Expires in 30 days</span>
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground">
+            Paste this command in the terminal of the machine you want to connect. Requires Node.js 20+.
+          </p>
+        </div>
+      </section>
 
       <section className="rounded-xl border border-border bg-card p-5">
         <div className="flex items-start justify-between gap-4">

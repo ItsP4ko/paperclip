@@ -14,6 +14,7 @@ import type { Db } from "@paperclipai/db";
 import {
   agentApiKeys,
   authUsers,
+  boardApiKeys,
   companies,
   invites,
   joinRequests
@@ -48,6 +49,11 @@ import {
   logActivity,
   notifyHireApproved
 } from "../services/index.js";
+import {
+  createBoardApiToken,
+  hashBearerToken,
+  boardApiKeyExpiresAt
+} from "../services/board-auth.js";
 import { assertCompanyAccess } from "./authz.js";
 import {
   claimBoardOwnership,
@@ -1803,6 +1809,41 @@ export function accessRoutes(
       });
     }
     res.json({ revoked: true, keyId: key.id });
+  });
+
+  router.post("/cli-setup/generate", async (req, res) => {
+    if (req.actor.type !== "board" || !req.actor.userId) {
+      throw unauthorized("Authenticated session required");
+    }
+
+    const userId = req.actor.userId;
+
+    const plainToken = createBoardApiToken();
+    const keyHash = hashBearerToken(plainToken);
+    const expiresAt = boardApiKeyExpiresAt();
+
+    await db.insert(boardApiKeys).values({
+      userId,
+      name: "CLI Setup (auto-generated)",
+      keyHash,
+      expiresAt,
+    });
+
+    const user = await db
+      .select({ email: authUsers.email })
+      .from(authUsers)
+      .where(eq(authUsers.id, userId))
+      .then((rows) => rows[0] ?? null);
+
+    const serverUrl =
+      process.env.PAPERCLIP_PUBLIC_URL || requestBaseUrl(req) || null;
+
+    res.status(201).json({
+      token: plainToken,
+      serverUrl,
+      expiresAt: expiresAt.toISOString(),
+      userEmail: user?.email ?? null,
+    });
   });
 
   async function assertCompanyPermission(
