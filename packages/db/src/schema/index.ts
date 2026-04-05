@@ -61,3 +61,4 @@ export { pluginLogs } from "./plugin_logs.js";
 export { knowledgeEntries } from "./knowledge_entries.js";
 export { knowledgeInjections } from "./knowledge_injections.js";
 export { costRecommendations } from "./cost_recommendations.js";
+export { pipelines, pipelineSteps, pipelineRuns, pipelineRunSteps } from "./pipelines.js";

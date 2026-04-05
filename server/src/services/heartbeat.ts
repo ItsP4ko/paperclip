@@ -55,6 +55,7 @@ import {
   resolveExecutionWorkspaceMode,
 } from "./execution-workspace-policy.js";
 import { instanceSettingsService } from "./instance-settings.js";
+import { knowledgeService } from "./knowledge.js";
 import { redactCurrentUserText, redactCurrentUserValue } from "../log-redaction.js";
 import {
   hasSessionCompactionThresholds,
@@ -892,6 +893,7 @@ export function heartbeatService(db: Db) {
   const issuesSvc = issueService(db);
   const executionWorkspacesSvc = executionWorkspaceService(db);
   const workspaceOperationsSvc = workspaceOperationService(db);
+  const knowledgeSvc = knowledgeService(db);
   const activeRunExecutions = new Set<string>();
   const budgetHooks = {
     cancelWorkForScope: cancelBudgetScopeWork,
@@ -2647,6 +2649,39 @@ export function heartbeatService(db: Db) {
           payload: meta as unknown as Record<string, unknown>,
         });
       };
+
+      // --- Knowledge Base injection ---
+      try {
+        const kbEntries = await knowledgeSvc.resolveForInjection(
+          agent.companyId,
+          agent.id,
+          issueContext?.title ?? undefined,
+        );
+        const allKbEntries = [...kbEntries.pinned, ...kbEntries.contextual];
+        if (allKbEntries.length > 0) {
+          context.paperclipKnowledgeBase = allKbEntries.map((e) => ({
+            id: e.id,
+            title: e.title,
+            content: e.content,
+            category: e.category,
+            pinned: e.pinned,
+          }));
+          await knowledgeSvc.recordInjections(
+            agent.companyId,
+            agent.id,
+            run.id,
+            allKbEntries.map((e) => e.id),
+          );
+          await appendRunEvent(currentRun, seq++, {
+            eventType: "lifecycle",
+            stream: "system",
+            level: "info",
+            message: `injected ${allKbEntries.length} knowledge base entries`,
+          });
+        }
+      } catch (kbErr) {
+        logger.warn({ runId: run.id, err: kbErr }, "Knowledge base injection failed; continuing without KB context");
+      }
 
       const adapter = getServerAdapter(agent.adapterType);
       const authToken = adapter.supportsLocalAgentJwt

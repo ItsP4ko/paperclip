@@ -27,6 +27,9 @@ import { Analytics } from "./pages/Analytics";
 import { AuditLog } from "./pages/AuditLog";
 import { KnowledgeBase } from "./pages/KnowledgeBase";
 import { CostRecommendations } from "./pages/CostRecommendations";
+import { Pipelines } from "./pages/Pipelines";
+import { PipelineDetail } from "./pages/PipelineDetail";
+import { PipelineRunDetail } from "./pages/PipelineRunDetail";
 import { Inbox } from "./pages/Inbox";
 import { CompanySettings } from "./pages/CompanySettings";
 import { MyIssues } from "./pages/MyIssues";
@@ -177,6 +180,9 @@ function boardRoutes() {
       <Route path="audit" element={<AuditLog />} />
       <Route path="knowledge" element={<KnowledgeBase />} />
       <Route path="cost-recommendations" element={<CostRecommendations />} />
+      <Route path="pipelines" element={<Pipelines />} />
+      <Route path="pipelines/:pipelineId" element={<PipelineDetail />} />
+      <Route path="pipelines/:pipelineId/runs/:runId" element={<PipelineRunDetail />} />
       <Route path="inbox" element={<InboxRootRedirect />} />
       <Route path="inbox/mine" element={<Inbox />} />
       <Route path="inbox/recent" element={<Inbox />} />
@@ -355,6 +361,11 @@ export function App() {
           <Route path="projects/:projectId/configuration" element={<UnprefixedBoardRedirect />} />
           <Route path="my-tasks" element={<UnprefixedBoardRedirect />} />
           <Route path="execution-workspaces/:workspaceId" element={<UnprefixedBoardRedirect />} />
+          <Route path="knowledge" element={<UnprefixedBoardRedirect />} />
+          <Route path="cost-recommendations" element={<UnprefixedBoardRedirect />} />
+          <Route path="pipelines" element={<UnprefixedBoardRedirect />} />
+          <Route path="pipelines/:pipelineId" element={<UnprefixedBoardRedirect />} />
+          <Route path="pipelines/:pipelineId/runs/:runId" element={<UnprefixedBoardRedirect />} />
           <Route path="tests/ux/runs" element={<UnprefixedBoardRedirect />} />
           <Route path=":companyPrefix" element={<Layout />}>
             {boardRoutes()}

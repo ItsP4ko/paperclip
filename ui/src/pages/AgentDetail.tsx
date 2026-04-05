@@ -76,6 +76,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { AgentIcon, AgentIconPicker } from "../components/AgentIconPicker";
+import { knowledgeApi, type KnowledgeEntry, type KnowledgeEntryInput } from "../api/knowledge";
 import { RunTranscriptView, type TranscriptMode } from "../components/transcript/RunTranscriptView";
 import {
   isUuidLike,
@@ -223,13 +224,14 @@ function scrollToContainerBottom(container: ScrollContainer, behavior: ScrollBeh
   container.scrollTo({ top: container.scrollHeight, behavior });
 }
 
-type AgentDetailView = "dashboard" | "instructions" | "configuration" | "skills" | "runs" | "budget";
+type AgentDetailView = "dashboard" | "instructions" | "configuration" | "skills" | "runs" | "budget" | "knowledge";
 
 function parseAgentDetailView(value: string | null): AgentDetailView {
   if (value === "instructions" || value === "prompts") return "instructions";
   if (value === "configure" || value === "configuration") return "configuration";
   if (value === "skills") return "skills";
   if (value === "budget") return "budget";
+  if (value === "knowledge") return "knowledge";
   if (value === "runs") return value;
   return "dashboard";
 }
@@ -652,6 +654,8 @@ export function AgentDetail() {
               ? "runs"
               : activeView === "budget"
                 ? "budget"
+                : activeView === "knowledge"
+                  ? "knowledge"
               : "dashboard";
     if (routeAgentRef !== canonicalAgentRef || urlTab !== canonicalTab) {
       navigate(`/agents/${canonicalAgentRef}/${canonicalTab}`, { replace: true });
@@ -773,6 +777,8 @@ export function AgentDetail() {
       //   crumbs.push({ label: "Skills" });
       } else if (activeView === "runs") {
         crumbs.push({ label: "Runs" });
+      } else if (activeView === "knowledge") {
+        crumbs.push({ label: "Knowledge" });
       } else if (activeView === "budget") {
         crumbs.push({ label: "Budget" });
       } else {
@@ -914,6 +920,7 @@ export function AgentDetail() {
               { value: "skills", label: "Skills" },
               { value: "configuration", label: "Configuration" },
               { value: "runs", label: "Runs" },
+              { value: "knowledge", label: "Knowledge" },
               { value: "budget", label: "Budget" },
             ]}
             value={activeView}
@@ -1026,6 +1033,10 @@ export function AgentDetail() {
           agent={agent}
           companyId={resolvedCompanyId ?? undefined}
         />
+      )}
+
+      {activeView === "knowledge" && resolvedCompanyId && (
+        <AgentKnowledgeTab agentId={agent.id} companyId={resolvedCompanyId} />
       )}
 
       {activeView === "runs" && (
@@ -2343,6 +2354,131 @@ function PromptEditorSkeleton() {
     <div className="space-y-3">
       <Skeleton className="h-10 w-full" />
       <Skeleton className="h-[420px] w-full" />
+    </div>
+  );
+}
+
+function AgentKnowledgeTab({ agentId, companyId }: { agentId: string; companyId: string }) {
+  const queryClient = useQueryClient();
+  const entries = useQuery({
+    queryKey: queryKeys.knowledge.list(companyId, { agentId }),
+    queryFn: () => knowledgeApi.list(companyId, { agentId }),
+    enabled: !!companyId,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (input: KnowledgeEntryInput) =>
+      knowledgeApi.create(companyId, { ...input, agentId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["knowledge", companyId] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => knowledgeApi.delete(companyId, id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["knowledge", companyId] }),
+  });
+
+  const togglePinMutation = useMutation({
+    mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) =>
+      knowledgeApi.update(companyId, id, { pinned }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["knowledge", companyId] }),
+  });
+
+  const [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+
+  function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title || !content) return;
+    createMutation.mutate({ title, content, pinned: false }, {
+      onSuccess: () => {
+        setTitle("");
+        setContent("");
+        setShowForm(false);
+      },
+    });
+  }
+
+  return (
+    <div className="max-w-3xl space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Knowledge entries scoped to this agent. Pinned entries are automatically injected into every run.
+        </p>
+        <Button size="sm" variant="outline" onClick={() => setShowForm(!showForm)}>
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          Add
+        </Button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleCreate} className="rounded-lg border border-border bg-card p-4 space-y-3">
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Entry title"
+            required
+            autoFocus
+          />
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Content (markdown supported)"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[100px] resize-y"
+            required
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowForm(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" disabled={createMutation.isPending}>
+              {createMutation.isPending ? "Creating..." : "Create"}
+            </Button>
+          </div>
+        </form>
+      )}
+
+      <div className="rounded-lg border border-border bg-card divide-y divide-border">
+        {entries.data?.length === 0 && (
+          <p className="text-sm text-muted-foreground py-8 text-center">No knowledge entries for this agent</p>
+        )}
+        {entries.data?.map((entry) => (
+          <div key={entry.id} className="px-4 py-3 group flex items-start gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{entry.title}</span>
+                {entry.pinned && <span className="text-amber-500 text-[10px] font-medium">PINNED</span>}
+                {entry.category && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{entry.category}</span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{entry.content.slice(0, 200)}</p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => togglePinMutation.mutate({ id: entry.id, pinned: !entry.pinned })}
+                title={entry.pinned ? "Unpin" : "Pin"}
+              >
+                <span className={`text-xs ${entry.pinned ? "text-amber-500" : ""}`}>
+                  {entry.pinned ? "Unpin" : "Pin"}
+                </span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => deleteMutation.mutate(entry.id)}
+              >
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            </div>
+          </div>
+        ))}
+        {entries.isLoading && (
+          <p className="text-sm text-muted-foreground py-6 text-center">Loading...</p>
+        )}
+      </div>
     </div>
   );
 }

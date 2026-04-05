@@ -13,7 +13,7 @@ Requirements for v1.2 Performance & Mobile Fix milestone.
 - [x] **OPTM-02**: User sees assignee change reflected immediately on issue detail without waiting for server confirmation
 - [x] **OPTM-03**: User sees newly created subtask appear in list before server confirms creation
 - [x] **OPTM-04**: Failed mutations auto-rollback to previous state with visible error feedback
-- [ ] **OPTM-05**: WS-driven cache invalidations do not overwrite in-flight optimistic mutations (isMutating guard)
+- [x] **OPTM-05**: WS-driven cache invalidations do not overwrite in-flight optimistic mutations (isMutating guard)
 
 ### Caching
 
@@ -64,7 +64,7 @@ Requirements for v1.2 Performance & Mobile Fix milestone.
 | OPTM-02 | Phase 10 | Complete |
 | OPTM-03 | Phase 10 | Complete |
 | OPTM-04 | Phase 10 | Complete |
-| OPTM-05 | Phase 10 | Pending |
+| OPTM-05 | Phase 10 | Complete |
 | CACHE-01 | Phase 11 | Pending |
 | CACHE-02 | Phase 11 | Pending |
 | CACHE-03 | Phase 11 | Pending |

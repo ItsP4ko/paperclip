@@ -128,6 +128,15 @@ export const queryKeys = {
     list: (companyId: string, status?: string) =>
       ["cost-recommendations", companyId, status ?? "all"] as const,
   },
+  pipelines: {
+    list: (companyId: string) => ["pipelines", companyId] as const,
+    detail: (companyId: string, pipelineId: string) =>
+      ["pipelines", companyId, pipelineId] as const,
+    runs: (companyId: string, pipelineId?: string) =>
+      ["pipeline-runs", companyId, pipelineId ?? "__all__"] as const,
+    run: (companyId: string, runId: string) =>
+      ["pipeline-runs", companyId, "detail", runId] as const,
+  },
   health: ["health"] as const,
   secrets: {
     list: (companyId: string) => ["secrets", companyId] as const,

@@ -46,6 +46,7 @@ import { assertCompanyAccess, getActorInfo } from "./authz.js";
 import { shouldWakeAssigneeOnCheckout } from "./issues-checkout-wakeup.js";
 import { isAllowedContentType, MAX_ATTACHMENT_BYTES } from "../attachment-types.js";
 import { queueIssueAssignmentWakeup } from "../services/issue-assignment-wakeup.js";
+import { pipelineService } from "../services/pipelines.js";
 
 const MAX_ISSUE_COMMENT_LIMIT = 500;
 const updateIssueRouteSchema = updateIssueSchema.extend({
@@ -67,6 +68,7 @@ export function issueRoutes(db: Db, storage: StorageService) {
   const workProductsSvc = workProductService(db);
   const documentsSvc = documentService(db);
   const routinesSvc = routineService(db);
+  const pipelineSvc = pipelineService(db);
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: MAX_ATTACHMENT_BYTES, files: 1 },
@@ -1204,6 +1206,9 @@ export function issueRoutes(db: Db, storage: StorageService) {
           trackAgentTaskCompleted(tc, { agentRole: actorAgent.role });
         }
       }
+      pipelineSvc.onIssueStatusChange(issue.id, issue.companyId).catch((err) =>
+        logger.warn({ err, issueId: issue.id }, "pipeline hook error"),
+      );
     }
 
     let comment = null;
