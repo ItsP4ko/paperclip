@@ -52,9 +52,9 @@ Requirements for deployment & SaaS readiness. Each maps to roadmap phases.
 - [x] **E2E-01**: Owner can invite a new user from Vercel frontend
 - [x] **E2E-02**: Invited user can sign up, accept invite, and see their dashboard
 - [x] **E2E-03**: Owner can assign a task to the invited user
-- [ ] **E2E-04**: Invited user can change task status, attach files, create subtasks
-- [ ] **E2E-05**: User can reassign a task to an AI agent (bidirectional handoff works)
-- [ ] **E2E-06**: Real-time updates (WebSocket) work across the deployed stack
+- [x] **E2E-04**: Invited user can change task status, attach files, create subtasks
+- [x] **E2E-05**: User can reassign a task to an AI agent (bidirectional handoff works)
+- [x] **E2E-06**: Real-time updates (WebSocket) work across the deployed stack
 
 ## v1.2 Requirements
 
@@ -107,9 +107,9 @@ Deferred to future release. Tracked but not in current roadmap.
 | E2E-01 | Phase 7 | Complete |
 | E2E-02 | Phase 7 | Complete |
 | E2E-03 | Phase 7 | Complete |
-| E2E-04 | Phase 9 (gap closure) | Pending |
-| E2E-05 | Phase 9 (gap closure) | Pending |
-| E2E-06 | Phase 9 (gap closure) | Pending |
+| E2E-04 | Phase 9 (gap closure) | Complete |
+| E2E-05 | Phase 9 (gap closure) | Complete |
+| E2E-06 | Phase 9 (gap closure) | Complete |
 
 **Coverage:**
 - v1.1 requirements: 28 total
@@ -118,4 +118,4 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-04-04*
-*Last updated: 2026-04-05 -- AUTH-05 marked complete; all Phase 6 requirements now [x]; verified via gap closure plan 06-05*
+*Last updated: 2026-04-05 -- E2E-04, E2E-05, E2E-06 marked complete; all 28 v1.1 requirements now [x]*
