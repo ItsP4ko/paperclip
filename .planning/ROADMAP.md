@@ -27,6 +27,7 @@ See: milestones/v1.0-ROADMAP.md for full phase details
 - [x] **Phase 6: Infrastructure Provisioning & Deployment** — Provision Supabase, Easypanel, Vercel; wire env vars; achieve a live multi-tier deployment (completed 2026-04-05)
 - [ ] **Phase 7: End-to-End Verification** — Validate the full invite → join → work → handoff cycle on the live deployment
 - [x] **Phase 8: API Hardening & Redis** — Add rate limiting, security headers, and Redis cache layer after base deployment is stable (completed 2026-04-05)
+- [ ] **Phase 9: Gap Closure — Rate-Limit Fix & E2E Completion** — Fix rate-limit health-skip bug, verify E2E-04 file attach and E2E-06 WebSocket manually, update docs
 
 ## Phase Details
 
@@ -93,6 +94,18 @@ Plans:
 - [ ] 08-01-PLAN.md — Helmet security headers, Redis client singleton, and config wiring
 - [ ] 08-02-PLAN.md — Rate limiting with RedisStore and instance settings cache
 
+### Phase 9: Gap Closure — Rate-Limit Fix & E2E Completion
+**Goal**: Close all audit gaps: fix rate-limit health-skip bug, manually verify E2E-04 file attach and E2E-06 WebSocket real-time, update requirements docs
+**Depends on**: Phase 8
+**Requirements**: E2E-04, E2E-05, E2E-06 (+ integration fix for HARD-01, DEPLOY-06)
+**Gap Closure**: Closes gaps from v1.1-MILESTONE-AUDIT.md
+**Success Criteria** (what must be TRUE):
+  1. Health endpoint (`/api/health`) is excluded from rate limiting — skip condition matches the actual request path
+  2. E2E-04 file attach verified manually on live deployment
+  3. E2E-06 WebSocket real-time verified in two-window manual test
+  4. All 28 v1.1 requirements show `[x]` in REQUIREMENTS.md with matching SUMMARY frontmatter
+**Plans:** 0/1 plans
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -105,3 +118,4 @@ Plans:
 | 6. Infrastructure Provisioning & Deployment | 5/5 | Complete   | 2026-04-05 | - |
 | 7. End-to-End Verification | 1/2 | In Progress|  | - |
 | 8. API Hardening & Redis | 2/2 | Complete   | 2026-04-05 | - |
+| 9. Gap Closure — Rate-Limit Fix & E2E Completion | 0/1 | Not Started | | - |

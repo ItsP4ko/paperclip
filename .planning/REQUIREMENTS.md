@@ -107,9 +107,9 @@ Deferred to future release. Tracked but not in current roadmap.
 | E2E-01 | Phase 7 | Complete |
 | E2E-02 | Phase 7 | Complete |
 | E2E-03 | Phase 7 | Complete |
-| E2E-04 | Phase 7 | Pending |
-| E2E-05 | Phase 7 | Pending |
-| E2E-06 | Phase 7 | Pending |
+| E2E-04 | Phase 9 (gap closure) | Pending |
+| E2E-05 | Phase 9 (gap closure) | Pending |
+| E2E-06 | Phase 9 (gap closure) | Pending |
 
 **Coverage:**
 - v1.1 requirements: 28 total
