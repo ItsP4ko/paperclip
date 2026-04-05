@@ -99,6 +99,19 @@ export const queryKeys = {
     schedulerHeartbeats: ["instance", "scheduler-heartbeats"] as const,
     experimentalSettings: ["instance", "experimental-settings"] as const,
   },
+  analytics: {
+    spendOverTime: (companyId: string, granularity?: string, groupBy?: string, from?: string, to?: string) =>
+      ["analytics", "spend-over-time", companyId, granularity, groupBy, from, to] as const,
+    agentPerformance: (companyId: string, from?: string, to?: string) =>
+      ["analytics", "agent-performance", companyId, from, to] as const,
+    adapterComparison: (companyId: string, from?: string, to?: string) =>
+      ["analytics", "adapter-comparison", companyId, from, to] as const,
+  },
+  audit: {
+    timeline: (companyId: string, filters?: Record<string, string | undefined>) =>
+      ["audit", "timeline", companyId, filters ?? {}] as const,
+    filters: (companyId: string) => ["audit", "filters", companyId] as const,
+  },
   health: ["health"] as const,
   secrets: {
     list: (companyId: string) => ["secrets", companyId] as const,
