@@ -31,6 +31,7 @@ import {
   type IssueCommentReassignment,
   type OptimisticIssueComment,
 } from "../lib/optimistic-issue-comments";
+import { applyOptimisticStatus, applyOptimisticAssignee, createOptimisticSubtaskStub } from "../lib/optimistic-issue-mutations";
 import { useProjectOrder } from "../hooks/useProjectOrder";
 import { relativeTime, cn, formatTokens, visibleRunCostUsd } from "../lib/utils";
 import { InlineEditor } from "../components/InlineEditor";
@@ -640,17 +641,68 @@ export function IssueDetail() {
   });
 
   const updateIssue = useMutation({
+    mutationKey: ["issue-update", issueId],
     mutationFn: (data: Record<string, unknown>) => issuesApi.update(issueId!, data),
-    onSuccess: () => {
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.issues.detail(issueId!) });
+      const previous = queryClient.getQueryData<Issue>(queryKeys.issues.detail(issueId!));
+
+      // Optimistic patch: assignee changes
+      if ("assigneeAgentId" in data || "assigneeUserId" in data) {
+        queryClient.setQueryData<Issue>(
+          queryKeys.issues.detail(issueId!),
+          (old) => applyOptimisticAssignee(old, {
+            assigneeAgentId: (data.assigneeAgentId as string | null) ?? old?.assigneeAgentId ?? null,
+            assigneeUserId: (data.assigneeUserId as string | null) ?? old?.assigneeUserId ?? null,
+          }),
+        );
+      }
+
+      // Optimistic patch: status changes (from StatusIcon onChange)
+      if ("status" in data && typeof data.status === "string") {
+        queryClient.setQueryData<Issue>(
+          queryKeys.issues.detail(issueId!),
+          (old) => applyOptimisticStatus(old, data.status as Issue["status"]),
+        );
+      }
+
+      return { previous };
+    },
+    onError: (_err, _data, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.issues.detail(issueId!), context.previous);
+      }
+      pushToast({ title: "Update failed", body: "Could not save changes. Try again.", tone: "error" });
+    },
+    onSettled: () => {
       invalidateIssue();
     },
   });
 
   // HumanActionBar: status mutation (named separately for clarity)
   const updateStatus = useMutation({
+    mutationKey: ["issue-status", issueId],
     mutationFn: (status: string) => issuesApi.update(issueId!, { status }),
-    onSuccess: () => {
+    onMutate: async (status) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.issues.detail(issueId!) });
+      const previous = queryClient.getQueryData<Issue>(queryKeys.issues.detail(issueId!));
+      queryClient.setQueryData<Issue>(
+        queryKeys.issues.detail(issueId!),
+        (old) => applyOptimisticStatus(old, status as Issue["status"]),
+      );
+      return { previous };
+    },
+    onError: (_err, _status, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.issues.detail(issueId!), context.previous);
+      }
+      pushToast({ title: "Status update failed", body: "Could not change status. Try again.", tone: "error" });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.issues.detail(issueId!) });
+      if (selectedCompanyId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(selectedCompanyId) });
+      }
     },
   });
 
@@ -672,21 +724,44 @@ export function IssueDetail() {
 
   // HumanActionBar: subtask creation using issue.companyId
   const createSubtask = useMutation({
+    mutationKey: ["create-subtask", issueId],
     mutationFn: (title: string) => {
       if (!issue) throw new Error("Issue not loaded");
       return issuesApi.create(issue.companyId, { title, parentId: issueId!, status: "todo" });
+    },
+    onMutate: async (title) => {
+      if (!issue || !selectedCompanyId) return {};
+      await queryClient.cancelQueries({ queryKey: queryKeys.issues.list(selectedCompanyId) });
+      const previousList = queryClient.getQueryData<Issue[]>(queryKeys.issues.list(selectedCompanyId));
+      const stub = createOptimisticSubtaskStub({
+        title,
+        companyId: issue.companyId,
+        parentId: issue.id,
+        projectId: issue.projectId ?? null,
+        goalId: issue.goalId ?? null,
+      });
+      queryClient.setQueryData<Issue[]>(
+        queryKeys.issues.list(selectedCompanyId),
+        (old) => [...(old ?? []), stub],
+      );
+      return { previousList, optimisticStubId: stub.id };
     },
     onSuccess: () => {
       setSubtaskTitle("");
       setSubtaskInputOpen(false);
       setSubtaskError(null);
+    },
+    onError: (_err, _title, context) => {
+      if (context?.previousList && selectedCompanyId) {
+        queryClient.setQueryData(queryKeys.issues.list(selectedCompanyId), context.previousList);
+      }
+      setSubtaskError("Could not create subtask. Try again.");
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.issues.detail(issueId!) });
       if (selectedCompanyId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(selectedCompanyId) });
       }
-    },
-    onError: () => {
-      setSubtaskError("Could not create subtask. Try again.");
     },
   });
 
