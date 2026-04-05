@@ -1,5 +1,4 @@
-import { API_BASE } from "@/lib/api-base";
-const BASE = API_BASE;
+import { API_BASE, getBearerHeaders, handle401 } from "@/lib/api-base";
 
 export class ApiError extends Error {
   status: number;
@@ -20,12 +19,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
-  const res = await fetch(`${BASE}${path}`, {
+  // Inject bearer auth header for cross-origin mobile support
+  const bearer = getBearerHeaders();
+  for (const [key, value] of Object.entries(bearer)) {
+    if (!headers.has(key)) {
+      headers.set(key, value);
+    }
+  }
+
+  const res = await fetch(`${API_BASE}${path}`, {
     headers,
     credentials: "include",
     ...init,
   });
   if (!res.ok) {
+    if (res.status === 401) {
+      handle401();
+    }
     const errorBody = await res.json().catch(() => null);
     throw new ApiError(
       (errorBody as { error?: string } | null)?.error ?? `Request failed: ${res.status}`,

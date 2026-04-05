@@ -20,3 +20,36 @@ export function getWsHost(): string {
   }
   return window.location.host;
 }
+
+/**
+ * Returns an Authorization: Bearer header object when a session token
+ * exists in localStorage, or an empty object otherwise.
+ * Used by all authenticated fetch calls for cross-origin mobile support.
+ */
+export function getBearerHeaders(): Record<string, string> {
+  try {
+    const token = localStorage.getItem("paperclip_session_token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    // localStorage may be unavailable in some contexts (SSR, privacy mode)
+    return {};
+  }
+}
+
+/**
+ * Centralized 401 handler: clears the bearer token from localStorage
+ * and redirects to /login. Per user decision (CONTEXT.md): "On any 401
+ * response: clear the localStorage token and redirect to /login.
+ * No silent refresh."
+ */
+export function handle401(): void {
+  try {
+    localStorage.removeItem("paperclip_session_token");
+  } catch {
+    // localStorage unavailable
+  }
+  // Only redirect if not already on /login to avoid redirect loops
+  if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+    window.location.href = "/login";
+  }
+}

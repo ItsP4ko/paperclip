@@ -1,4 +1,4 @@
-import { API_BASE } from "@/lib/api-base";
+import { API_BASE, getBearerHeaders } from "@/lib/api-base";
 
 export type DevServerHealthStatus = {
   enabled: true;
@@ -32,7 +32,10 @@ export const healthApi = {
   get: async (): Promise<HealthStatus> => {
     const res = await fetch(`${API_BASE}/health`, {
       credentials: "include",
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        ...getBearerHeaders(),
+      },
     });
     if (!res.ok) {
       const payload = await res.json().catch(() => null) as { error?: string } | null;

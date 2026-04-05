@@ -1,4 +1,4 @@
-import { API_BASE } from "@/lib/api-base";
+import { API_BASE, getBearerHeaders, handle401 } from "@/lib/api-base";
 
 export type AuthSession = {
   session: { id: string; userId: string };
@@ -42,16 +42,34 @@ async function authPost(path: string, body: Record<string, unknown>) {
         : (payload as { error?: string } | null)?.error ?? `Request failed: ${res.status}`;
     throw new Error(message);
   }
+  // Capture bearer token if present (mobile/cross-origin flows).
+  // The BetterAuth bearer plugin emits set-auth-token on successful sign-in/sign-up.
+  const authToken = res.headers.get("set-auth-token");
+  if (authToken) {
+    try {
+      localStorage.setItem("paperclip_session_token", authToken);
+    } catch {
+      // localStorage unavailable — bearer auth won't work but cookie fallback remains
+    }
+  }
   return payload;
 }
 
 export const authApi = {
   getSession: async (): Promise<AuthSession | null> => {
+    const bearerHeaders = getBearerHeaders();
     const res = await fetch(`${API_BASE}/auth/get-session`, {
       credentials: "include",
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        ...bearerHeaders,
+      },
     });
-    if (res.status === 401) return null;
+    if (res.status === 401) {
+      // Clear stale token and redirect to /login per user decision
+      handle401();
+      return null;
+    }
     const payload = await res.json().catch(() => null);
     if (!res.ok) {
       throw new Error(`Failed to load session (${res.status})`);
@@ -72,5 +90,7 @@ export const authApi = {
 
   signOut: async () => {
     await authPost("/sign-out", {});
+    // Clear bearer token from localStorage (cookie is cleared server-side)
+    try { localStorage.removeItem("paperclip_session_token"); } catch {}
   },
 };
