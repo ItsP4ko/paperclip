@@ -124,6 +124,6 @@ Plans:
 | 9. Gap Closure — Rate-Limit Fix & E2E Completion | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 10. Optimistic UI Mutations | v1.2 | Complete    | 2026-04-05 | 2026-04-05 |
 | 11. Backend Deploy Gaps | v1.2 | Complete    | 2026-04-05 | - |
-| 12. Aggressive Caching | 2/2 | Complete   | 2026-04-05 | - |
+| 12. Aggressive Caching | 2/2 | Complete    | 2026-04-05 | - |
 | 13. Mobile Cross-Origin Auth | v1.2 | 0/? | Not started | - |
 | 14. WebSocket Optimization | v1.2 | 0/? | Not started | - |
