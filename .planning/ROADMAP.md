@@ -39,7 +39,7 @@ See: milestones/v1.1-ROADMAP.md for full phase details
 
 - [x] **Phase 10: Optimistic UI Mutations** - Status/assignment/subtask changes reflect immediately; rollback on failure; WS race guarded (completed 2026-04-05)
 - [x] **Phase 11: Backend Deploy Gaps** - Redeploy Easypanel backend with missing routes; fix sidebar routing; re-run E2E for phases 3, 4, 5 (completed 2026-04-05)
-- [ ] **Phase 12: Aggressive Caching** - Navigation between previously-visited pages is instant; My Tasks renders correctly
+- [x] **Phase 12: Aggressive Caching** - Navigation between previously-visited pages is instant; My Tasks renders correctly (completed 2026-04-05)
 - [ ] **Phase 13: Mobile Cross-Origin Auth** - iOS Safari and Android Chrome users can log in and maintain authenticated sessions
 - [ ] **Phase 14: WebSocket Optimization** - Dead connections detected and reconnected; per-message latency reduced; cache recovered after reconnect
 
@@ -82,7 +82,7 @@ Plans:
   2. User opens a previously-visited issue detail — it renders instantly without a skeleton screen
   3. My Tasks page shows the correct list of assigned issues (matches the sidebar badge count)
   4. After a user performs any mutation (status change, assignment, subtask creation), the relevant list and detail pages reflect the updated data — no stale values shown
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 12-01-PLAN.md — Per-query staleTime: 120_000 on issue list and detail queries (CACHE-01, CACHE-02)
 - [ ] 12-02-PLAN.md — Add listAssignedToMe invalidation to all missing call-sites (CACHE-03, CACHE-04)
@@ -124,6 +124,6 @@ Plans:
 | 9. Gap Closure — Rate-Limit Fix & E2E Completion | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 10. Optimistic UI Mutations | v1.2 | Complete    | 2026-04-05 | 2026-04-05 |
 | 11. Backend Deploy Gaps | v1.2 | Complete    | 2026-04-05 | - |
-| 12. Aggressive Caching | 1/2 | In Progress|  | - |
+| 12. Aggressive Caching | 2/2 | Complete   | 2026-04-05 | - |
 | 13. Mobile Cross-Origin Auth | v1.2 | 0/? | Not started | - |
 | 14. WebSocket Optimization | v1.2 | 0/? | Not started | - |

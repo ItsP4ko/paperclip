@@ -19,8 +19,8 @@ Requirements for v1.2 Performance & Mobile Fix milestone.
 
 - [x] **CACHE-01**: Issue lists are cached for 2 minutes — navigating back to a list shows data instantly without spinner
 - [x] **CACHE-02**: Issue detail is cached for 2 minutes — reopening a previously-visited issue is instant
-- [ ] **CACHE-03**: My Tasks page renders assigned issues correctly (fix: currently renders empty despite badge count showing tasks)
-- [ ] **CACHE-04**: Cache invalidates correctly after any mutation — no stale data shown to user after a change
+- [x] **CACHE-03**: My Tasks page renders assigned issues correctly (fix: currently renders empty despite badge count showing tasks)
+- [x] **CACHE-04**: Cache invalidates correctly after any mutation — no stale data shown to user after a change
 
 ### Mobile Auth
 
@@ -67,8 +67,8 @@ Requirements for v1.2 Performance & Mobile Fix milestone.
 | OPTM-05 | Phase 10 | Complete |
 | CACHE-01 | Phase 11 | Complete |
 | CACHE-02 | Phase 11 | Complete |
-| CACHE-03 | Phase 11 | Pending |
-| CACHE-04 | Phase 11 | Pending |
+| CACHE-03 | Phase 11 | Complete |
+| CACHE-04 | Phase 11 | Complete |
 | MAUTH-01 | Phase 12 | Pending |
 | MAUTH-02 | Phase 12 | Pending |
 | MAUTH-03 | Phase 12 | Pending |

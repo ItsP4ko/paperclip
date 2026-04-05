@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Performance & Mobile Fix
 status: unknown
-stopped_at: "Completed 12-01-PLAN.md"
-last_updated: "2026-04-05T22:01:00Z"
+stopped_at: Completed 12-02-PLAN.md
+last_updated: "2026-04-05T22:12:24.363Z"
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -44,6 +44,7 @@ Plan: 2 of 2
 | Phase 10 P01 | 3m | 2 tasks | 3 files |
 | Phase 10 P02 | 8 | 1 tasks | 2 files |
 | Phase 10-optimistic-ui-mutations P02 | 10m | 2 tasks | 2 files |
+| Phase 12 P02 | 10m | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,8 @@ Plan: 2 of 2
 - [12-01]: Mock IssuesList in Issues.test.tsx to avoid useDialog context — test goal is query options not render output
 - [12-01]: Mock InlineEditor/sandpack components in IssueDetail.test.tsx — stitches CSS insertRule fails in jsdom
 - [12-01]: Per-query staleTime 120_000 overrides global 30s default for issue list and detail queries only; polling queries unchanged
+- [Phase 12-02]: listAssignedToMe placed outside isMutating guard — filtered list not touched by optimistic writes, always safe to invalidate alongside listMineByMe/listTouchedByMe/listUnreadTouchedByMe
+- [Phase 12-02]: IssueDetail/Issues tests use useMutation capture pattern to invoke onSettled/onSuccess callbacks and verify listAssignedToMe invalidation without rendering full mutation lifecycle
 
 ### Pending Todos
 
@@ -76,6 +79,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T22:01:00Z
-Stopped at: Completed 12-01-PLAN.md
-Resume file: .planning/phases/12-aggressive-caching/12-01-SUMMARY.md
+Last session: 2026-04-05T22:12:24.362Z
+Stopped at: Completed 12-02-PLAN.md
+Resume file: None
