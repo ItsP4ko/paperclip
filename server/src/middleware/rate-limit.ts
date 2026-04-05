@@ -12,7 +12,7 @@ export function createRateLimiter(redisClient?: RedisClientType, opts?: { limit?
 
   return rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: opts?.limit ?? 200,
+    limit: opts?.limit ?? 1000,
     standardHeaders: "draft-8",
     legacyHeaders: false,
     store,
