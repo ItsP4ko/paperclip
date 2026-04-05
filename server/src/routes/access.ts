@@ -1865,6 +1865,9 @@ export function accessRoutes(
     }
     if (req.actor.type !== "board") throw unauthorized();
     if (isLocalImplicit(req)) return;
+    // Owner bypass — company owners have all permissions implicitly
+    const membership = await access.getMembership(companyId, "user", req.actor.userId!);
+    if (membership?.membershipRole === "owner") return;
     const allowed = await access.canUser(
       companyId,
       req.actor.userId,
