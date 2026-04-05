@@ -54,7 +54,10 @@ See: milestones/v1.1-ROADMAP.md for full phase details
   3. User creates a subtask and it appears in the subtask list before the server responds
   4. When a mutation fails (simulated network error), the UI reverts to the previous state and shows an error message
   5. While a status or assignment mutation is in flight, a WebSocket `activity.logged` event does not overwrite the optimistic value
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 10-01-PLAN.md — Optimistic mutation utilities + rewire IssueDetail.tsx mutations
+- [ ] 10-02-PLAN.md — isMutating guard in LiveUpdatesProvider + human verification
 
 ### Phase 11: Aggressive Caching
 **Goal**: Navigating between pages that have been visited before is instant, with no loading skeleton, and the My Tasks page renders assigned issues correctly
@@ -102,7 +105,7 @@ See: milestones/v1.1-ROADMAP.md for full phase details
 | 7. End-to-End Verification | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 8. API Hardening & Redis | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 9. Gap Closure — Rate-Limit Fix & E2E Completion | v1.1 | 2/2 | Complete | 2026-04-05 |
-| 10. Optimistic UI Mutations | v1.2 | 0/? | Not started | - |
+| 10. Optimistic UI Mutations | v1.2 | 0/2 | Not started | - |
 | 11. Aggressive Caching | v1.2 | 0/? | Not started | - |
 | 12. Mobile Cross-Origin Auth | v1.2 | 0/? | Not started | - |
 | 13. WebSocket Optimization | v1.2 | 0/? | Not started | - |
