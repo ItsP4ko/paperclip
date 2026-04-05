@@ -1,9 +1,11 @@
 import { Router, type Request } from "express";
 import type { Db } from "@paperclipai/db";
+import type { RedisClientType } from "redis";
 import { patchInstanceExperimentalSettingsSchema, patchInstanceGeneralSettingsSchema } from "@paperclipai/shared";
 import { forbidden } from "../errors.js";
 import { validate } from "../middleware/validate.js";
 import { instanceSettingsService, logActivity } from "../services/index.js";
+import { logger } from "../middleware/logger.js";
 import { getActorInfo } from "./authz.js";
 
 function assertCanManageInstanceSettings(req: Request) {
@@ -16,9 +18,12 @@ function assertCanManageInstanceSettings(req: Request) {
   throw forbidden("Instance admin access required");
 }
 
-export function instanceSettingsRoutes(db: Db) {
+export function instanceSettingsRoutes(db: Db, redisClient?: RedisClientType) {
   const router = Router();
   const svc = instanceSettingsService(db);
+
+  const CACHE_KEY = "instance:settings:general";
+  const TTL_SECONDS = 60;
 
   router.get("/instance/settings/general", async (req, res) => {
     // General settings (e.g. keyboardShortcuts) are readable by any
@@ -26,7 +31,25 @@ export function instanceSettingsRoutes(db: Db) {
     if (req.actor.type !== "board") {
       throw forbidden("Board access required");
     }
-    res.json(await svc.getGeneral());
+
+    if (redisClient?.isReady) {
+      const cached = await redisClient.get(CACHE_KEY).catch(() => null);
+      if (cached) {
+        logger.debug("[redis] cache hit: instance settings");
+        res.json(JSON.parse(cached));
+        return;
+      }
+    }
+
+    const settings = await svc.getGeneral();
+
+    if (redisClient?.isReady) {
+      await redisClient.set(CACHE_KEY, JSON.stringify(settings), { EX: TTL_SECONDS }).catch(() => {
+        logger.warn("[redis] failed to cache instance settings");
+      });
+    }
+
+    res.json(settings);
   });
 
   router.patch(
@@ -35,6 +58,13 @@ export function instanceSettingsRoutes(db: Db) {
     async (req, res) => {
       assertCanManageInstanceSettings(req);
       const updated = await svc.updateGeneral(req.body);
+
+      if (redisClient?.isReady) {
+        await redisClient.del(CACHE_KEY).catch(() => {
+          logger.warn("[redis] failed to invalidate instance settings cache");
+        });
+      }
+
       const actor = getActorInfo(req);
       const companyIds = await svc.listCompanyIds();
       await Promise.all(
