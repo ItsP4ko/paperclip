@@ -73,7 +73,10 @@ Plans:
   4. Invited user can change task status, attach a file, and create a subtask — all changes persist on reload
   5. Invited user can reassign a task to an AI agent; the agent receives the task and the handoff warning dialog appears
   6. Real-time WebSocket updates (task state changes) are visible to both users without a page refresh
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 07-01-PLAN.md — Fix members 403 bug (owner bypass in assertCompanyPermission) + deploy
+- [ ] 07-02-PLAN.md — Full E2E verification journey with Chrome DevTools MCP + VERIFICATION.md report
 
 ### Phase 8: API Hardening & Redis
 **Goal**: The API layer is resilient to abuse and performant under real load — rate limiting is distributed via Redis, security headers protect all responses, and frequently-read data is cached
@@ -97,5 +100,5 @@ Plans:
 | 4. Online Deployment & Multi-User Auth | v1.0 | 2/2 | Complete | 2026-04-04 |
 | 5. Cross-Origin Code Preparation | 2/2 | Complete   | 2026-04-04 | - |
 | 6. Infrastructure Provisioning & Deployment | 5/5 | Complete   | 2026-04-05 | - |
-| 7. End-to-End Verification | v1.1 | 0/TBD | Not started | - |
+| 7. End-to-End Verification | v1.1 | 0/2 | Planned | - |
 | 8. API Hardening & Redis | v1.1 | 0/TBD | Not started | - |
