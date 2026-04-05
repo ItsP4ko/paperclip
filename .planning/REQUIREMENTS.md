@@ -58,33 +58,31 @@ Requirements for v1.2 Performance & Mobile Fix milestone.
 
 ## Traceability
 
-Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| OPTM-01 | — | Pending |
-| OPTM-02 | — | Pending |
-| OPTM-03 | — | Pending |
-| OPTM-04 | — | Pending |
-| OPTM-05 | — | Pending |
-| CACHE-01 | — | Pending |
-| CACHE-02 | — | Pending |
-| CACHE-03 | — | Pending |
-| CACHE-04 | — | Pending |
-| MAUTH-01 | — | Pending |
-| MAUTH-02 | — | Pending |
-| MAUTH-03 | — | Pending |
-| MAUTH-04 | — | Pending |
-| MAUTH-05 | — | Pending |
-| WS-01 | — | Pending |
-| WS-02 | — | Pending |
-| WS-03 | — | Pending |
+| OPTM-01 | Phase 10 | Pending |
+| OPTM-02 | Phase 10 | Pending |
+| OPTM-03 | Phase 10 | Pending |
+| OPTM-04 | Phase 10 | Pending |
+| OPTM-05 | Phase 10 | Pending |
+| CACHE-01 | Phase 11 | Pending |
+| CACHE-02 | Phase 11 | Pending |
+| CACHE-03 | Phase 11 | Pending |
+| CACHE-04 | Phase 11 | Pending |
+| MAUTH-01 | Phase 12 | Pending |
+| MAUTH-02 | Phase 12 | Pending |
+| MAUTH-03 | Phase 12 | Pending |
+| MAUTH-04 | Phase 12 | Pending |
+| MAUTH-05 | Phase 12 | Pending |
+| WS-01 | Phase 13 | Pending |
+| WS-02 | Phase 13 | Pending |
+| WS-03 | Phase 13 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 17 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 17 ⚠️
+- Mapped to phases: 17
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-05*
-*Last updated: 2026-04-05 after initial definition*
+*Last updated: 2026-04-05 — traceability complete, roadmap phases 10-13 assigned*

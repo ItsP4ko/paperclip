@@ -4,6 +4,7 @@
 
 - ✅ **v1.0 Human Agents MVP** — Phases 1-4 (shipped 2026-04-04)
 - ✅ **v1.1 Deployment & SaaS Readiness** — Phases 5-9 (shipped 2026-04-05)
+- 🚧 **v1.2 Performance & Mobile Fix** — Phases 10-13 (in progress)
 
 ## Phases
 
@@ -32,6 +33,62 @@ See: milestones/v1.1-ROADMAP.md for full phase details
 
 </details>
 
+### 🚧 v1.2 Performance & Mobile Fix (In Progress)
+
+**Milestone Goal:** Make every interaction feel instant via optimistic UI and aggressive caching, and fix cross-origin auth so mobile browsers can log in.
+
+- [ ] **Phase 10: Optimistic UI Mutations** - Status/assignment/subtask changes reflect immediately; rollback on failure; WS race guarded
+- [ ] **Phase 11: Aggressive Caching** - Navigation between previously-visited pages is instant; My Tasks renders correctly
+- [ ] **Phase 12: Mobile Cross-Origin Auth** - iOS Safari and Android Chrome users can log in and maintain authenticated sessions
+- [ ] **Phase 13: WebSocket Optimization** - Dead connections detected and reconnected; per-message latency reduced; cache recovered after reconnect
+
+## Phase Details
+
+### Phase 10: Optimistic UI Mutations
+**Goal**: Users see their actions reflected immediately in the UI — status changes, assignments, and new subtasks appear without waiting for the server, with visible rollback on failure
+**Depends on**: Phase 9 (v1.1 complete)
+**Requirements**: OPTM-01, OPTM-02, OPTM-03, OPTM-04, OPTM-05
+**Success Criteria** (what must be TRUE):
+  1. User changes an issue status and the new status appears in the UI immediately — no loading spinner or delay visible
+  2. User reassigns an issue and the new assignee reflects in the issue detail without waiting for server confirmation
+  3. User creates a subtask and it appears in the subtask list before the server responds
+  4. When a mutation fails (simulated network error), the UI reverts to the previous state and shows an error message
+  5. While a status or assignment mutation is in flight, a WebSocket `activity.logged` event does not overwrite the optimistic value
+**Plans**: TBD
+
+### Phase 11: Aggressive Caching
+**Goal**: Navigating between pages that have been visited before is instant, with no loading skeleton, and the My Tasks page renders assigned issues correctly
+**Depends on**: Phase 10
+**Requirements**: CACHE-01, CACHE-02, CACHE-03, CACHE-04
+**Success Criteria** (what must be TRUE):
+  1. User navigates away from an issue list and returns within 5 minutes — data appears instantly without a loading spinner
+  2. User opens a previously-visited issue detail — it renders instantly without a skeleton screen
+  3. My Tasks page shows the correct list of assigned issues (matches the sidebar badge count)
+  4. After a user performs any mutation (status change, assignment, subtask creation), the relevant list and detail pages reflect the updated data — no stale values shown
+**Plans**: TBD
+
+### Phase 12: Mobile Cross-Origin Auth
+**Goal**: Users on iOS Safari and Android Chrome can log in to Paperclip and maintain an authenticated session, including real-time WebSocket updates
+**Depends on**: Phase 11
+**Requirements**: MAUTH-01, MAUTH-02, MAUTH-03, MAUTH-04, MAUTH-05
+**Success Criteria** (what must be TRUE):
+  1. A user on iOS Safari with default privacy settings can sign in and stay logged in across page navigations
+  2. A user on Android Chrome can sign in and stay logged in across page navigations
+  3. Frontend and backend are accessible under the same root domain so Safari ITP does not block session cookies
+  4. WebSocket connections from mobile sessions receive real-time updates (user session token validated in WS upgrade, not only agent API keys)
+  5. Navigating directly to a nested route (e.g., `/PAC/dashboard`) on Vercel loads the correct page instead of a 404
+**Plans**: TBD
+
+### Phase 13: WebSocket Optimization
+**Goal**: WebSocket connections are reliable — dead connections are detected and recovered, per-message latency is reduced, and the client cache is restored after a reconnect
+**Depends on**: Phase 12
+**Requirements**: WS-01, WS-02, WS-03
+**Success Criteria** (what must be TRUE):
+  1. After a network drop or silent NAT timeout, the client detects the dead connection within 25 seconds and automatically reconnects without user action
+  2. WebSocket message round-trip latency on the live Easypanel deployment is measurably lower than before (`perMessageDeflate` disabled)
+  3. After a WebSocket reconnect, any issues or lists the user has open reflect the current server state — events missed during the disconnect window are not silently lost
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -45,3 +102,7 @@ See: milestones/v1.1-ROADMAP.md for full phase details
 | 7. End-to-End Verification | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 8. API Hardening & Redis | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 9. Gap Closure — Rate-Limit Fix & E2E Completion | v1.1 | 2/2 | Complete | 2026-04-05 |
+| 10. Optimistic UI Mutations | v1.2 | 0/? | Not started | - |
+| 11. Aggressive Caching | v1.2 | 0/? | Not started | - |
+| 12. Mobile Cross-Origin Auth | v1.2 | 0/? | Not started | - |
+| 13. WebSocket Optimization | v1.2 | 0/? | Not started | - |
