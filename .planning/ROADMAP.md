@@ -24,7 +24,7 @@ See: milestones/v1.0-ROADMAP.md for full phase details
 **Milestone Goal:** Deploy Paperclip for real multi-user testing — frontend on Vercel CDN, backend on Easypanel VPS, Supabase as global database, API Gateway middleware, Redis cache layer. The full invite → join → work → handoff cycle verified against a live production-like deployment.
 
 - [x] **Phase 5: Cross-Origin Code Preparation** — Fix all code-level blockers so the frontend can talk to a separately-hosted backend (completed 2026-04-04)
-- [ ] **Phase 6: Infrastructure Provisioning & Deployment** — Provision Supabase, Easypanel, Vercel; wire env vars; achieve a live multi-tier deployment
+- [x] **Phase 6: Infrastructure Provisioning & Deployment** — Provision Supabase, Easypanel, Vercel; wire env vars; achieve a live multi-tier deployment (completed 2026-04-05)
 - [ ] **Phase 7: End-to-End Verification** — Validate the full invite → join → work → handoff cycle on the live deployment
 - [ ] **Phase 8: API Hardening & Redis** — Add rate limiting, security headers, and Redis cache layer after base deployment is stable
 
@@ -54,7 +54,7 @@ Plans:
   2. Easypanel container is running with `SERVE_UI=false`; `GET /health` returns 200 and health checks pass
   3. Vercel deployment completes with `VITE_API_URL` pointing to Easypanel backend; direct-navigation to any route returns the app (not a 404)
   4. A user can sign up and log in from the Vercel frontend to the Easypanel backend — session cookie is set and persists across page refreshes
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 Plans:
 - [x] 06-01-PLAN.md — Pool size cap for Supabase connection (code change)
 - [x] 06-02-PLAN.md — Supabase provisioning and schema migration
@@ -96,6 +96,6 @@ Plans:
 | 3. Owner Team Visibility | v1.0 | 3/3 | Complete | 2026-04-04 |
 | 4. Online Deployment & Multi-User Auth | v1.0 | 2/2 | Complete | 2026-04-04 |
 | 5. Cross-Origin Code Preparation | 2/2 | Complete   | 2026-04-04 | - |
-| 6. Infrastructure Provisioning & Deployment | 4/5 | In Progress|  | - |
+| 6. Infrastructure Provisioning & Deployment | 5/5 | Complete   | 2026-04-05 | - |
 | 7. End-to-End Verification | v1.1 | 0/TBD | Not started | - |
 | 8. API Hardening & Redis | v1.1 | 0/TBD | Not started | - |

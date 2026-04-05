@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Deployment & SaaS Readiness
 status: unknown
-stopped_at: Completed 06-04-PLAN.md
-last_updated: "2026-04-05T01:58:18.419Z"
+stopped_at: Completed 06-05-PLAN.md
+last_updated: "2026-04-05T02:05:48.892Z"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -44,6 +44,7 @@ Plan: 1 of 5
 | Phase 05 P02 | 338 | 2 tasks | 8 files |
 | Phase 05 P01 | 7 | 2 tasks | 7 files |
 | Phase 06 P04 | 185 | 3 tasks | 3 files |
+| Phase 06-infrastructure-provisioning-deployment P05 | 1 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -58,6 +59,7 @@ Plan: 1 of 5
 - [05-02]: Pre-existing TS error in IssueProperties.tsx (AssigneeSelection type mismatch) blocks tsc -b — out of scope for this plan, deferred.
 - [Phase 05]: cors package chosen over hand-rolled CORS headers; CORS and boardMutationGuard both use opts.allowedHostnames; BetterAuth SameSite=None via advanced.defaultCookieAttributes
 - [Phase 06]: DEPLOY-05/07/09/10/11 marked complete — Easypanel+Supabase infrastructure verified deployed; AUTH-05 deferred to plan 06-05
+- [Phase 06]: AUTH-05 verified via Chrome DevTools MCP — all auth checks passed; minor Vercel nested SPA route 404 deferred to Phase 7
 
 ### Pending Todos
 
@@ -70,6 +72,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T01:58:18.417Z
-Stopped at: Completed 06-04-PLAN.md
+Last session: 2026-04-05T02:05:48.891Z
+Stopped at: Completed 06-05-PLAN.md
 Resume file: None
