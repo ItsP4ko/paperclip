@@ -14,8 +14,9 @@ Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactam
 **Phase 05 complete** (2026-04-04) — Cross-origin code preparation: CORS middleware, BetterAuth cross-origin cookies, centralized API base URL, Vercel SPA rewrite.
 **Phase 06 complete** (2026-04-05) — Infrastructure deployed: Frontend on Vercel CDN, backend on Easypanel VPS, Supabase PostgreSQL. Cross-origin auth verified end-to-end (sign-up, sign-in, session persistence).
 **Phase 08 complete** (2026-04-05) — API Hardening & Redis: Helmet security headers, distributed rate limiting via Redis, instance settings endpoint caching.
+**Phase 09 complete** (2026-04-05) — Gap Closure: Rate-limit health-skip bug fixed, E2E-04/05/06 verified on live deployment. All 28 v1.1 requirements now [x].
 
-Human agents are fully functional in `local_trusted` mode. The full invite → join → work → handoff cycle works end-to-end. Authenticated mode supports auto-approval for human joins. Three-tier deployment is live. API layer is hardened with security headers, rate limiting, and Redis caching.
+Human agents are fully functional in `local_trusted` mode. The full invite → join → work → handoff cycle works end-to-end. Authenticated mode supports auto-approval for human joins. Three-tier deployment is live. API layer is hardened with security headers, rate limiting, and Redis caching. All v1.1 milestone requirements verified and closed.
 
 **Known tech debt:** 9 items (see `milestones/v1.0-MILESTONE-AUDIT.md`). Key items:
 - Members endpoint requires `users:manage_permissions` grant — non-owner humans get 403 in authenticated mode
@@ -54,7 +55,7 @@ Human agents are fully functional in `local_trusted` mode. The full invite → j
 - [x] Supabase as global database + Backend on Easypanel VPS — Validated in Phase 06
 - [ ] API Gateway protecting backend
 - [x] Redis cache layer for global database — Validated in Phase 08
-- [ ] End-to-end multi-user testing (invite → join → work → handoff)
+- [x] End-to-end multi-user testing (invite → join → work → handoff) — Validated in Phase 09
 
 ### Out of Scope
 
@@ -104,4 +105,4 @@ v1.0 shipped. Tech stack: React 19 + Vite + Tailwind v4 + shadcn/ui (frontend), 
 | InlineEntitySelector groups prop | Reusar componente existente para grouped pickers | ✓ Good — NewIssueDialog uses it; IssueProperties uses bespoke popover |
 
 ---
-*Last updated: 2026-04-05 after Phase 08 (API Hardening & Redis) complete*
+*Last updated: 2026-04-05 after Phase 09 (Gap Closure — Rate-limit fix & E2E verification) complete. v1.1 milestone fully verified.*
