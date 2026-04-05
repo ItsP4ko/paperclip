@@ -21,10 +21,10 @@ See: milestones/v1.0-ROADMAP.md for full phase details
 
 ### 🚧 v1.1 Deployment & SaaS Readiness (In Progress)
 
-**Milestone Goal:** Deploy Paperclip for real multi-user testing — frontend on Vercel CDN, backend on Railway, Supabase as global database, API Gateway middleware, Redis cache layer. The full invite → join → work → handoff cycle verified against a live production-like deployment.
+**Milestone Goal:** Deploy Paperclip for real multi-user testing — frontend on Vercel CDN, backend on Easypanel VPS, Supabase as global database, API Gateway middleware, Redis cache layer. The full invite → join → work → handoff cycle verified against a live production-like deployment.
 
 - [x] **Phase 5: Cross-Origin Code Preparation** — Fix all code-level blockers so the frontend can talk to a separately-hosted backend (completed 2026-04-04)
-- [ ] **Phase 6: Infrastructure Provisioning & Deployment** — Provision Supabase, Railway, Vercel; wire env vars; achieve a live multi-tier deployment
+- [ ] **Phase 6: Infrastructure Provisioning & Deployment** — Provision Supabase, Easypanel, Vercel; wire env vars; achieve a live multi-tier deployment
 - [ ] **Phase 7: End-to-End Verification** — Validate the full invite → join → work → handoff cycle on the live deployment
 - [ ] **Phase 8: API Hardening & Redis** — Add rate limiting, security headers, and Redis cache layer after base deployment is stable
 
@@ -46,19 +46,21 @@ Plans:
 - [ ] 05-02-PLAN.md — Frontend API/WS URL centralization and Vercel config
 
 ### Phase 6: Infrastructure Provisioning & Deployment
-**Goal**: Supabase, Railway, and Vercel are all live with correct env vars wired between them, and the backend responds to authenticated API requests from the Vercel frontend
+**Goal**: Supabase, Easypanel, and Vercel are all live with correct env vars wired between them, and the backend responds to authenticated API requests from the Vercel frontend
 **Depends on**: Phase 5
 **Requirements**: DEPLOY-05, DEPLOY-07, DEPLOY-09, DEPLOY-10, DEPLOY-11, AUTH-05
 **Success Criteria** (what must be TRUE):
   1. Supabase PostgreSQL is provisioned and the full schema is migrated — backend boots against Supabase without schema errors
-  2. Railway container is running with `SERVE_UI=false`; `GET /health` returns 200 and Railway health checks pass
-  3. Vercel deployment completes with `VITE_API_URL` pointing to Railway; direct-navigation to any route returns the app (not a 404)
-  4. A user can sign up and log in from the Vercel frontend to the Railway backend — session cookie is set and persists across page refreshes
-**Plans:** 3 plans
+  2. Easypanel container is running with `SERVE_UI=false`; `GET /health` returns 200 and health checks pass
+  3. Vercel deployment completes with `VITE_API_URL` pointing to Easypanel backend; direct-navigation to any route returns the app (not a 404)
+  4. A user can sign up and log in from the Vercel frontend to the Easypanel backend — session cookie is set and persists across page refreshes
+**Plans:** 5 plans (3 original + 2 gap closure)
 Plans:
-- [ ] 06-01-PLAN.md — Pool size cap for Supabase connection (code change)
-- [ ] 06-02-PLAN.md — Supabase provisioning and schema migration
-- [ ] 06-03-PLAN.md — Railway + Vercel deployment and auth verification
+- [x] 06-01-PLAN.md — Pool size cap for Supabase connection (code change)
+- [x] 06-02-PLAN.md — Supabase provisioning and schema migration
+- [x] 06-03-PLAN.md — Easypanel + Vercel deployment and auth configuration
+- [ ] 06-04-PLAN.md — Documentation correction: Railway to Easypanel + mark requirements
+- [ ] 06-05-PLAN.md — Auth bootstrap and verification checkpoint
 
 ### Phase 7: End-to-End Verification
 **Goal**: The complete multi-user workflow (owner invites, user joins, task assigned, task worked, handoff to AI agent, real-time updates) is verified on the live deployment
@@ -94,6 +96,6 @@ Plans:
 | 3. Owner Team Visibility | v1.0 | 3/3 | Complete | 2026-04-04 |
 | 4. Online Deployment & Multi-User Auth | v1.0 | 2/2 | Complete | 2026-04-04 |
 | 5. Cross-Origin Code Preparation | 2/2 | Complete   | 2026-04-04 | - |
-| 6. Infrastructure Provisioning & Deployment | v1.1 | 0/3 | Not started | - |
+| 6. Infrastructure Provisioning & Deployment | v1.1 | 3/5 | In progress | - |
 | 7. End-to-End Verification | v1.1 | 0/TBD | Not started | - |
 | 8. API Hardening & Redis | v1.1 | 0/TBD | Not started | - |
