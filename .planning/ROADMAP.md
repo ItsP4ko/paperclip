@@ -97,7 +97,7 @@ Plans:
   3. Frontend and backend are accessible under the same root domain so Safari ITP does not block session cookies
   4. WebSocket connections from mobile sessions receive real-time updates (user session token validated in WS upgrade, not only agent API keys)
   5. Navigating directly to a nested route (e.g., `/PAC/dashboard`) on Vercel loads the correct page instead of a 404
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 13-01-PLAN.md — Server-side bearer auth + WS user session auth (MAUTH-01, MAUTH-02, MAUTH-03, MAUTH-04)
 - [ ] 13-02-PLAN.md — Frontend bearer injection + WS token + Vercel SPA routing (MAUTH-01, MAUTH-02, MAUTH-04, MAUTH-05)
@@ -128,5 +128,5 @@ Plans:
 | 10. Optimistic UI Mutations | v1.2 | Complete    | 2026-04-05 | 2026-04-05 |
 | 11. Backend Deploy Gaps | v1.2 | Complete    | 2026-04-05 | - |
 | 12. Aggressive Caching | 2/2 | Complete    | 2026-04-05 | - |
-| 13. Mobile Cross-Origin Auth | v1.2 | 0/2 | Planning complete | - |
+| 13. Mobile Cross-Origin Auth | 1/2 | In Progress|  | - |
 | 14. WebSocket Optimization | v1.2 | 0/? | Not started | - |

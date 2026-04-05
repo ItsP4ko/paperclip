@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Performance & Mobile Fix
-status: unknown
-stopped_at: Phase 13 context gathered
-last_updated: "2026-04-05T22:30:45.284Z"
+status: executing
+stopped_at: Completed 13-01-PLAN.md
+last_updated: "2026-04-05T23:05:00Z"
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-05)
 
 **Core value:** A human can receive, work on, and complete tasks inside Paperclip exactly as an AI agent does — without friction, from the web app.
-**Current focus:** Phase 12 — aggressive-caching
+**Current focus:** Phase 13 — mobile-cross-origin-auth
 
 ## Current Position
 
-Phase: 12 (aggressive-caching) — EXECUTING
+Phase: 13 (mobile-cross-origin-auth) — EXECUTING
 Plan: 2 of 2
 
 ## Performance Metrics
@@ -45,6 +45,7 @@ Plan: 2 of 2
 | Phase 10 P02 | 8 | 1 tasks | 2 files |
 | Phase 10-optimistic-ui-mutations P02 | 10m | 2 tasks | 2 files |
 | Phase 12 P02 | 10m | 2 tasks | 6 files |
+| Phase 13 P01 | 4m | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -55,6 +56,9 @@ Plan: 2 of 2
 - [v1.1]: Redis optional with graceful degradation — no hard dependency
 - [v1.2]: Phase 10 before Phase 11 — isMutating guard must exist before staleTime is raised or WS race window widens
 - [v1.2]: MAUTH uses bearer() plugin strategy (not Vercel proxy) — solves both HTTP and WS auth in one pass
+- [13-01]: bearer() plugin added unconditionally — only activates when Authorization: Bearer header is present, cookie-only flows unaffected
+- [13-01]: authorizeUpgrade exported for unit testing — low risk, only adds a named export from module
+- [13-01]: source="bearer_session" added to actor to distinguish bearer from cookie sessions in logs
 - [10-01]: createOptimisticSubtaskStub omits "as Issue" cast — TypeScript satisfied structurally via all required fields
 - [10-01]: updateIssue patches both assignee and status optimistically via key-presence detection to cover all callers
 - [Phase 10]: Guard suppresses only issue list and detail keys — non-optimistic keys (comments, activity, runs, attachments) always invalidated
@@ -79,6 +83,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T22:30:45.282Z
-Stopped at: Phase 13 context gathered
-Resume file: .planning/phases/13-mobile-cross-origin-auth/13-CONTEXT.md
+Last session: 2026-04-05T23:05:00Z
+Stopped at: Completed 13-01-PLAN.md
+Resume file: .planning/phases/13-mobile-cross-origin-auth/13-02-PLAN.md

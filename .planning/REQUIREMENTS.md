@@ -24,10 +24,10 @@ Requirements for v1.2 Performance & Mobile Fix milestone.
 
 ### Mobile Auth
 
-- [ ] **MAUTH-01**: User on iOS Safari can log in and maintain an authenticated session (currently stuck on login screen)
-- [ ] **MAUTH-02**: User on Android Chrome can log in and maintain an authenticated session
-- [ ] **MAUTH-03**: Frontend and backend are served under the same root custom domain to resolve Safari ITP third-party cookie blocking
-- [ ] **MAUTH-04**: WebSocket connections authenticate user sessions (currently only agent API keys are validated in live-events-ws.ts)
+- [x] **MAUTH-01**: User on iOS Safari can log in and maintain an authenticated session (currently stuck on login screen)
+- [x] **MAUTH-02**: User on Android Chrome can log in and maintain an authenticated session
+- [x] **MAUTH-03**: Frontend and backend are served under the same root custom domain to resolve Safari ITP third-party cookie blocking
+- [x] **MAUTH-04**: WebSocket connections authenticate user sessions (currently only agent API keys are validated in live-events-ws.ts)
 - [ ] **MAUTH-05**: Nested SPA routes (e.g. `/PAC/dashboard`) load correctly on Vercel without 404
 
 ### WebSocket
@@ -69,10 +69,10 @@ Requirements for v1.2 Performance & Mobile Fix milestone.
 | CACHE-02 | Phase 11 | Complete |
 | CACHE-03 | Phase 11 | Complete |
 | CACHE-04 | Phase 11 | Complete |
-| MAUTH-01 | Phase 12 | Pending |
-| MAUTH-02 | Phase 12 | Pending |
-| MAUTH-03 | Phase 12 | Pending |
-| MAUTH-04 | Phase 12 | Pending |
+| MAUTH-01 | Phase 12 | Complete |
+| MAUTH-02 | Phase 12 | Complete |
+| MAUTH-03 | Phase 12 | Complete |
+| MAUTH-04 | Phase 12 | Complete |
 | MAUTH-05 | Phase 12 | Pending |
 | WS-01 | Phase 13 | Pending |
 | WS-02 | Phase 13 | Pending |
