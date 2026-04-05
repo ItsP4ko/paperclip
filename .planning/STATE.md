@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Performance & Mobile Fix
-status: executing
-stopped_at: Completed 13-01-PLAN.md
-last_updated: "2026-04-05T23:05:00Z"
+status: unknown
+stopped_at: Completed 13-02-PLAN.md (Tasks 1-2); paused at Task 3 human-verify checkpoint
+last_updated: "2026-04-05T23:11:32.802Z"
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -46,6 +46,7 @@ Plan: 2 of 2
 | Phase 10-optimistic-ui-mutations P02 | 10m | 2 tasks | 2 files |
 | Phase 12 P02 | 10m | 2 tasks | 6 files |
 | Phase 13 P01 | 4m | 2 tasks | 5 files |
+| Phase 13 P02 | 15 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,9 @@ Plan: 2 of 2
 - [12-01]: Per-query staleTime 120_000 overrides global 30s default for issue list and detail queries only; polling queries unchanged
 - [Phase 12-02]: listAssignedToMe placed outside isMutating guard — filtered list not touched by optimistic writes, always safe to invalidate alongside listMineByMe/listTouchedByMe/listUnreadTouchedByMe
 - [Phase 12-02]: IssueDetail/Issues tests use useMutation capture pattern to invoke onSettled/onSuccess callbacks and verify listAssignedToMe invalidation without rendering full mutation lifecycle
+- [Phase 13-02]: getBearerHeaders/handle401 in api-base.ts as single source of truth for bearer token logic; signOut does not call handle401() — redirect handled by UI router
+- [Phase 13-02]: encodeURIComponent() mandatory for WS token param — BetterAuth signed tokens contain . + = URL-special chars that corrupt query string parsing
+- [Phase 13-02]: vercel.json rewrites replaced with routes + filesystem handle — rewrites cannot coexist with routes; filesystem handle required for static asset serving
 
 ### Pending Todos
 
@@ -83,6 +87,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T23:05:00Z
-Stopped at: Completed 13-01-PLAN.md
-Resume file: .planning/phases/13-mobile-cross-origin-auth/13-02-PLAN.md
+Last session: 2026-04-05T23:11:32.799Z
+Stopped at: Completed 13-02-PLAN.md (Tasks 1-2); paused at Task 3 human-verify checkpoint
+Resume file: None

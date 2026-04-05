@@ -28,7 +28,7 @@ Requirements for v1.2 Performance & Mobile Fix milestone.
 - [x] **MAUTH-02**: User on Android Chrome can log in and maintain an authenticated session
 - [x] **MAUTH-03**: Frontend and backend are served under the same root custom domain to resolve Safari ITP third-party cookie blocking
 - [x] **MAUTH-04**: WebSocket connections authenticate user sessions (currently only agent API keys are validated in live-events-ws.ts)
-- [ ] **MAUTH-05**: Nested SPA routes (e.g. `/PAC/dashboard`) load correctly on Vercel without 404
+- [x] **MAUTH-05**: Nested SPA routes (e.g. `/PAC/dashboard`) load correctly on Vercel without 404
 
 ### WebSocket
 
@@ -73,7 +73,7 @@ Requirements for v1.2 Performance & Mobile Fix milestone.
 | MAUTH-02 | Phase 12 | Complete |
 | MAUTH-03 | Phase 12 | Complete |
 | MAUTH-04 | Phase 12 | Complete |
-| MAUTH-05 | Phase 12 | Pending |
+| MAUTH-05 | Phase 12 | Complete |
 | WS-01 | Phase 13 | Pending |
 | WS-02 | Phase 13 | Pending |
 | WS-03 | Phase 13 | Pending |
