@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Deployment & SaaS Readiness
 status: unknown
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-04-05T15:56:48.393Z"
+stopped_at: Completed 09-02-PLAN.md -- all 28 v1.1 requirements [x]
+last_updated: "2026-04-05T16:06:34.032Z"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -49,6 +49,7 @@ Plan: 2 of 2
 | Phase 08-api-hardening-redis P01 | 4 | 2 tasks | 10 files |
 | Phase 08-api-hardening-redis P02 | 4 | 2 tasks | 6 files |
 | Phase 09-gap-closure-ratelimit-e2e P01 | 2 | 1 tasks | 2 files |
+| Phase 09-gap-closure-ratelimit-e2e P02 | 15 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Plan: 2 of 2
 - [Phase 08-02]: draft-8 standardHeaders sends combined RateLimit header (not ratelimit-limit) — tests check ratelimit header
 - [Phase 08-02]: Cache invalidation del() placed before activity logging in PATCH handler to minimize stale-read window
 - [Phase 09-01]: Skip condition must use /api/health because rate limiter mounts at root (app.ts:111) before /api router mounts at line 265 — req.path at root middleware level includes the full path
+- [Phase 09-02]: E2E-06 WebSocket PASS with performance note: functionally correct, slow/laggy -- flagged for v1.2+ optimization
+- [Phase 09-02]: E2E-04 file attach PASS via database-backed endpoint -- PROD-02 S3/R2 deferred to v1.2
 
 ### Pending Todos
 
@@ -81,6 +84,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T15:56:48.391Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-04-05T16:06:34.031Z
+Stopped at: Completed 09-02-PLAN.md -- all 28 v1.1 requirements [x]
 Resume file: None

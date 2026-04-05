@@ -27,7 +27,7 @@ See: milestones/v1.0-ROADMAP.md for full phase details
 - [x] **Phase 6: Infrastructure Provisioning & Deployment** — Provision Supabase, Easypanel, Vercel; wire env vars; achieve a live multi-tier deployment (completed 2026-04-05)
 - [ ] **Phase 7: End-to-End Verification** — Validate the full invite → join → work → handoff cycle on the live deployment
 - [x] **Phase 8: API Hardening & Redis** — Add rate limiting, security headers, and Redis cache layer after base deployment is stable (completed 2026-04-05)
-- [ ] **Phase 9: Gap Closure — Rate-Limit Fix & E2E Completion** — Fix rate-limit health-skip bug, verify E2E-04 file attach and E2E-06 WebSocket manually, update docs
+- [x] **Phase 9: Gap Closure — Rate-Limit Fix & E2E Completion** — Fix rate-limit health-skip bug, verify E2E-04 file attach and E2E-06 WebSocket manually, update docs (completed 2026-04-05)
 
 ## Phase Details
 
@@ -104,7 +104,7 @@ Plans:
   2. E2E-04 file attach verified manually on live deployment
   3. E2E-06 WebSocket real-time verified in two-window manual test
   4. All 28 v1.1 requirements show `[x]` in REQUIREMENTS.md with matching SUMMARY frontmatter
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 09-01-PLAN.md — Fix rate-limit /api/health skip bug and update test routing
 - [ ] 09-02-PLAN.md — Manual E2E verification (file attach + WebSocket) and documentation closure
@@ -121,4 +121,4 @@ Plans:
 | 6. Infrastructure Provisioning & Deployment | 5/5 | Complete   | 2026-04-05 | - |
 | 7. End-to-End Verification | 1/2 | In Progress|  | - |
 | 8. API Hardening & Redis | 2/2 | Complete   | 2026-04-05 | - |
-| 9. Gap Closure — Rate-Limit Fix & E2E Completion | 1/2 | In Progress|  | - |
+| 9. Gap Closure — Rate-Limit Fix & E2E Completion | 2/2 | Complete   | 2026-04-05 | - |
