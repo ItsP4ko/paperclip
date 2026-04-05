@@ -27,6 +27,7 @@ import detectPort from "detect-port";
 import { createApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { logger } from "./middleware/logger.js";
+import { createRedisClient } from "./services/redis-client.js";
 import { setupLiveEventsWebSocketServer } from "./realtime/live-events-ws.js";
 import {
   feedbackService,
@@ -527,6 +528,13 @@ export async function startServer(): Promise<StartedServer> {
   const feedback = feedbackService(db as any, {
     shareClient: createFeedbackTraceShareClientFromConfig(config) ?? undefined,
   });
+  const redisClient = config.redisUrl
+    ? await createRedisClient(config.redisUrl).catch((err) => {
+        logger.error({ err }, "[redis] failed to connect at startup - continuing without Redis");
+        return undefined;
+      })
+    : undefined;
+
   const app = await createApp(db as any, {
     uiMode,
     serverPort: listenPort,
@@ -540,6 +548,7 @@ export async function startServer(): Promise<StartedServer> {
     companyDeletionEnabled: config.companyDeletionEnabled,
     betterAuthHandler,
     resolveSession,
+    redisClient,
   });
   const server = createServer(app as unknown as Parameters<typeof createServer>[0]);
   
@@ -734,6 +743,14 @@ export async function startServer(): Promise<StartedServer> {
       if (telemetryClient) {
         telemetryClient.stop();
         await telemetryClient.flush();
+      }
+
+      if (redisClient) {
+        try {
+          await redisClient.disconnect();
+        } catch {
+          // ignore disconnect errors during shutdown
+        }
       }
 
       if (embeddedPostgres && embeddedPostgresStartedByThisProcess) {

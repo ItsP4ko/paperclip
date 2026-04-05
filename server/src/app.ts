@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 import type { Db } from "@paperclipai/db";
 import type { DeploymentExposure, DeploymentMode } from "@paperclipai/shared";
 import type { StorageService } from "./storage/types.js";
-import { httpLogger, errorHandler } from "./middleware/index.js";
+import { httpLogger, errorHandler, securityHeaders } from "./middleware/index.js";
+import type { RedisClientType } from "redis";
 import { actorMiddleware } from "./middleware/auth.js";
 import { boardMutationGuard } from "./middleware/board-mutation-guard.js";
 import { privateHostnameGuard, resolvePrivateHostnameAllowSet } from "./middleware/private-hostname-guard.js";
@@ -83,6 +84,7 @@ export async function createApp(
     localPluginDir?: string;
     betterAuthHandler?: express.RequestHandler;
     resolveSession?: (req: ExpressRequest) => Promise<BetterAuthSessionResult | null>;
+    redisClient?: RedisClientType;
   },
 ) {
   const app = express();
@@ -104,6 +106,8 @@ export async function createApp(
       credentials: true,
     }),
   );
+
+  app.use(securityHeaders);
 
   app.use(express.json({
     // Company import/export payloads can inline full portable packages.
