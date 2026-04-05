@@ -49,9 +49,9 @@ Requirements for deployment & SaaS readiness. Each maps to roadmap phases.
 
 ### End-to-End Verification
 
-- [ ] **E2E-01**: Owner can invite a new user from Vercel frontend
-- [ ] **E2E-02**: Invited user can sign up, accept invite, and see their dashboard
-- [ ] **E2E-03**: Owner can assign a task to the invited user
+- [x] **E2E-01**: Owner can invite a new user from Vercel frontend
+- [x] **E2E-02**: Invited user can sign up, accept invite, and see their dashboard
+- [x] **E2E-03**: Owner can assign a task to the invited user
 - [ ] **E2E-04**: Invited user can change task status, attach files, create subtasks
 - [ ] **E2E-05**: User can reassign a task to an AI agent (bidirectional handoff works)
 - [ ] **E2E-06**: Real-time updates (WebSocket) work across the deployed stack
@@ -104,9 +104,9 @@ Deferred to future release. Tracked but not in current roadmap.
 | REDIS-01 | Phase 8 | Pending |
 | REDIS-02 | Phase 8 | Pending |
 | REDIS-03 | Phase 8 | Pending |
-| E2E-01 | Phase 7 | Pending |
-| E2E-02 | Phase 7 | Pending |
-| E2E-03 | Phase 7 | Pending |
+| E2E-01 | Phase 7 | Complete |
+| E2E-02 | Phase 7 | Complete |
+| E2E-03 | Phase 7 | Complete |
 | E2E-04 | Phase 7 | Pending |
 | E2E-05 | Phase 7 | Pending |
 | E2E-06 | Phase 7 | Pending |
