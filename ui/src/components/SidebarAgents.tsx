@@ -40,7 +40,9 @@ export function SidebarAgents() {
     queryKey: queryKeys.liveRuns(selectedCompanyId!),
     queryFn: () => heartbeatsApi.liveRunsForCompany(selectedCompanyId!),
     enabled: !!selectedCompanyId,
-    refetchInterval: 10_000,
+    // WebSocket events (LiveUpdatesProvider) already invalidate this cache on
+    // heartbeat.run.status / heartbeat.run.queued. No HTTP polling needed.
+    staleTime: 30_000,
   });
 
   const liveCountByAgent = useMemo(() => {
