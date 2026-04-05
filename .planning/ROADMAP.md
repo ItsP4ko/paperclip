@@ -54,7 +54,7 @@ Plans:
   2. Easypanel container is running with `SERVE_UI=false`; `GET /health` returns 200 and health checks pass
   3. Vercel deployment completes with `VITE_API_URL` pointing to Easypanel backend; direct-navigation to any route returns the app (not a 404)
   4. A user can sign up and log in from the Vercel frontend to the Easypanel backend — session cookie is set and persists across page refreshes
-**Plans:** 5 plans (3 original + 2 gap closure)
+**Plans:** 4/5 plans executed
 Plans:
 - [x] 06-01-PLAN.md — Pool size cap for Supabase connection (code change)
 - [x] 06-02-PLAN.md — Supabase provisioning and schema migration
@@ -96,6 +96,6 @@ Plans:
 | 3. Owner Team Visibility | v1.0 | 3/3 | Complete | 2026-04-04 |
 | 4. Online Deployment & Multi-User Auth | v1.0 | 2/2 | Complete | 2026-04-04 |
 | 5. Cross-Origin Code Preparation | 2/2 | Complete   | 2026-04-04 | - |
-| 6. Infrastructure Provisioning & Deployment | v1.1 | 3/5 | In progress | - |
+| 6. Infrastructure Provisioning & Deployment | 4/5 | In Progress|  | - |
 | 7. End-to-End Verification | v1.1 | 0/TBD | Not started | - |
 | 8. API Hardening & Redis | v1.1 | 0/TBD | Not started | - |
