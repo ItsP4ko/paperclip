@@ -16,7 +16,7 @@ export function createRateLimiter(redisClient?: RedisClientType, opts?: { limit?
     standardHeaders: "draft-8",
     legacyHeaders: false,
     store,
-    skip: (req) => req.path === "/health" || req.headers.upgrade === "websocket",
+    skip: (req) => req.path === "/api/health" || req.headers.upgrade === "websocket",
     handler: (_req, res) => {
       res.status(429).json({ error: "Too many requests. Please slow down." });
     },
