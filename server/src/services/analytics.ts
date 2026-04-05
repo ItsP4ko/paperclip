@@ -36,7 +36,7 @@ export function analyticsService(db: Db) {
       groupBy: GroupBy = "agent",
       range?: AnalyticsDateRange,
     ) => {
-      const truncExpr = sql`date_trunc(${granularity}, ${costEvents.occurredAt})`;
+      const truncExpr = sql`date_trunc(${sql.raw(`'${granularity}'`)}, ${costEvents.occurredAt})`;
 
       const groupExpr =
         groupBy === "agent"
@@ -78,7 +78,7 @@ export function analyticsService(db: Db) {
       return joined
         .where(and(...conditions))
         .groupBy(truncExpr, groupExpr, groupIdExpr)
-        .orderBy(sql`${truncExpr}`, desc(sql`coalesce(sum(${costEvents.costCents}), 0)::int`));
+        .orderBy(truncExpr, desc(sql`coalesce(sum(${costEvents.costCents}), 0)::int`));
     },
 
     /**

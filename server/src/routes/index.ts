@@ -17,3 +17,5 @@ export { accessRoutes } from "./access.js";
 export { instanceSettingsRoutes } from "./instance-settings.js";
 export { analyticsRoutes } from "./analytics.js";
 export { auditRoutes } from "./audit.js";
+export { knowledgeRoutes } from "./knowledge.js";
+export { costRecommendationRoutes } from "./cost-recommendations.js";

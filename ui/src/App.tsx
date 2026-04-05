@@ -25,6 +25,8 @@ import { Costs } from "./pages/Costs";
 import { Activity } from "./pages/Activity";
 import { Analytics } from "./pages/Analytics";
 import { AuditLog } from "./pages/AuditLog";
+import { KnowledgeBase } from "./pages/KnowledgeBase";
+import { CostRecommendations } from "./pages/CostRecommendations";
 import { Inbox } from "./pages/Inbox";
 import { CompanySettings } from "./pages/CompanySettings";
 import { MyIssues } from "./pages/MyIssues";
@@ -173,6 +175,8 @@ function boardRoutes() {
       <Route path="activity" element={<Activity />} />
       <Route path="analytics" element={<Analytics />} />
       <Route path="audit" element={<AuditLog />} />
+      <Route path="knowledge" element={<KnowledgeBase />} />
+      <Route path="cost-recommendations" element={<CostRecommendations />} />
       <Route path="inbox" element={<InboxRootRedirect />} />
       <Route path="inbox/mine" element={<Inbox />} />
       <Route path="inbox/recent" element={<Inbox />} />

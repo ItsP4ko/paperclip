@@ -14,6 +14,8 @@ import {
   ListTodo,
   BarChart3,
   Shield,
+  BookOpen,
+  Zap,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { SidebarSection } from "./SidebarSection";
@@ -124,6 +126,8 @@ export function Sidebar() {
           <SidebarNavItem to="/analytics" label="Analytics" icon={BarChart3} />
           <SidebarNavItem to="/activity" label="Activity" icon={History} />
           <SidebarNavItem to="/audit" label="Audit Log" icon={Shield} />
+          <SidebarNavItem to="/knowledge" label="Knowledge Base" icon={BookOpen} />
+          <SidebarNavItem to="/cost-recommendations" label="Cost Optimizer" icon={Zap} />
           <SidebarNavItem to="/company/settings" label="Settings" icon={Settings} />
         </SidebarSection>
 

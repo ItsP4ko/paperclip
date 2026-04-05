@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, Cell,
@@ -7,7 +7,26 @@ import {
 import { useCompany } from "../context/CompanyContext";
 import { queryKeys } from "../lib/queryKeys";
 import { analyticsApi, type AgentPerformanceRow } from "../api/analytics";
+import { costRecommendationsApi, type CostRecommendation } from "../api/cost-recommendations";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
+import { Link } from "@/lib/router";
+import { TrendingDown, Zap, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
+const TYPE_LABELS: Record<CostRecommendation["type"], string> = {
+  downgrade_model: "Downgrade Model",
+  pause_idle: "Pause Idle Agent",
+  switch_adapter: "Switch Adapter",
+  high_failure_rate: "High Failure Rate",
+  budget_underutilized: "Budget Underutilized",
+};
+
+const SEVERITY_VARIANT: Record<CostRecommendation["severity"], "destructive" | "secondary" | "outline"> = {
+  high: "destructive",
+  medium: "secondary",
+  low: "outline",
+};
 
 const COLORS = [
   "#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6",
@@ -47,7 +66,23 @@ function last30Days() {
 export function Analytics() {
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
+  const queryClient = useQueryClient();
   useEffect(() => { setBreadcrumbs([{ label: "Analytics" }]); }, [setBreadcrumbs]);
+
+  const recsQuery = useQuery({
+    queryKey: queryKeys.costRecommendations.list(selectedCompanyId!, "pending"),
+    queryFn: () => costRecommendationsApi.list(selectedCompanyId!, { status: "pending", limit: "3" }),
+    enabled: !!selectedCompanyId,
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: () => costRecommendationsApi.generate(selectedCompanyId!),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["cost-recommendations", selectedCompanyId!] });
+    },
+  });
+
+  const topRecs = recsQuery.data ?? [];
 
   const [granularity, setGranularity] = useState<"day" | "week" | "month">("day");
   const [groupBy, setGroupBy] = useState<"agent" | "provider" | "model">("agent");
@@ -121,6 +156,62 @@ export function Analytics() {
         <h1 className="text-xl font-semibold">Analytics</h1>
         <p className="text-sm text-muted-foreground mt-1">Last 30 days</p>
       </div>
+
+      {/* Cost Optimizer Widget */}
+      <section className="rounded-lg border border-border bg-card p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-amber-500" />
+            <h2 className="text-sm font-medium">Cost Optimizer</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => generateMutation.mutate()}
+              disabled={generateMutation.isPending}
+              className="h-7 text-xs"
+            >
+              <RefreshCw className={`h-3 w-3 mr-1.5 ${generateMutation.isPending ? "animate-spin" : ""}`} />
+              Analyze
+            </Button>
+            <Link to="cost-recommendations" className="text-xs text-muted-foreground hover:text-foreground">
+              View all →
+            </Link>
+          </div>
+        </div>
+        {topRecs.length > 0 ? (
+          <div className="divide-y divide-border">
+            {topRecs.map((rec) => (
+              <div key={rec.id} className="py-2.5 flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium">{TYPE_LABELS[rec.type]}</span>
+                    <Badge variant={SEVERITY_VARIANT[rec.severity]} className="text-[10px] px-1.5 py-0 capitalize">
+                      {rec.severity}
+                    </Badge>
+                  </div>
+                  {rec.details?.agentName && (
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {rec.details.agentName as string}
+                    </p>
+                  )}
+                </div>
+                {rec.estimatedSavingsCents > 0 && (
+                  <div className="flex items-center gap-1 text-xs text-green-600 shrink-0">
+                    <TrendingDown className="h-3 w-3" />
+                    ${(rec.estimatedSavingsCents / 100).toFixed(2)}/mo
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground text-center py-4">
+            Click Analyze to get cost-saving recommendations
+          </p>
+        )}
+      </section>
 
       {/* Spend Over Time */}
       <section className="rounded-lg border border-border bg-card p-5">

@@ -112,6 +112,22 @@ export const queryKeys = {
       ["audit", "timeline", companyId, filters ?? {}] as const,
     filters: (companyId: string) => ["audit", "filters", companyId] as const,
   },
+  knowledge: {
+    list: (companyId: string, filters?: Record<string, string | undefined>) =>
+      ["knowledge", companyId, filters ?? {}] as const,
+    search: (companyId: string, q: string, agentId?: string) =>
+      ["knowledge", "search", companyId, q, agentId] as const,
+    detail: (companyId: string, entryId: string) =>
+      ["knowledge", "detail", companyId, entryId] as const,
+    categories: (companyId: string) =>
+      ["knowledge", "categories", companyId] as const,
+    injections: (companyId: string, runId: string) =>
+      ["knowledge", "injections", companyId, runId] as const,
+  },
+  costRecommendations: {
+    list: (companyId: string, status?: string) =>
+      ["cost-recommendations", companyId, status ?? "all"] as const,
+  },
   health: ["health"] as const,
   secrets: {
     list: (companyId: string) => ["secrets", companyId] as const,

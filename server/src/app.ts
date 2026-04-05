@@ -32,6 +32,8 @@ import { assetRoutes } from "./routes/assets.js";
 import { accessRoutes } from "./routes/access.js";
 import { analyticsRoutes } from "./routes/analytics.js";
 import { auditRoutes } from "./routes/audit.js";
+import { knowledgeRoutes } from "./routes/knowledge.js";
+import { costRecommendationRoutes } from "./routes/cost-recommendations.js";
 import { pluginRoutes } from "./routes/plugins.js";
 import { pluginUiStaticRoutes } from "./routes/plugin-ui-static.js";
 import { applyUiBranding } from "./ui-branding.js";
@@ -195,6 +197,8 @@ export async function createApp(
   api.use(instanceSettingsRoutes(db, opts.redisClient));
   api.use(analyticsRoutes(db));
   api.use(auditRoutes(db));
+  api.use(knowledgeRoutes(db));
+  api.use(costRecommendationRoutes(db));
   const hostServicesDisposers = new Map<string, () => void>();
   const workerManager = createPluginWorkerManager();
   const pluginRegistry = pluginRegistryService(db);
