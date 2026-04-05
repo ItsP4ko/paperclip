@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Deployment & SaaS Readiness
-status: unknown
-stopped_at: Completed 09-02-PLAN.md -- all 28 v1.1 requirements [x]
-last_updated: "2026-04-05T16:11:22.257Z"
+status: complete
+stopped_at: Milestone v1.1 complete — archived and tagged
+last_updated: "2026-04-05T18:30:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 5
@@ -16,62 +16,43 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-04)
+See: .planning/PROJECT.md (updated 2026-04-05)
 
 **Core value:** A human can receive, work on, and complete tasks inside Paperclip exactly as an AI agent does — without friction, from the web app.
-**Current focus:** Phase 09 — gap-closure-ratelimit-e2e
+**Current focus:** Planning next milestone (v1.2)
 
 ## Current Position
 
-Phase: 09 (gap-closure-ratelimit-e2e) — EXECUTING
-Plan: 2 of 2
+Milestone v1.1 complete. No active phases.
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 11 (v1.0)
-- Average duration: —
-- Total execution time: —
+- v1.0: 4 phases, 11 plans (1 day)
+- v1.1: 5 phases, 13 plans (2 days)
 
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| v1.0 (1-4) | 11 | — | — |
-
-**Recent Trend:** —
-| Phase 05 P02 | 338 | 2 tasks | 8 files |
+**Recent Trend:**
 | Phase 05 P01 | 7 | 2 tasks | 7 files |
+| Phase 05 P02 | 338 | 2 tasks | 8 files |
 | Phase 06 P04 | 185 | 3 tasks | 3 files |
-| Phase 06-infrastructure-provisioning-deployment P05 | 1 | 2 tasks | 2 files |
-| Phase 07-end-to-end-verification P01 | 1 | 2 tasks | 1 files |
-| Phase 08-api-hardening-redis P01 | 4 | 2 tasks | 10 files |
-| Phase 08-api-hardening-redis P02 | 4 | 2 tasks | 6 files |
-| Phase 09-gap-closure-ratelimit-e2e P01 | 2 | 1 tasks | 2 files |
-| Phase 09-gap-closure-ratelimit-e2e P02 | 15 | 2 tasks | 3 files |
+| Phase 06 P05 | 1 | 2 tasks | 2 files |
+| Phase 07 P01 | 1 | 2 tasks | 1 files |
+| Phase 08 P01 | 4 | 2 tasks | 10 files |
+| Phase 08 P02 | 4 | 2 tasks | 6 files |
+| Phase 09 P01 | 2 | 1 tasks | 2 files |
+| Phase 09 P02 | 15 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
 ### Decisions
 
-- [v1.0]: Auth bypass, local agents, global/local tasks, two-database strategy — see memory/project_arch_decisions.md
-- [v1.1 roadmap]: Phase 5 isolates code changes from infrastructure. All cross-origin pitfalls must be resolved before any cloud provisioning begins.
-- [v1.1 roadmap]: Phase 8 (hardening) deferred until Phase 7 smoke test passes — rate limits interfere with auth/CORS debugging.
-- [v1.1 research]: Use session-mode Supabase pooler (port 5432), not transaction-mode — Drizzle prepared statements break on port 6543.
-- [v1.1 research]: Use Railway Redis addon (private TCP), not Upstash — persistent server, not serverless.
-- [05-02]: All frontend API/WS calls centralized through api-base.ts — API_BASE for REST, getWsHost() for WebSocket; VITE_API_URL drives cross-origin targeting at build time.
-- [05-02]: Pre-existing TS error in IssueProperties.tsx (AssigneeSelection type mismatch) blocks tsc -b — out of scope for this plan, deferred.
-- [Phase 05]: cors package chosen over hand-rolled CORS headers; CORS and boardMutationGuard both use opts.allowedHostnames; BetterAuth SameSite=None via advanced.defaultCookieAttributes
-- [Phase 06]: DEPLOY-05/07/09/10/11 marked complete — Easypanel+Supabase infrastructure verified deployed; AUTH-05 deferred to plan 06-05
-- [Phase 06]: AUTH-05 verified via Chrome DevTools MCP — all auth checks passed; minor Vercel nested SPA route 404 deferred to Phase 7
-- [Phase 07-end-to-end-verification]: Owner bypass placed after isLocalImplicit and before canUser in assertCompanyPermission — membershipRole=owner short-circuits permission grant table lookup
-- [Phase 08-01]: helmet frameguard action explicitly set to deny — helmet default is SAMEORIGIN, plan requires DENY; all four Phase 02 packages installed in Plan 01 to avoid second install step
-- [Phase 08-02]: draft-8 standardHeaders sends combined RateLimit header (not ratelimit-limit) — tests check ratelimit header
-- [Phase 08-02]: Cache invalidation del() placed before activity logging in PATCH handler to minimize stale-read window
-- [Phase 09-01]: Skip condition must use /api/health because rate limiter mounts at root (app.ts:111) before /api router mounts at line 265 — req.path at root middleware level includes the full path
-- [Phase 09-02]: E2E-06 WebSocket PASS with performance note: functionally correct, slow/laggy -- flagged for v1.2+ optimization
-- [Phase 09-02]: E2E-04 file attach PASS via database-backed endpoint -- PROD-02 S3/R2 deferred to v1.2
+- [v1.0]: Auth bypass, local agents, global/local tasks, two-database strategy
+- [v1.1]: Cross-origin code before infrastructure — prevented debugging CORS + infra simultaneously
+- [v1.1]: Easypanel over Railway — leveraged existing VPS
+- [v1.1]: Session-mode Supabase pooler — Drizzle prepared statements break on transaction-mode
+- [v1.1]: Redis optional with graceful degradation — no hard dependency
+- [v1.1]: Hardening after E2E verification — clean baseline first
 
 ### Pending Todos
 
@@ -79,11 +60,10 @@ None.
 
 ### Blockers/Concerns
 
-- BetterAuth cookie config field name (MEDIUM confidence) — verify `advanced.defaultCookieAttributes` vs `advanced.cookieOptions` against installed BetterAuth version before Phase 5 implementation.
-- Railway IPv6 for Supabase direct connection — deploy-time check; fall back to session-mode pooler URL if IPv6 outbound not supported.
+None — milestone complete.
 
 ## Session Continuity
 
-Last session: 2026-04-05T16:06:34.031Z
-Stopped at: Completed 09-02-PLAN.md -- all 28 v1.1 requirements [x]
+Last session: 2026-04-05
+Stopped at: Milestone v1.1 complete — archived and tagged
 Resume file: None

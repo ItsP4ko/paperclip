@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Extensión de Paperclip para soportar agentes humanos reales junto a los agentes de IA. Los dueños de organizaciones pueden invitar personas, asignarles tareas desde un dashboard, y los humanos las gestionan (cambian estado, adjuntan archivos, crean subtareas, reasignan a agentes IA). Flujo bidireccional humano ↔ IA dentro del mismo sistema de issues. Auto-approval en invites para onboarding sin fricción.
+Extensión de Paperclip para soportar agentes humanos reales junto a los agentes de IA. Los dueños de organizaciones pueden invitar personas, asignarles tareas desde un dashboard, y los humanos las gestionan (cambian estado, adjuntan archivos, crean subtareas, reasignan a agentes IA). Flujo bidireccional humano ↔ IA dentro del mismo sistema de issues. Auto-approval en invites para onboarding sin fricción. Desplegado en producción como SaaS de tres capas: Vercel CDN (frontend), Easypanel VPS (backend), Supabase (PostgreSQL).
 
 ## Core Value
 
@@ -10,18 +10,16 @@ Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactam
 
 ## Current State
 
-**v1.0 shipped** (2026-04-04) — 4 phases, 11 plans, +1,468 lines across 26 files.
-**Phase 05 complete** (2026-04-04) — Cross-origin code preparation: CORS middleware, BetterAuth cross-origin cookies, centralized API base URL, Vercel SPA rewrite.
-**Phase 06 complete** (2026-04-05) — Infrastructure deployed: Frontend on Vercel CDN, backend on Easypanel VPS, Supabase PostgreSQL. Cross-origin auth verified end-to-end (sign-up, sign-in, session persistence).
-**Phase 08 complete** (2026-04-05) — API Hardening & Redis: Helmet security headers, distributed rate limiting via Redis, instance settings endpoint caching.
-**Phase 09 complete** (2026-04-05) — Gap Closure: Rate-limit health-skip bug fixed, E2E-04/05/06 verified on live deployment. All 28 v1.1 requirements now [x].
+**v1.0 shipped** (2026-04-04) — Human agents MVP: My Tasks, invite flow, task work surface, bidirectional handoff.
+**v1.1 shipped** (2026-04-05) — Deployment & SaaS Readiness: Three-tier deployment (Vercel + Easypanel + Supabase), cross-origin auth, API hardening (Helmet + rate limiting + Redis cache), full E2E verification.
 
-Human agents are fully functional in `local_trusted` mode. The full invite → join → work → handoff cycle works end-to-end. Authenticated mode supports auto-approval for human joins. Three-tier deployment is live. API layer is hardened with security headers, rate limiting, and Redis caching. All v1.1 milestone requirements verified and closed.
+The platform is live and functional for multi-user testing. All 28 v1.1 requirements verified. The full invite → join → work → handoff → real-time cycle works end-to-end on the deployed stack.
 
-**Known tech debt:** 9 items (see `milestones/v1.0-MILESTONE-AUDIT.md`). Key items:
-- Members endpoint requires `users:manage_permissions` grant — non-owner humans get 403 in authenticated mode
-- `resolveAssigneeName` helper exported but unused in production components
-- TS2345 compile error in `confirmReassign` path (runtime correct)
+**Known tech debt (v1.1):** 9 items — see `milestones/v1.1-MILESTONE-AUDIT.md`. Key items:
+- WebSocket real-time updates are slow/laggy on live deployment
+- File attachments use local disk (lost on container replacement — PROD-02 deferred)
+- My Tasks page renders empty despite badge count (tasks accessible via Issues > Assigned to me)
+- Vercel 404 on nested SPA routes like /PAC/dashboard
 
 ## Requirements
 
@@ -46,16 +44,16 @@ Human agents are fully functional in `local_trusted` mode. The full invite → j
 - ✓ El dueño puede asignar tareas a cualquier miembro (humano o IA) desde el dashboard — v1.0
 - ✓ Los miembros humanos aparecen en el org chart / listado de la empresa — v1.0
 - ✓ Vista de equipo: ver qué tiene asignado cada miembro (humano + IA) — v1.0
+- ✓ Frontend deployed to CDN (Vercel) — v1.1
+- ✓ Supabase as global database + Backend on Easypanel VPS — v1.1
+- ✓ Redis cache layer for global database — v1.1
+- ✓ End-to-end multi-user testing (invite → join → work → handoff) — v1.1
+- ✓ Cross-origin auth (CORS, SameSite cookies, secret validation) — v1.1
+- ✓ API hardening (Helmet security headers, rate limiting) — v1.1
 
 ### Active
 
-<!-- v1.1 — Deployment & SaaS Readiness -->
-
-- [x] Frontend deployed to CDN (Vercel) — Validated in Phase 06
-- [x] Supabase as global database + Backend on Easypanel VPS — Validated in Phase 06
-- [ ] API Gateway protecting backend
-- [x] Redis cache layer for global database — Validated in Phase 08
-- [x] End-to-end multi-user testing (invite → join → work → handoff) — Validated in Phase 09
+(Next milestone — define with `/gsd:new-milestone`)
 
 ### Out of Scope
 
@@ -64,22 +62,15 @@ Human agents are fully functional in `local_trusted` mode. The full invite → j
 - Time tracking — complejidad innecesaria para v1
 - App móvil — web-first
 - Roles granulares más allá de owner/member — simplificar para v1
-
-## Current Milestone: v1.1 Deployment & SaaS Readiness
-
-**Goal:** Deploy Paperclip para testing real multi-usuario y sentar las bases de arquitectura SaaS (frontend en CDN, backend en Easypanel VPS, BD global en Supabase, API Gateway, Redis cache).
-
-**Target features:**
-- Frontend en Vercel (CDN) separado del backend
-- Backend en Easypanel VPS con Dockerfile existente
-- Supabase como BD global (reemplaza embedded-postgres para datos globales)
-- API Gateway para proteger el backend
-- Redis como capa de cache para la BD global
-- Testing end-to-end del flujo completo: owner invita → usuario se registra → tareas → agentes → handoff
+- Row-Level Security (RLS) — future SaaS hardening, single-tenant testing first
+- CI/CD pipeline — manual deploys sufficient for testing phase
+- Kubernetes / container orchestration — Easypanel handles this
 
 ## Context
 
-v1.0 shipped. Tech stack: React 19 + Vite + Tailwind v4 + shadcn/ui (frontend), Express 5 + Drizzle ORM (backend), BetterAuth (auth). No schema migrations were needed — the existing `assigneeUserId` on issues and `principalType: "user"` in memberships supported the full feature set.
+v1.1 shipped. Tech stack: React 19 + Vite + Tailwind v4 + shadcn/ui (frontend), Express 5 + Drizzle ORM (backend), BetterAuth (auth), Supabase PostgreSQL (database), Redis (caching + rate limiting). Deployed: Vercel CDN (frontend), Easypanel VPS (backend). 23 commits, +10,594 lines across 185 files for v1.1 milestone.
+
+Performance is a known concern — WebSocket updates are slow, general UI responsiveness needs improvement. User wants to explore more aggressive caching and async patterns for v1.2.
 
 ## Constraints
 
@@ -88,6 +79,7 @@ v1.0 shipped. Tech stack: React 19 + Vite + Tailwind v4 + shadcn/ui (frontend), 
 - **DB**: No se ejecutan migraciones automáticamente — todo SQL debe mostrarse al usuario
 - **Compatibilidad**: No romper funcionalidad existente de agentes IA
 - **Auth**: Usar better-auth existente, no agregar otro sistema de auth
+- **Deployment**: Three-tier (Vercel + Easypanel + Supabase) — no cambiar infraestructura
 
 ## Key Decisions
 
@@ -99,10 +91,12 @@ v1.0 shipped. Tech stack: React 19 + Vite + Tailwind v4 + shadcn/ui (frontend), 
 | Dashboard dedicado + filtro en Issues | Lo mejor de ambos mundos: vista rápida enfocada + acceso completo | ✓ Good — both surfaces functional |
 | Flujo bidireccional humano ↔ IA | Un humano puede reasignar a un agente y viceversa | ✓ Good — with warning dialog for AI interruption |
 | Auto-approval for human invites | Eliminar paso manual de aprobación para humanos | ✓ Good — frictionless onboarding |
-| resolveAssigneePatch atomic utility | Prevenir 422 errors por envío parcial de campos assignee | ✓ Good — all assignment paths use it |
-| Member permission gate in PATCH | Humanos solo pueden mutar sus propios issues (owner bypasses) | ✓ Good — simple, correct |
-| Inline HumanActionBar in IssueDetail | No crear componente separado — inline section gated on assigneeUserId | ✓ Good — minimal footprint |
-| InlineEntitySelector groups prop | Reusar componente existente para grouped pickers | ✓ Good — NewIssueDialog uses it; IssueProperties uses bespoke popover |
+| Cross-origin code before infrastructure | Phase 5 isolated code changes from cloud provisioning | ✓ Good — prevented debugging CORS + infra simultaneously |
+| Easypanel over Railway | Switched from Railway to user's existing Easypanel VPS | ✓ Good — leveraged existing infrastructure |
+| Session-mode Supabase pooler (port 5432) | Drizzle prepared statements break on transaction-mode (port 6543) | ✓ Good — stable connection |
+| Redis optional (graceful degradation) | Server starts without REDIS_URL, falls back to in-memory | ✓ Good — no hard dependency |
+| Hardening after E2E verification | Rate limits interfere with auth/CORS debugging | ✓ Good — clean E2E baseline first |
+| Gap closure phase for audit gaps | Phase 9 addressed rate-limit bug + manual E2E verification | ✓ Good — all 28 requirements closed |
 
 ---
-*Last updated: 2026-04-05 after Phase 09 (Gap Closure — Rate-limit fix & E2E verification) complete. v1.1 milestone fully verified.*
+*Last updated: 2026-04-05 after v1.1 milestone*

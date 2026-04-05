@@ -1,5 +1,23 @@
 # Milestones
 
+## v1.1 Deployment & SaaS Readiness (Shipped: 2026-04-05)
+
+**Phases completed:** 5 phases, 13 plans | 23 commits | +10,594 / -1,075 lines | 185 files
+**Timeline:** 2026-04-04 → 2026-04-05 (2 days)
+**Git range:** 0518fb32..8916bbd0
+
+**Key accomplishments:**
+
+1. Cross-origin deployment wiring: CORS middleware, BetterAuth SameSite=None cookies, centralized API_BASE/getWsHost, Vercel SPA rewrites
+2. Three-tier deployment live: Vercel CDN frontend, Easypanel VPS backend, Supabase PostgreSQL with pool cap
+3. Full E2E multi-user flow verified on live deployment: invite → join → work → handoff → real-time WebSocket updates
+4. API hardening: Helmet security headers (HSTS, CSP, X-Frame-Options DENY), distributed rate limiting via Redis, instance settings cache with 60s TTL
+5. Rate-limit health-skip bug fixed, E2E-04/05/06 manually verified and closed — all 28 requirements satisfied
+
+**Tech Debt (accepted):** 9 items — see milestones/v1.1-MILESTONE-AUDIT.md
+
+---
+
 ## v1.0 Human Agents MVP (Shipped: 2026-04-04)
 
 **Phases completed:** 4 phases, 11 plans | 23 commits | +1,468 / -49 lines | 26 files
