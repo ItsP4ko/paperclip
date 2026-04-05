@@ -85,6 +85,7 @@ export function Issues() {
     queryKey: [...queryKeys.issues.list(selectedCompanyId!), "participant-agent", participantAgentId ?? "__all__"],
     queryFn: () => issuesApi.list(selectedCompanyId!, { participantAgentId }),
     enabled: !!selectedCompanyId,
+    staleTime: 120_000,
   });
 
   const updateIssue = useMutation({

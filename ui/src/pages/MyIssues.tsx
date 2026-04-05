@@ -24,6 +24,7 @@ export function MyIssues() {
     queryKey: queryKeys.issues.listAssignedToMe(selectedCompanyId!),
     queryFn: () => issuesApi.list(selectedCompanyId!, { assigneeUserId: "me" }),
     enabled: !!selectedCompanyId,
+    staleTime: 120_000,
   });
 
   if (!selectedCompanyId) {

@@ -314,6 +314,7 @@ export function IssueDetail() {
     queryKey: queryKeys.issues.detail(issueId!),
     queryFn: () => issuesApi.get(issueId!),
     enabled: !!issueId,
+    staleTime: 120_000,
   });
   const resolvedCompanyId = issue?.companyId ?? selectedCompanyId;
 
