@@ -26,7 +26,7 @@ See: milestones/v1.0-ROADMAP.md for full phase details
 - [x] **Phase 5: Cross-Origin Code Preparation** — Fix all code-level blockers so the frontend can talk to a separately-hosted backend (completed 2026-04-04)
 - [x] **Phase 6: Infrastructure Provisioning & Deployment** — Provision Supabase, Easypanel, Vercel; wire env vars; achieve a live multi-tier deployment (completed 2026-04-05)
 - [ ] **Phase 7: End-to-End Verification** — Validate the full invite → join → work → handoff cycle on the live deployment
-- [ ] **Phase 8: API Hardening & Redis** — Add rate limiting, security headers, and Redis cache layer after base deployment is stable
+- [x] **Phase 8: API Hardening & Redis** — Add rate limiting, security headers, and Redis cache layer after base deployment is stable (completed 2026-04-05)
 
 ## Phase Details
 
@@ -88,7 +88,7 @@ Plans:
   3. Rate limit counters survive a Railway container restart — counters persist in Redis, not in-process memory
   4. Redis client connects on Railway private network with reconnection handling; connection errors are logged but do not crash the server
   5. At least one read-heavy endpoint returns cached data from Redis on repeat requests — observable via reduced Supabase query latency or cache-hit logs
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 08-01-PLAN.md — Helmet security headers, Redis client singleton, and config wiring
 - [ ] 08-02-PLAN.md — Rate limiting with RedisStore and instance settings cache
@@ -104,4 +104,4 @@ Plans:
 | 5. Cross-Origin Code Preparation | 2/2 | Complete   | 2026-04-04 | - |
 | 6. Infrastructure Provisioning & Deployment | 5/5 | Complete   | 2026-04-05 | - |
 | 7. End-to-End Verification | 1/2 | In Progress|  | - |
-| 8. API Hardening & Redis | 1/2 | In Progress|  | - |
+| 8. API Hardening & Redis | 2/2 | Complete   | 2026-04-05 | - |

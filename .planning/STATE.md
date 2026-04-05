@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Deployment & SaaS Readiness
-status: unknown
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-04-05T14:58:23.556Z"
+status: complete
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-04-05T15:04:35Z"
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 11
-  completed_plans: 10
+  completed_phases: 4
+  total_plans: 12
+  completed_plans: 12
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 ## Current Position
 
-Phase: 08 (api-hardening-redis) — EXECUTING
-Plan: 2 of 2
+Phase: 08 (api-hardening-redis) — COMPLETE
+Plan: 2 of 2 (all plans complete)
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Plan: 2 of 2
 | Phase 06-infrastructure-provisioning-deployment P05 | 1 | 2 tasks | 2 files |
 | Phase 07-end-to-end-verification P01 | 1 | 2 tasks | 1 files |
 | Phase 08-api-hardening-redis P01 | 4 | 2 tasks | 10 files |
+| Phase 08-api-hardening-redis P02 | 4 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,8 @@ Plan: 2 of 2
 - [Phase 06]: AUTH-05 verified via Chrome DevTools MCP — all auth checks passed; minor Vercel nested SPA route 404 deferred to Phase 7
 - [Phase 07-end-to-end-verification]: Owner bypass placed after isLocalImplicit and before canUser in assertCompanyPermission — membershipRole=owner short-circuits permission grant table lookup
 - [Phase 08-01]: helmet frameguard action explicitly set to deny — helmet default is SAMEORIGIN, plan requires DENY; all four Phase 02 packages installed in Plan 01 to avoid second install step
+- [Phase 08-02]: draft-8 standardHeaders sends combined RateLimit header (not ratelimit-limit) — tests check ratelimit header
+- [Phase 08-02]: Cache invalidation del() placed before activity logging in PATCH handler to minimize stale-read window
 
 ### Pending Todos
 
@@ -76,6 +79,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T14:58:23.554Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-04-05T15:04:35Z
+Stopped at: Completed 08-02-PLAN.md (Phase 08 complete)
 Resume file: None

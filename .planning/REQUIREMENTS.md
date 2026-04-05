@@ -37,15 +37,15 @@ Requirements for deployment & SaaS readiness. Each maps to roadmap phases.
 
 ### API Hardening
 
-- [ ] **HARD-01**: Rate limiting middleware (`express-rate-limit`) protects API endpoints with per-IP throttling
+- [x] **HARD-01**: Rate limiting middleware (`express-rate-limit`) protects API endpoints with per-IP throttling
 - [x] **HARD-02**: Security headers middleware (`helmet`) applied to all responses
-- [ ] **HARD-03**: Rate limit state stored in Redis (`rate-limit-redis`) for persistence across restarts
+- [x] **HARD-03**: Rate limit state stored in Redis (`rate-limit-redis`) for persistence across restarts
 
 ### Redis Cache
 
 - [x] **REDIS-01**: Redis instance provisioned (Railway addon)
 - [x] **REDIS-02**: Redis client (`node-redis` v5) connected with reconnection handling
-- [ ] **REDIS-03**: Frequently-queried global data cached in Redis with appropriate TTL
+- [x] **REDIS-03**: Frequently-queried global data cached in Redis with appropriate TTL
 
 ### End-to-End Verification
 
@@ -98,12 +98,12 @@ Deferred to future release. Tracked but not in current roadmap.
 | AUTH-03 | Phase 5 | Complete |
 | AUTH-04 | Phase 5 | Complete |
 | AUTH-05 | Phase 6 | Complete |
-| HARD-01 | Phase 8 | Pending |
+| HARD-01 | Phase 8 | Complete |
 | HARD-02 | Phase 8 | Complete |
-| HARD-03 | Phase 8 | Pending |
+| HARD-03 | Phase 8 | Complete |
 | REDIS-01 | Phase 8 | Complete |
 | REDIS-02 | Phase 8 | Complete |
-| REDIS-03 | Phase 8 | Pending |
+| REDIS-03 | Phase 8 | Complete |
 | E2E-01 | Phase 7 | Complete |
 | E2E-02 | Phase 7 | Complete |
 | E2E-03 | Phase 7 | Complete |
