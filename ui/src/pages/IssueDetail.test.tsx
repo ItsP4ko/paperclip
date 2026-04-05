@@ -138,9 +138,10 @@ vi.mock("../components/ImageGalleryModal", () => ({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCompany } from "../context/CompanyContext";
 import { IssueDetail } from "./IssueDetail";
+import { queryKeys } from "../lib/queryKeys";
 
 vi.mock("@tanstack/react-query", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-query")>();
@@ -240,6 +241,56 @@ describe("IssueDetail", () => {
     for (const call of pollingCalls) {
       expect(call.staleTime).not.toBe(120_000);
     }
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it("invalidateIssue includes listAssignedToMe invalidation", () => {
+    vi.mocked(useCompany).mockReturnValue({
+      selectedCompanyId: "company-1",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+
+    const invalidations: unknown[] = [];
+    const mockQueryClient = {
+      invalidateQueries: vi.fn((input: unknown) => { invalidations.push(input); }),
+      setQueryData: vi.fn(),
+      getQueryData: vi.fn(),
+      cancelQueries: vi.fn(),
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const capturedMutations: any[] = [];
+    vi.mocked(useMutation).mockImplementation((options: unknown) => {
+      capturedMutations.push(options);
+      return { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false } as ReturnType<typeof useMutation>;
+    });
+
+    vi.mocked(useQueryClient).mockReturnValue(mockQueryClient as ReturnType<typeof useQueryClient>);
+
+    const root = createRoot(container);
+    act(() => {
+      root.render(<IssueDetail />);
+    });
+
+    // Find the updateIssue mutation (mutationKey: ["issue-update", "PAP-100"])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateIssueMutation = capturedMutations.find((opts: any) => {
+      const key = opts?.mutationKey as unknown[];
+      return Array.isArray(key) && key[0] === "issue-update" && key[1] === "PAP-100";
+    });
+
+    expect(updateIssueMutation).toBeDefined();
+
+    // Invoke onSettled which calls invalidateIssue()
+    invalidations.length = 0;
+    updateIssueMutation.onSettled();
+
+    expect(invalidations).toContainEqual({
+      queryKey: queryKeys.issues.listAssignedToMe("company-1"),
+    });
 
     act(() => {
       root.unmount();

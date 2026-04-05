@@ -35,6 +35,56 @@ describe("LiveUpdatesProvider issue invalidation", () => {
       queryKey: queryKeys.issues.listUnreadTouchedByMe("company-1"),
     });
   });
+
+  it("invalidates listAssignedToMe on issue activity", () => {
+    const invalidations: unknown[] = [];
+    const queryClient = {
+      invalidateQueries: (input: unknown) => {
+        invalidations.push(input);
+      },
+      getQueryData: () => undefined,
+      isMutating: () => 0,
+    };
+
+    __liveUpdatesTestUtils.invalidateActivityQueries(
+      queryClient as never,
+      "company-1",
+      {
+        entityType: "issue",
+        entityId: "issue-1",
+        details: null,
+      },
+    );
+
+    expect(invalidations).toContainEqual({
+      queryKey: queryKeys.issues.listAssignedToMe("company-1"),
+    });
+  });
+
+  it("invalidates listAssignedToMe even when isMutating is true", () => {
+    const invalidations: unknown[] = [];
+    const queryClient = {
+      invalidateQueries: (input: unknown) => {
+        invalidations.push(input);
+      },
+      getQueryData: () => undefined,
+      isMutating: () => 1,
+    };
+
+    __liveUpdatesTestUtils.invalidateActivityQueries(
+      queryClient as never,
+      "company-1",
+      {
+        entityType: "issue",
+        entityId: "issue-1",
+        details: null,
+      },
+    );
+
+    expect(invalidations).toContainEqual({
+      queryKey: queryKeys.issues.listAssignedToMe("company-1"),
+    });
+  });
 });
 
 describe("LiveUpdatesProvider visible issue toast suppression", () => {

@@ -59,9 +59,10 @@ vi.mock("../components/IssuesList", () => ({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCompany } from "../context/CompanyContext";
 import { Issues } from "./Issues";
+import { queryKeys } from "../lib/queryKeys";
 
 vi.mock("@tanstack/react-query", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-query")>();
@@ -119,6 +120,47 @@ describe("Issues", () => {
 
     expect(issuesListCall).toBeDefined();
     expect(issuesListCall.staleTime).toBe(120_000);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it("updateIssue onSuccess invalidates listAssignedToMe", () => {
+    vi.mocked(useCompany).mockReturnValue({
+      selectedCompanyId: "company-1",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+
+    const invalidations: unknown[] = [];
+    const mockQueryClient = { invalidateQueries: vi.fn((input: unknown) => { invalidations.push(input); }) };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const capturedMutations: any[] = [];
+    vi.mocked(useMutation).mockImplementation((options: unknown) => {
+      capturedMutations.push(options);
+      return { mutate: vi.fn(), mutateAsync: vi.fn() } as ReturnType<typeof useMutation>;
+    });
+
+    vi.mocked(useQueryClient).mockReturnValue(mockQueryClient as ReturnType<typeof useQueryClient>);
+
+    const root = createRoot(container);
+    act(() => {
+      root.render(<Issues />);
+    });
+
+    // The first (and only) useMutation call in Issues.tsx is updateIssue
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateIssueMutation = capturedMutations[0] as any;
+    expect(updateIssueMutation).toBeDefined();
+
+    // Invoke onSuccess which should invalidate listAssignedToMe
+    invalidations.length = 0;
+    updateIssueMutation.onSuccess();
+
+    expect(invalidations).toContainEqual({
+      queryKey: queryKeys.issues.listAssignedToMe("company-1"),
+    });
 
     act(() => {
       root.unmount();
