@@ -88,7 +88,10 @@ Plans:
   3. Rate limit counters survive a Railway container restart — counters persist in Redis, not in-process memory
   4. Redis client connects on Railway private network with reconnection handling; connection errors are logged but do not crash the server
   5. At least one read-heavy endpoint returns cached data from Redis on repeat requests — observable via reduced Supabase query latency or cache-hit logs
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 08-01-PLAN.md — Helmet security headers, Redis client singleton, and config wiring
+- [ ] 08-02-PLAN.md — Rate limiting with RedisStore and instance settings cache
 
 ## Progress
 
@@ -101,4 +104,4 @@ Plans:
 | 5. Cross-Origin Code Preparation | 2/2 | Complete   | 2026-04-04 | - |
 | 6. Infrastructure Provisioning & Deployment | 5/5 | Complete   | 2026-04-05 | - |
 | 7. End-to-End Verification | 1/2 | In Progress|  | - |
-| 8. API Hardening & Redis | v1.1 | 0/TBD | Not started | - |
+| 8. API Hardening & Redis | v1.1 | 0/2 | Not started | - |
