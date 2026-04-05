@@ -82,7 +82,7 @@ Plans:
   2. User opens a previously-visited issue detail — it renders instantly without a skeleton screen
   3. My Tasks page shows the correct list of assigned issues (matches the sidebar badge count)
   4. After a user performs any mutation (status change, assignment, subtask creation), the relevant list and detail pages reflect the updated data — no stale values shown
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 12-01-PLAN.md — Per-query staleTime: 120_000 on issue list and detail queries (CACHE-01, CACHE-02)
 - [ ] 12-02-PLAN.md — Add listAssignedToMe invalidation to all missing call-sites (CACHE-03, CACHE-04)
@@ -124,6 +124,6 @@ Plans:
 | 9. Gap Closure — Rate-Limit Fix & E2E Completion | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 10. Optimistic UI Mutations | v1.2 | Complete    | 2026-04-05 | 2026-04-05 |
 | 11. Backend Deploy Gaps | v1.2 | Complete    | 2026-04-05 | - |
-| 12. Aggressive Caching | v1.2 | 0/2 | Planned | - |
+| 12. Aggressive Caching | 1/2 | In Progress|  | - |
 | 13. Mobile Cross-Origin Auth | v1.2 | 0/? | Not started | - |
 | 14. WebSocket Optimization | v1.2 | 0/? | Not started | - |

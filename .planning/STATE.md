@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Performance & Mobile Fix
 status: unknown
-stopped_at: Phase 11 context gathered
-last_updated: "2026-04-05T21:27:35.881Z"
+stopped_at: "Completed 12-01-PLAN.md"
+last_updated: "2026-04-05T22:01:00Z"
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-05)
 
 **Core value:** A human can receive, work on, and complete tasks inside Paperclip exactly as an AI agent does — without friction, from the web app.
-**Current focus:** Phase 11 — backend-deploy-gaps
+**Current focus:** Phase 12 — aggressive-caching
 
 ## Current Position
 
-Phase: 11 (backend-deploy-gaps) — EXECUTING
-Plan: 1 of 2
+Phase: 12 (aggressive-caching) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -60,6 +60,9 @@ Plan: 1 of 2
 - [Phase 10]: Three mutation key prefixes (issue-status, issue-update, create-subtask) match exactly the keys set in Plan 01 IssueDetail.tsx
 - [Phase 10-02]: Guard suppresses only issue list and detail keys — non-optimistic keys (comments, activity, runs, attachments) always invalidated
 - [Phase 10-02]: Three mutation key prefixes (issue-status, issue-update, create-subtask) match exactly the keys set in Plan 01 IssueDetail.tsx
+- [12-01]: Mock IssuesList in Issues.test.tsx to avoid useDialog context — test goal is query options not render output
+- [12-01]: Mock InlineEditor/sandpack components in IssueDetail.test.tsx — stitches CSS insertRule fails in jsdom
+- [12-01]: Per-query staleTime 120_000 overrides global 30s default for issue list and detail queries only; polling queries unchanged
 
 ### Pending Todos
 
@@ -73,6 +76,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T20:27:31.922Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/milestones/v1.2-phases/11-backend-deploy-gaps/11-CONTEXT.md
+Last session: 2026-04-05T22:01:00Z
+Stopped at: Completed 12-01-PLAN.md
+Resume file: .planning/phases/12-aggressive-caching/12-01-SUMMARY.md
