@@ -60,7 +60,7 @@ Pre-populated from `design-guide/SKILL.md` — Section 4 "Typography Scale". No 
 | Body | 14px (0.875rem) | 400 (regular) | 1.5 | `text-sm` |
 | Label / card title | 14px (0.875rem) | 500–600 (medium/semibold) | 1.5 | `text-sm font-medium` or `text-sm font-semibold` |
 | Section heading | 14px (0.875rem) | 600 (semibold) | 1.5 | `text-sm font-semibold text-muted-foreground uppercase tracking-wide` |
-| Page title | 20px (1.25rem) | 700 (bold) | 1.2 | `text-xl font-bold` |
+| Page title | 20px (1.25rem) | 600 (semibold) | 1.2 | `text-xl font-semibold` |
 
 Two declared weights: 400 (regular) and 600 (semibold). Weight 500 (medium) is used for card titles only — not a third declared weight.
 
