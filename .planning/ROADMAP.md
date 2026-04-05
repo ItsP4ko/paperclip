@@ -104,7 +104,7 @@ Plans:
   2. E2E-04 file attach verified manually on live deployment
   3. E2E-06 WebSocket real-time verified in two-window manual test
   4. All 28 v1.1 requirements show `[x]` in REQUIREMENTS.md with matching SUMMARY frontmatter
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 09-01-PLAN.md — Fix rate-limit /api/health skip bug and update test routing
 - [ ] 09-02-PLAN.md — Manual E2E verification (file attach + WebSocket) and documentation closure
@@ -121,4 +121,4 @@ Plans:
 | 6. Infrastructure Provisioning & Deployment | 5/5 | Complete   | 2026-04-05 | - |
 | 7. End-to-End Verification | 1/2 | In Progress|  | - |
 | 8. API Hardening & Redis | 2/2 | Complete   | 2026-04-05 | - |
-| 9. Gap Closure — Rate-Limit Fix & E2E Completion | 0/2 | Not Started | | - |
+| 9. Gap Closure — Rate-Limit Fix & E2E Completion | 1/2 | In Progress|  | - |
