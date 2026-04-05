@@ -172,6 +172,35 @@ export function InstanceGeneralSettings() {
           <p className="text-xs text-muted-foreground">
             Paste this command in the terminal of the machine you want to connect. Requires Node.js 20+.
           </p>
+
+          <details className="group">
+            <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground select-none">
+              Teammate doesn't have Node.js?
+            </summary>
+            <div className="mt-2 rounded-md border border-border bg-muted/30 p-3 space-y-2">
+              <p className="text-xs text-muted-foreground">Tell them to install Node.js first:</p>
+              <div className="space-y-1.5">
+                <div>
+                  <span className="text-xs font-medium text-foreground">macOS</span>
+                  <code className="block rounded border border-border bg-muted/40 px-2 py-1 mt-0.5 text-xs font-mono text-foreground select-all">
+                    brew install node
+                  </code>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-foreground">Linux (Ubuntu/Debian)</span>
+                  <code className="block rounded border border-border bg-muted/40 px-2 py-1 mt-0.5 text-xs font-mono text-foreground select-all">
+                    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash - &amp;&amp; sudo apt install -y nodejs
+                  </code>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-foreground">Windows</span>
+                  <code className="block rounded border border-border bg-muted/40 px-2 py-1 mt-0.5 text-xs font-mono text-foreground select-all">
+                    winget install OpenJS.NodeJS.LTS
+                  </code>
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
       </section>
 
