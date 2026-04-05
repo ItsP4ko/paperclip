@@ -92,7 +92,7 @@ function headersFromIncomingMessage(req: IncomingMessage): Headers {
   return headers;
 }
 
-async function authorizeUpgrade(
+export async function authorizeUpgrade(
   db: Db,
   req: IncomingMessage,
   companyId: string,
@@ -160,6 +160,48 @@ async function authorizeUpgrade(
     .then((rows) => rows[0] ?? null);
 
   if (!key || key.companyId !== companyId) {
+    // Not a valid agent API key for this company.
+    // Try user session resolution via bearer token (signed BetterAuth session cookie).
+    if (opts.deploymentMode === "authenticated" && opts.resolveSessionFromHeaders) {
+      const syntheticHeaders = new Headers();
+      syntheticHeaders.set("authorization", `Bearer ${token}`);
+      let session: BetterAuthSessionResult | null = null;
+      try {
+        session = await opts.resolveSessionFromHeaders(syntheticHeaders);
+      } catch (err) {
+        logger.warn({ err, companyId }, "Failed to resolve WS bearer session");
+        return null;
+      }
+      const userId = session?.user?.id;
+      if (!userId) return null;
+
+      const [roleRow, memberships] = await Promise.all([
+        db
+          .select({ id: instanceUserRoles.id })
+          .from(instanceUserRoles)
+          .where(and(eq(instanceUserRoles.userId, userId), eq(instanceUserRoles.role, "instance_admin")))
+          .then((rows) => rows[0] ?? null),
+        db
+          .select({ companyId: companyMemberships.companyId })
+          .from(companyMemberships)
+          .where(
+            and(
+              eq(companyMemberships.principalType, "user"),
+              eq(companyMemberships.principalId, userId),
+              eq(companyMemberships.status, "active"),
+            ),
+          ),
+      ]);
+
+      const hasCompanyMembership = memberships.some((row) => row.companyId === companyId);
+      if (!roleRow && !hasCompanyMembership) return null;
+
+      return {
+        companyId,
+        actorType: "board" as const,
+        actorId: userId,
+      };
+    }
     return null;
   }
 
