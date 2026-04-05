@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Deployment & SaaS Readiness
 status: unknown
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-04-05T14:17:40.518Z"
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-04-05T14:58:23.556Z"
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 11
+  completed_plans: 10
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** A human can receive, work on, and complete tasks inside Paperclip exactly as an AI agent does — without friction, from the web app.
-**Current focus:** Phase 07 — end-to-end-verification
+**Current focus:** Phase 08 — api-hardening-redis
 
 ## Current Position
 
-Phase: 07 (end-to-end-verification) — EXECUTING
-Plan: 1 of 2
+Phase: 08 (api-hardening-redis) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Plan: 1 of 2
 | Phase 06 P04 | 185 | 3 tasks | 3 files |
 | Phase 06-infrastructure-provisioning-deployment P05 | 1 | 2 tasks | 2 files |
 | Phase 07-end-to-end-verification P01 | 1 | 2 tasks | 1 files |
+| Phase 08-api-hardening-redis P01 | 4 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,7 @@ Plan: 1 of 2
 - [Phase 06]: DEPLOY-05/07/09/10/11 marked complete — Easypanel+Supabase infrastructure verified deployed; AUTH-05 deferred to plan 06-05
 - [Phase 06]: AUTH-05 verified via Chrome DevTools MCP — all auth checks passed; minor Vercel nested SPA route 404 deferred to Phase 7
 - [Phase 07-end-to-end-verification]: Owner bypass placed after isLocalImplicit and before canUser in assertCompanyPermission — membershipRole=owner short-circuits permission grant table lookup
+- [Phase 08-01]: helmet frameguard action explicitly set to deny — helmet default is SAMEORIGIN, plan requires DENY; all four Phase 02 packages installed in Plan 01 to avoid second install step
 
 ### Pending Todos
 
@@ -74,6 +76,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T02:40:44.192Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-04-05T14:58:23.554Z
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None
