@@ -2969,9 +2969,9 @@ function RunsTab({
     try {
       const result = await heartbeatsApi.deleteAllForAgent(agentId);
       await queryClient.invalidateQueries({ queryKey: queryKeys.heartbeats(companyId, agentId) });
-      pushToast({ message: `Deleted ${result.deleted} run${result.deleted === 1 ? "" : "s"}.`, tone: "success" });
+      pushToast({ title: `Deleted ${result.deleted} run${result.deleted === 1 ? "" : "s"}.`, tone: "success" });
     } catch {
-      pushToast({ message: "Failed to delete runs.", tone: "error" });
+      pushToast({ title: "Failed to delete runs.", tone: "error" });
     } finally {
       setClearing(false);
     }
