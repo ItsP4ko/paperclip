@@ -1,20 +1,52 @@
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { accessApi, type CompanyMember } from "../api/access";
+import { authApi } from "../api/auth";
 import { issuesApi } from "../api/issues";
 import { useCompany } from "../context/CompanyContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { queryKeys } from "../lib/queryKeys";
 import { EmptyState } from "../components/EmptyState";
 import { PageSkeleton } from "../components/PageSkeleton";
-import { Users, User } from "lucide-react";
+import { Users, User, MoreHorizontal } from "lucide-react";
 import { cn } from "../lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
+import { Button } from "../components/ui/button";
 
-function MemberRow({ member, companyId }: { member: CompanyMember; companyId: string }) {
+function MemberRow({
+  member,
+  companyId,
+  currentUserId,
+  canManage,
+}: {
+  member: CompanyMember;
+  companyId: string;
+  currentUserId: string | null;
+  canManage: boolean;
+}) {
+  const queryClient = useQueryClient();
+
   const { data: issues = [] } = useQuery({
     queryKey: ["issues", companyId, "by-user", member.principalId],
     queryFn: () => issuesApi.list(companyId, { assigneeUserId: member.principalId }),
     enabled: !!companyId,
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: () => accessApi.removeMember(companyId, member.principalId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.access.members(companyId) }),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: (status: "active" | "suspended") =>
+      accessApi.updateMemberStatus(companyId, member.principalId, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.access.members(companyId) }),
   });
 
   const openCount = issues.filter(
@@ -23,6 +55,10 @@ function MemberRow({ member, companyId }: { member: CompanyMember; companyId: st
 
   const displayName = member.userDisplayName ?? member.userEmail ?? member.principalId.slice(0, 8);
   const isActive = member.status === "active";
+  const isSelf = currentUserId === member.principalId;
+  const isOwner = member.membershipRole === "owner";
+  const showActions = canManage && !isSelf && !isOwner;
+
   const joinedAt = new Date(member.createdAt).toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
@@ -69,6 +105,43 @@ function MemberRow({ member, companyId }: { member: CompanyMember; companyId: st
           {openCount} open
         </span>
       </div>
+
+      <div className="w-7 shrink-0">
+        {showActions && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {isActive ? (
+                <DropdownMenuItem
+                  onClick={() => statusMutation.mutate("suspended")}
+                  disabled={statusMutation.isPending}
+                >
+                  Suspend
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={() => statusMutation.mutate("active")}
+                  disabled={statusMutation.isPending}
+                >
+                  Reactivate
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => removeMutation.mutate()}
+                disabled={removeMutation.isPending}
+                className="text-destructive focus:text-destructive"
+              >
+                Remove from company
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
     </div>
   );
 }
@@ -80,6 +153,13 @@ export function Members() {
   useEffect(() => {
     setBreadcrumbs([{ label: "Members" }]);
   }, [setBreadcrumbs]);
+
+  const { data: session } = useQuery({
+    queryKey: queryKeys.auth.session,
+    queryFn: () => authApi.getSession(),
+  });
+
+  const currentUserId = session?.user?.id ?? session?.session?.userId ?? null;
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: queryKeys.access.members(selectedCompanyId!),
@@ -98,6 +178,10 @@ export function Members() {
   const humanMembers = members.filter((m: CompanyMember) => m.principalType === "user");
   const active = humanMembers.filter((m) => m.status === "active");
   const inactive = humanMembers.filter((m) => m.status !== "active");
+
+  // Current user is owner or has manage role
+  const currentMember = humanMembers.find((m) => m.principalId === currentUserId);
+  const canManage = currentMember?.membershipRole === "owner" || currentMember?.membershipRole === "admin";
 
   if (humanMembers.length === 0) {
     return (
@@ -128,7 +212,13 @@ export function Members() {
           </div>
           <div className="border border-border divide-y divide-border">
             {active.map((m) => (
-              <MemberRow key={m.id} member={m} companyId={selectedCompanyId!} />
+              <MemberRow
+                key={m.id}
+                member={m}
+                companyId={selectedCompanyId!}
+                currentUserId={currentUserId}
+                canManage={canManage}
+              />
             ))}
           </div>
         </div>
@@ -143,7 +233,13 @@ export function Members() {
           </div>
           <div className="border border-border divide-y divide-border">
             {inactive.map((m) => (
-              <MemberRow key={m.id} member={m} companyId={selectedCompanyId!} />
+              <MemberRow
+                key={m.id}
+                member={m}
+                companyId={selectedCompanyId!}
+                currentUserId={currentUserId}
+                canManage={canManage}
+              />
             ))}
           </div>
         </div>

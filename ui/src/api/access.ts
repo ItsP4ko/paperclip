@@ -174,4 +174,10 @@ export const accessApi = {
 
   listMembers: (companyId: string) =>
     api.get<CompanyMember[]>(`/companies/${companyId}/members`),
+
+  removeMember: (companyId: string, principalId: string) =>
+    api.delete<{ removed: boolean }>(`/companies/${companyId}/members/${principalId}`),
+
+  updateMemberStatus: (companyId: string, principalId: string, status: "active" | "suspended") =>
+    api.patch<CompanyMember>(`/companies/${companyId}/members/${principalId}/status`, { status }),
 };

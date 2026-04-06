@@ -2979,6 +2979,44 @@ export function accessRoutes(
     res.json(members);
   });
 
+  router.delete("/companies/:companyId/members/:principalId", async (req, res) => {
+    const companyId = req.params.companyId as string;
+    const principalId = req.params.principalId as string;
+    await assertCompanyPermission(req, companyId, "users:manage_permissions");
+    // Prevent removing yourself
+    if (req.actor.userId === principalId) {
+      res.status(400).json({ error: "Cannot remove yourself from the company" });
+      return;
+    }
+    const removed = await access.removeMember(companyId, principalId);
+    if (!removed) {
+      res.status(404).json({ error: "Member not found" });
+      return;
+    }
+    res.json({ removed: true });
+  });
+
+  router.patch("/companies/:companyId/members/:principalId/status", async (req, res) => {
+    const companyId = req.params.companyId as string;
+    const principalId = req.params.principalId as string;
+    const { status } = req.body as { status: string };
+    if (!["active", "suspended"].includes(status)) {
+      res.status(400).json({ error: "Invalid status. Use 'active' or 'suspended'." });
+      return;
+    }
+    await assertCompanyPermission(req, companyId, "users:manage_permissions");
+    if (req.actor.userId === principalId) {
+      res.status(400).json({ error: "Cannot change your own status" });
+      return;
+    }
+    const updated = await access.updateMemberStatus(companyId, principalId, status);
+    if (!updated) {
+      res.status(404).json({ error: "Member not found" });
+      return;
+    }
+    res.json(updated);
+  });
+
   router.patch(
     "/companies/:companyId/members/:memberId/permissions",
     validate(updateMemberPermissionsSchema),
