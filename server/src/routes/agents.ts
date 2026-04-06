@@ -192,6 +192,16 @@ export function agentRoutes(db: Db) {
     );
   }
 
+  async function assertDeveloperOrAbove(req: Request, companyId: string) {
+    if (req.actor.type !== "board") return;
+    if (req.actor.source === "local_implicit" || req.actor.isInstanceAdmin) return;
+    if (!req.actor.userId) throw forbidden("Authentication required");
+    const membership = await access.getMembership(companyId, "user", req.actor.userId);
+    if (!membership || !membership.membershipRole || membership.membershipRole === "member") {
+      throw forbidden("Developer or owner role required for agent management");
+    }
+  }
+
   async function assertCanCreateAgentsForCompany(req: Request, companyId: string) {
     assertCompanyAccess(req, companyId);
     if (req.actor.type === "board") {
@@ -300,7 +310,10 @@ export function agentRoutes(db: Db) {
 
   async function assertCanUpdateAgent(req: Request, targetAgent: { id: string; companyId: string }) {
     assertCompanyAccess(req, targetAgent.companyId);
-    if (req.actor.type === "board") return;
+    if (req.actor.type === "board") {
+      await assertDeveloperOrAbove(req, targetAgent.companyId);
+      return;
+    }
     if (!req.actor.agentId) throw forbidden("Agent authentication required");
 
     const actorAgent = await svc.getById(req.actor.agentId);
@@ -1425,6 +1438,7 @@ export function agentRoutes(db: Db) {
   router.post("/companies/:companyId/agents", validate(createAgentSchema), async (req, res) => {
     const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
+    await assertDeveloperOrAbove(req, companyId);
 
     if (req.actor.type === "agent") {
       assertBoard(req);
@@ -1969,6 +1983,8 @@ export function agentRoutes(db: Db) {
   router.post("/agents/:id/terminate", async (req, res) => {
     assertBoard(req);
     const id = req.params.id as string;
+    const existing = await svc.getById(id);
+    if (existing) await assertDeveloperOrAbove(req, existing.companyId);
     const agent = await svc.terminate(id);
     if (!agent) {
       res.status(404).json({ error: "Agent not found" });
@@ -1992,6 +2008,8 @@ export function agentRoutes(db: Db) {
   router.delete("/agents/:id", async (req, res) => {
     assertBoard(req);
     const id = req.params.id as string;
+    const toDelete = await svc.getById(id);
+    if (toDelete) await assertDeveloperOrAbove(req, toDelete.companyId);
     const agent = await svc.remove(id);
     if (!agent) {
       res.status(404).json({ error: "Agent not found" });

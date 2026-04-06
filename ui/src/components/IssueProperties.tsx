@@ -9,6 +9,7 @@ import { issuesApi } from "../api/issues";
 import { projectsApi } from "../api/projects";
 import { accessApi } from "../api/access";
 import { useCompany } from "../context/CompanyContext";
+import { useMemberRole } from "../hooks/useMemberRole";
 import { queryKeys } from "../lib/queryKeys";
 import { useProjectOrder } from "../hooks/useProjectOrder";
 import { getRecentAssigneeIds, sortAgentsByRecency, trackRecentAssignee } from "../lib/recent-assignees";
@@ -122,6 +123,7 @@ function PropertyPicker({
 
 export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProps) {
   const { selectedCompanyId } = useCompany();
+  const { isMember } = useMemberRole(selectedCompanyId);
   const queryClient = useQueryClient();
   const companyId = issue.companyId ?? selectedCompanyId;
   const [assigneeOpen, setAssigneeOpen] = useState(false);
@@ -455,10 +457,10 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
             }
           </>
         )}
-        {sortedAgents.length > 0 && (
+        {!isMember && sortedAgents.length > 0 && (
           <div className="px-2 py-1 text-xs font-semibold text-muted-foreground mt-1">AI Agents</div>
         )}
-        {sortedAgents
+        {!isMember && sortedAgents
           .filter((a) => {
             if (!assigneeSearch.trim()) return true;
             const q = assigneeSearch.toLowerCase();

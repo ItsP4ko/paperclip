@@ -407,6 +407,21 @@ export function accessService(db: Db) {
     return result[0] ?? null;
   }
 
+  async function updateMemberRole(companyId: string, principalId: string, role: string) {
+    const result = await db
+      .update(companyMemberships)
+      .set({ membershipRole: role, updatedAt: new Date() })
+      .where(
+        and(
+          eq(companyMemberships.companyId, companyId),
+          eq(companyMemberships.principalId, principalId),
+          eq(companyMemberships.principalType, "user"),
+        ),
+      )
+      .returning();
+    return result[0] ?? null;
+  }
+
   return {
     isInstanceAdmin,
     canUser,
@@ -426,5 +441,6 @@ export function accessService(db: Db) {
     setPrincipalPermission,
     removeMember,
     updateMemberStatus,
+    updateMemberRole,
   };
 }

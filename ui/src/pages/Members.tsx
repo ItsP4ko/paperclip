@@ -49,6 +49,12 @@ function MemberRow({
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.access.members(companyId) }),
   });
 
+  const roleMutation = useMutation({
+    mutationFn: (role: "owner" | "developer" | "member") =>
+      accessApi.updateMemberRole(companyId, member.principalId, role),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.access.members(companyId) }),
+  });
+
   const openCount = issues.filter(
     (i) => i.status !== "done" && i.status !== "cancelled"
   ).length;
@@ -130,6 +136,25 @@ function MemberRow({
                   Reactivate
                 </DropdownMenuItem>
               )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => roleMutation.mutate("owner")}
+                disabled={roleMutation.isPending || member.membershipRole === "owner"}
+              >
+                Make owner
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => roleMutation.mutate("developer")}
+                disabled={roleMutation.isPending || member.membershipRole === "developer"}
+              >
+                Make developer
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => roleMutation.mutate("member")}
+                disabled={roleMutation.isPending || member.membershipRole === "member"}
+              >
+                Make member
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => removeMutation.mutate()}

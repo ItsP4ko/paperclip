@@ -1052,9 +1052,18 @@ export function issueRoutes(db: Db, storage: StorageService) {
           "user",
           req.actor.userId,
         );
-        const isOwner = membership?.membershipRole === "owner";
+        const memberRole = membership?.membershipRole;
+        const isOwner = memberRole === "owner";
         if (!isOwner && existing.assigneeUserId !== req.actor.userId) {
           throw forbidden("Members can only mutate their own tasks");
+        }
+        // Members cannot assign issues to AI agents
+        if (
+          memberRole === "member" &&
+          req.body.assigneeAgentId !== undefined &&
+          req.body.assigneeAgentId !== null
+        ) {
+          throw forbidden("Members cannot assign issues to AI agents");
         }
       }
     }

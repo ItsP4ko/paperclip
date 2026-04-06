@@ -281,7 +281,7 @@ export function InviteLandingPage() {
           Invite expires {dateTime(invite.expiresAt)}.
         </p>
 
-        {invite.inviteType !== "bootstrap_ceo" && (
+        {invite.inviteType !== "bootstrap_ceo" && availableJoinTypes.length > 1 && (
           <div className="mt-5 flex gap-2">
             {availableJoinTypes.map((type) => (
               <button

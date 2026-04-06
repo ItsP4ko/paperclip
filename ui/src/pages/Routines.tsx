@@ -9,6 +9,7 @@ import { projectsApi } from "../api/projects";
 import { useCompany } from "../context/CompanyContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { useToast } from "../context/ToastContext";
+import { useMemberRole } from "../hooks/useMemberRole";
 import { queryKeys } from "../lib/queryKeys";
 import { getRecentAssigneeIds, sortAgentsByRecency, trackRecentAssignee } from "../lib/recent-assignees";
 import { EmptyState } from "../components/EmptyState";
@@ -72,6 +73,7 @@ function nextRoutineStatus(currentStatus: string, enabled: boolean) {
 
 export function Routines() {
   const { selectedCompanyId } = useCompany();
+  const { isMember } = useMemberRole(selectedCompanyId);
   const { setBreadcrumbs } = useBreadcrumbs();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -287,10 +289,12 @@ export function Routines() {
             Recurring work definitions that materialize into auditable execution issues.
           </p>
         </div>
-        <Button onClick={() => setComposerOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create routine
-        </Button>
+        {!isMember && (
+          <Button onClick={() => setComposerOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create routine
+          </Button>
+        )}
       </div>
 
       <Dialog
@@ -639,77 +643,85 @@ export function Routines() {
                         ) : null}
                       </td>
                       <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            role="switch"
-                            data-slot="toggle"
-                            aria-checked={enabled}
-                            aria-label={enabled ? `Disable ${routine.title}` : `Enable ${routine.title}`}
-                            disabled={isStatusPending || isArchived}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                              enabled ? "bg-foreground" : "bg-muted"
-                            } ${isStatusPending || isArchived ? "cursor-not-allowed opacity-50" : ""}`}
-                            onClick={() =>
-                              updateRoutineStatus.mutate({
-                                id: routine.id,
-                                status: nextRoutineStatus(routine.status, !enabled),
-                              })
-                            }
-                          >
-                            <span
-                              className={`inline-block h-5 w-5 rounded-full bg-background shadow-sm transition-transform ${
-                                enabled ? "translate-x-5" : "translate-x-0.5"
-                              }`}
-                            />
-                          </button>
+                        {!isMember ? (
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              role="switch"
+                              data-slot="toggle"
+                              aria-checked={enabled}
+                              aria-label={enabled ? `Disable ${routine.title}` : `Enable ${routine.title}`}
+                              disabled={isStatusPending || isArchived}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                enabled ? "bg-foreground" : "bg-muted"
+                              } ${isStatusPending || isArchived ? "cursor-not-allowed opacity-50" : ""}`}
+                              onClick={() =>
+                                updateRoutineStatus.mutate({
+                                  id: routine.id,
+                                  status: nextRoutineStatus(routine.status, !enabled),
+                                })
+                              }
+                            >
+                              <span
+                                className={`inline-block h-5 w-5 rounded-full bg-background shadow-sm transition-transform ${
+                                  enabled ? "translate-x-5" : "translate-x-0.5"
+                                }`}
+                              />
+                            </button>
+                            <span className="text-xs text-muted-foreground">
+                              {isArchived ? "Archived" : enabled ? "On" : "Off"}
+                            </span>
+                          </div>
+                        ) : (
                           <span className="text-xs text-muted-foreground">
                             {isArchived ? "Archived" : enabled ? "On" : "Off"}
                           </span>
-                        </div>
+                        )}
                       </td>
                       <td className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon-sm" aria-label={`More actions for ${routine.title}`}>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/routines/${routine.id}`)}>
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={runningRoutineId === routine.id || isArchived}
-                              onClick={() => handleRunNow(routine)}
-                            >
-                              {runningRoutineId === routine.id ? "Running..." : "Run now"}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() =>
-                                updateRoutineStatus.mutate({
-                                  id: routine.id,
-                                  status: enabled ? "paused" : "active",
-                                })
-                              }
-                              disabled={isStatusPending || isArchived}
-                            >
-                              {enabled ? "Pause" : "Enable"}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                updateRoutineStatus.mutate({
-                                  id: routine.id,
-                                  status: routine.status === "archived" ? "active" : "archived",
-                                })
-                              }
-                              disabled={isStatusPending}
-                            >
-                              {routine.status === "archived" ? "Restore" : "Archive"}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {!isMember && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon-sm" aria-label={`More actions for ${routine.title}`}>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => navigate(`/routines/${routine.id}`)}>
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={runningRoutineId === routine.id || isArchived}
+                                onClick={() => handleRunNow(routine)}
+                              >
+                                {runningRoutineId === routine.id ? "Running..." : "Run now"}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  updateRoutineStatus.mutate({
+                                    id: routine.id,
+                                    status: enabled ? "paused" : "active",
+                                  })
+                                }
+                                disabled={isStatusPending || isArchived}
+                              >
+                                {enabled ? "Pause" : "Enable"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  updateRoutineStatus.mutate({
+                                    id: routine.id,
+                                    status: routine.status === "archived" ? "active" : "archived",
+                                  })
+                                }
+                                disabled={isStatusPending}
+                              >
+                                {routine.status === "archived" ? "Restore" : "Archive"}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </td>
                     </tr>
                   );

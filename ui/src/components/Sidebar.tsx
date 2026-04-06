@@ -33,12 +33,14 @@ import { sidebarBadgesApi } from "../api/sidebarBadges";
 import { authApi } from "../api/auth";
 import { queryKeys } from "../lib/queryKeys";
 import { useInboxBadge } from "../hooks/useInboxBadge";
+import { useMemberRole } from "../hooks/useMemberRole";
 import { Button } from "@/components/ui/button";
 import { PluginSlotOutlet } from "@/plugins/slots";
 
 export function Sidebar() {
   const { openNewIssue } = useDialog();
   const { selectedCompanyId, selectedCompany } = useCompany();
+  const { isMember, canManageAgents } = useMemberRole(selectedCompanyId);
   const queryClient = useQueryClient();
   const { data: session } = useQuery({
     queryKey: queryKeys.auth.session,
@@ -137,18 +139,18 @@ export function Sidebar() {
 
         <SidebarProjects />
 
-        <SidebarAgents />
+        {canManageAgents && <SidebarAgents />}
 
         <SidebarSection label="Company">
-          <SidebarNavItem to="/org" label="Org" icon={Network} />
+          {!isMember && <SidebarNavItem to="/org" label="Org" icon={Network} />}
           <SidebarNavItem to="/members" label="Members" icon={Users} />
-          <SidebarNavItem to="/skills" label="Skills" icon={Boxes} />
-          <SidebarNavItem to="/costs" label="Costs" icon={DollarSign} />
-          <SidebarNavItem to="/analytics" label="Analytics" icon={BarChart3} />
-          <SidebarNavItem to="/activity" label="Activity" icon={History} />
-          <SidebarNavItem to="/audit" label="Audit Log" icon={Shield} />
+          {!isMember && <SidebarNavItem to="/skills" label="Skills" icon={Boxes} />}
+          {!isMember && <SidebarNavItem to="/costs" label="Costs" icon={DollarSign} />}
+          {!isMember && <SidebarNavItem to="/analytics" label="Analytics" icon={BarChart3} />}
+          {!isMember && <SidebarNavItem to="/activity" label="Activity" icon={History} />}
+          {!isMember && <SidebarNavItem to="/audit" label="Audit Log" icon={Shield} />}
           <SidebarNavItem to="/knowledge" label="Knowledge Base" icon={BookOpen} />
-          <SidebarNavItem to="/cost-recommendations" label="Cost Optimizer" icon={Zap} />
+          {!isMember && <SidebarNavItem to="/cost-recommendations" label="Cost Optimizer" icon={Zap} />}
           <SidebarNavItem to="/company/settings" label="Settings" icon={Settings} />
         </SidebarSection>
 

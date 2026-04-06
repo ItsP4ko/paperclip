@@ -180,4 +180,7 @@ export const accessApi = {
 
   updateMemberStatus: (companyId: string, principalId: string, status: "active" | "suspended") =>
     api.patch<CompanyMember>(`/companies/${companyId}/members/${principalId}/status`, { status }),
+
+  updateMemberRole: (companyId: string, principalId: string, role: "owner" | "developer" | "member") =>
+    api.patch<CompanyMember>(`/companies/${companyId}/members/${principalId}/role`, { role }),
 };

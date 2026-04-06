@@ -23,6 +23,16 @@ export function routineRoutes(db: Db) {
   const svc = routineService(db);
   const access = accessService(db);
 
+  async function assertDeveloperOrAbove(req: Request, companyId: string) {
+    if (req.actor.type !== "board") return;
+    if (req.actor.source === "local_implicit" || req.actor.isInstanceAdmin) return;
+    if (!req.actor.userId) throw forbidden("Authentication required");
+    const membership = await access.getMembership(companyId, "user", req.actor.userId);
+    if (!membership || !membership.membershipRole || membership.membershipRole === "member") {
+      throw forbidden("Developer or owner role required to manage routines");
+    }
+  }
+
   async function assertBoardCanAssignTasks(req: Request, companyId: string) {
     assertCompanyAccess(req, companyId);
     if (req.actor.type !== "board") return;
@@ -33,9 +43,12 @@ export function routineRoutes(db: Db) {
     }
   }
 
-  function assertCanManageCompanyRoutine(req: Request, companyId: string, assigneeAgentId?: string | null) {
+  async function assertCanManageCompanyRoutine(req: Request, companyId: string, assigneeAgentId?: string | null) {
     assertCompanyAccess(req, companyId);
-    if (req.actor.type === "board") return;
+    if (req.actor.type === "board") {
+      await assertDeveloperOrAbove(req, companyId);
+      return;
+    }
     if (req.actor.type !== "agent" || !req.actor.agentId) throw unauthorized();
     if (assigneeAgentId && assigneeAgentId !== req.actor.agentId) {
       throw forbidden("Agents can only manage routines assigned to themselves");
@@ -46,7 +59,10 @@ export function routineRoutes(db: Db) {
     const routine = await svc.get(routineId);
     if (!routine) return null;
     assertCompanyAccess(req, routine.companyId);
-    if (req.actor.type === "board") return routine;
+    if (req.actor.type === "board") {
+      await assertDeveloperOrAbove(req, routine.companyId);
+      return routine;
+    }
     if (req.actor.type !== "agent" || !req.actor.agentId) throw unauthorized();
     if (routine.assigneeAgentId !== req.actor.agentId) {
       throw forbidden("Agents can only manage routines assigned to themselves");
@@ -64,7 +80,7 @@ export function routineRoutes(db: Db) {
   router.post("/companies/:companyId/routines", validate(createRoutineSchema), async (req, res) => {
     const companyId = req.params.companyId as string;
     await assertBoardCanAssignTasks(req, companyId);
-    assertCanManageCompanyRoutine(req, companyId, req.body.assigneeAgentId);
+    await assertCanManageCompanyRoutine(req, companyId, req.body.assigneeAgentId);
     const created = await svc.create(companyId, req.body, {
       agentId: req.actor.type === "agent" ? req.actor.agentId : null,
       userId: req.actor.type === "board" ? req.actor.userId ?? "board" : null,

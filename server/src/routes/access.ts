@@ -2981,7 +2981,7 @@ export function accessRoutes(
 
   router.get("/companies/:companyId/members", async (req, res) => {
     const companyId = req.params.companyId as string;
-    await assertCompanyPermission(req, companyId, "users:manage_permissions");
+    assertCompanyAccess(req, companyId);
     const members = await access.listMembers(companyId);
     res.json(members);
   });
@@ -3017,6 +3017,27 @@ export function accessRoutes(
       return;
     }
     const updated = await access.updateMemberStatus(companyId, principalId, status);
+    if (!updated) {
+      res.status(404).json({ error: "Member not found" });
+      return;
+    }
+    res.json(updated);
+  });
+
+  router.patch("/companies/:companyId/members/:principalId/role", async (req, res) => {
+    const companyId = req.params.companyId as string;
+    const principalId = req.params.principalId as string;
+    const { role } = req.body as { role: string };
+    if (!["owner", "developer", "member"].includes(role)) {
+      res.status(400).json({ error: "Invalid role. Use 'owner', 'developer', or 'member'." });
+      return;
+    }
+    await assertCompanyPermission(req, companyId, "users:manage_permissions");
+    if (req.actor.userId === principalId) {
+      res.status(400).json({ error: "Cannot change your own role" });
+      return;
+    }
+    const updated = await access.updateMemberRole(companyId, principalId, role);
     if (!updated) {
       res.status(404).json({ error: "Member not found" });
       return;
