@@ -7,6 +7,7 @@ import type { Db } from "@paperclipai/db";
 import type { DeploymentExposure, DeploymentMode } from "@paperclipai/shared";
 import type { StorageService } from "./storage/types.js";
 import { httpLogger, errorHandler, securityHeaders, createRateLimiter } from "./middleware/index.js";
+import { createLoginRateLimiter } from "./middleware/login-rate-limit.js";
 import type { RedisClientType } from "redis";
 import { actorMiddleware } from "./middleware/auth.js";
 import { boardMutationGuard } from "./middleware/board-mutation-guard.js";
@@ -94,6 +95,7 @@ export async function createApp(
   },
 ) {
   const app = express();
+  app.set("trust proxy", 1);
 
   const corsAllowedOrigins = opts.allowedHostnames.flatMap((h) => [
     `https://${h}`,
@@ -162,6 +164,7 @@ export async function createApp(
     });
   });
   if (opts.betterAuthHandler) {
+    app.all("/api/auth/sign-in/email", createLoginRateLimiter(opts.redisClient));
     app.all("/api/auth/*authPath", opts.betterAuthHandler);
   }
   app.use(llmRoutes(db));
