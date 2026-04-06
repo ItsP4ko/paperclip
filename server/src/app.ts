@@ -92,15 +92,20 @@ export async function createApp(
     betterAuthHandler?: express.RequestHandler;
     resolveSession?: (req: ExpressRequest) => Promise<BetterAuthSessionResult | null>;
     redisClient?: RedisClientType;
+    /** Additional allowed origins (full URLs, e.g. "tauri://localhost"). */
+    extraAllowedOrigins?: string[];
   },
 ) {
   const app = express();
   app.set("trust proxy", 1);
 
-  const corsAllowedOrigins = opts.allowedHostnames.flatMap((h) => [
-    `https://${h}`,
-    `http://${h}`,
-  ]);
+  const corsAllowedOrigins = [
+    ...opts.allowedHostnames.flatMap((h) => [
+      `https://${h}`,
+      `http://${h}`,
+    ]),
+    ...(opts.extraAllowedOrigins ?? []),
+  ];
 
   app.use(
     cors({
@@ -171,10 +176,13 @@ export async function createApp(
 
   // Mount API routes
   const api = Router();
-  const guardAllowedOrigins = opts.allowedHostnames.flatMap((h) => [
-    `https://${h}`,
-    `http://${h}`,
-  ]);
+  const guardAllowedOrigins = [
+    ...opts.allowedHostnames.flatMap((h) => [
+      `https://${h}`,
+      `http://${h}`,
+    ]),
+    ...(opts.extraAllowedOrigins ?? []),
+  ];
   api.use(boardMutationGuard({ allowedOrigins: guardAllowedOrigins }));
   api.use(
     "/health",

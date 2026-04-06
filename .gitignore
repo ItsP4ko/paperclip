@@ -58,3 +58,6 @@ tests/release-smoke/playwright-report/
 .claude/worktrees/
 .github/workflows/
 .vercel
+
+# Tauri build artifacts
+src-tauri/target/

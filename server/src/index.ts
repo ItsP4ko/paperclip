@@ -543,6 +543,10 @@ export async function startServer(): Promise<StartedServer> {
     deploymentMode: config.deploymentMode,
     deploymentExposure: config.deploymentExposure,
     allowedHostnames: config.allowedHostnames,
+    extraAllowedOrigins: (process.env.PAPERCLIP_EXTRA_ORIGINS ?? "")
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean),
     bindHost: config.host,
     authReady,
     companyDeletionEnabled: config.companyDeletionEnabled,

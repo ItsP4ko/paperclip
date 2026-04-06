@@ -36,6 +36,8 @@ import { useInboxBadge } from "../hooks/useInboxBadge";
 import { useMemberRole } from "../hooks/useMemberRole";
 import { Button } from "@/components/ui/button";
 import { PluginSlotOutlet } from "@/plugins/slots";
+import { RunnerStatusIndicator } from "./RunnerStatusIndicator";
+import { DesktopDownloadButton } from "./DesktopDownloadButton";
 
 export function Sidebar() {
   const { openNewIssue } = useDialog();
@@ -162,6 +164,9 @@ export function Sidebar() {
           missingBehavior="placeholder"
         />
       </nav>
+
+      <DesktopDownloadButton />
+      <RunnerStatusIndicator />
 
       {session && (
         <div className="shrink-0 border-t border-border px-3 py-2 flex items-center gap-2">
