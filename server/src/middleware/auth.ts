@@ -9,6 +9,21 @@ import type { BetterAuthSessionResult } from "../auth/better-auth.js";
 import { logger } from "./logger.js";
 import { boardAuthService } from "../services/board-auth.js";
 
+// ---------------------------------------------------------------------------
+// CSRF PROTECTION: Not implemented by design.
+//
+// This server uses bearer token authentication (Authorization: Bearer <token>).
+// Bearer tokens are never sent automatically by browsers — they require explicit
+// JavaScript to attach to requests. This means cross-site request forgery is
+// impossible without the attacker also having the token.
+//
+// Reference: OWASP CSRF Prevention Cheat Sheet — "Use of Custom Request Headers"
+// https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html
+//
+// Adding CSRF tokens would break mobile clients and AI agent integrations
+// with zero security benefit. See also: .planning/REQUIREMENTS.md "Out of Scope".
+// ---------------------------------------------------------------------------
+
 function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }

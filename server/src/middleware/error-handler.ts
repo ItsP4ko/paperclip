@@ -49,10 +49,14 @@ export function errorHandler(
       const tc = getTelemetryClient();
       if (tc) trackErrorHandlerCrash(tc, { errorCode: err.name });
     }
-    res.status(err.status).json({
-      error: err.message,
-      ...(err.details ? { details: err.details } : {}),
-    });
+    if (err.status >= 500) {
+      res.status(err.status).json({ error: "Internal server error" });
+    } else {
+      res.status(err.status).json({
+        error: err.message,
+        ...(err.details ? { details: err.details } : {}),
+      });
+    }
     return;
   }
 
