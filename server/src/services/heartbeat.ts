@@ -4185,5 +4185,18 @@ export function heartbeatService(db: Db) {
       activeRunExecutions.delete(runId);
       return finalizedRun;
     },
+
+    deleteRunsByAgent: async (agentId: string, companyId: string): Promise<number> => {
+      // Delete events first (FK constraint), then runs
+      const runs = await db
+        .select({ id: heartbeatRuns.id })
+        .from(heartbeatRuns)
+        .where(and(eq(heartbeatRuns.agentId, agentId), eq(heartbeatRuns.companyId, companyId)));
+      if (runs.length === 0) return 0;
+      const runIds = runs.map((r) => r.id);
+      await db.delete(heartbeatRunEvents).where(inArray(heartbeatRunEvents.runId, runIds));
+      await db.delete(heartbeatRuns).where(inArray(heartbeatRuns.id, runIds));
+      return runIds.length;
+    },
   };
 }

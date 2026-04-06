@@ -2959,6 +2959,23 @@ function RunsTab({
   adapterType: string;
 }) {
   const { isMobile } = useSidebar();
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [clearing, setClearing] = useState(false);
+
+  async function handleClearAllRuns() {
+    if (!confirm("Delete all runs for this agent? This cannot be undone.")) return;
+    setClearing(true);
+    try {
+      const result = await heartbeatsApi.deleteAllForAgent(agentId);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.heartbeats(companyId, agentId) });
+      showToast(`Deleted ${result.deleted} run${result.deleted === 1 ? "" : "s"}.`, "success");
+    } catch {
+      showToast("Failed to delete runs.", "error");
+    } finally {
+      setClearing(false);
+    }
+  }
 
   if (runs.length === 0) {
     return <p className="text-sm text-muted-foreground">No runs yet.</p>;
@@ -2990,16 +3007,39 @@ function RunsTab({
       );
     }
     return (
-      <div className="border border-border rounded-lg overflow-x-hidden">
-        {sorted.map((run) => (
-          <RunListItem key={run.id} run={run} isSelected={false} agentId={agentRouteId} />
-        ))}
+      <div className="space-y-2">
+        <div className="flex justify-end">
+          <button
+            onClick={() => void handleClearAllRuns()}
+            disabled={clearing}
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {clearing ? "Clearing..." : "Clear all runs"}
+          </button>
+        </div>
+        <div className="border border-border rounded-lg overflow-x-hidden">
+          {sorted.map((run) => (
+            <RunListItem key={run.id} run={run} isSelected={false} agentId={agentRouteId} />
+          ))}
+        </div>
       </div>
     );
   }
 
   // Desktop: side-by-side layout
   return (
+    <div className="space-y-2">
+      <div className="flex justify-end">
+        <button
+          onClick={() => void handleClearAllRuns()}
+          disabled={clearing}
+          className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          {clearing ? "Clearing..." : "Clear all runs"}
+        </button>
+      </div>
     <div className="flex gap-0">
       {/* Left: run list — border stretches full height, content sticks */}
       <div className={cn(
@@ -3019,6 +3059,7 @@ function RunsTab({
           <RunDetail key={selectedRun.id} run={selectedRun} agentRouteId={agentRouteId} adapterType={adapterType} />
         </div>
       )}
+    </div>
     </div>
   );
 }

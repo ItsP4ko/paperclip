@@ -2245,6 +2245,16 @@ export function agentRoutes(db: Db) {
     res.json(redactCurrentUserValue(run, await getCurrentUserRedactionOptions()));
   });
 
+  router.delete("/agents/:id/runs", async (req, res) => {
+    assertBoard(req);
+    const agentId = req.params.id as string;
+    const agent = await getAgent(agentId);
+    if (!agent) { res.status(404).json({ error: "Agent not found" }); return; }
+    assertCompanyAccess(req, agent.companyId);
+    const deleted = await heartbeat.deleteRunsByAgent(agentId, agent.companyId);
+    res.json({ deleted });
+  });
+
   router.post("/heartbeat-runs/:runId/cancel", async (req, res) => {
     assertBoard(req);
     const runId = req.params.runId as string;
