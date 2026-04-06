@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Performance & Mobile Fix
 status: unknown
-stopped_at: Completed 13-02-PLAN.md (Tasks 1-2); paused at Task 3 human-verify checkpoint
-last_updated: "2026-04-05T23:11:32.802Z"
+stopped_at: Completed 13-02-PLAN.md — phase 13 complete, all tasks and verification passed
+last_updated: "2026-04-06T01:13:10.086Z"
 progress:
   total_phases: 5
   completed_phases: 2
@@ -47,6 +47,7 @@ Plan: 2 of 2
 | Phase 12 P02 | 10m | 2 tasks | 6 files |
 | Phase 13 P01 | 4m | 2 tasks | 5 files |
 | Phase 13 P02 | 15 | 2 tasks | 6 files |
+| Phase 13 P02 | 45 | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,8 @@ Plan: 2 of 2
 - [Phase 13-02]: getBearerHeaders/handle401 in api-base.ts as single source of truth for bearer token logic; signOut does not call handle401() — redirect handled by UI router
 - [Phase 13-02]: encodeURIComponent() mandatory for WS token param — BetterAuth signed tokens contain . + = URL-special chars that corrupt query string parsing
 - [Phase 13-02]: vercel.json rewrites replaced with routes + filesystem handle — rewrites cannot coexist with routes; filesystem handle required for static asset serving
+- [Phase 13-02]: handle401() redirects to /auth (not /login) — matches actual app auth route; discovered during iOS Safari verification
+- [Phase 13-02]: Token capture reads set-auth-token header before body consumption — CORS exposedHeaders must include set-auth-token for browser to surface it to JS
 
 ### Pending Todos
 
@@ -87,6 +90,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T23:11:32.799Z
-Stopped at: Completed 13-02-PLAN.md (Tasks 1-2); paused at Task 3 human-verify checkpoint
+Last session: 2026-04-06T01:13:10.085Z
+Stopped at: Completed 13-02-PLAN.md — phase 13 complete, all tasks and verification passed
 Resume file: None
