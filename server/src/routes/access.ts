@@ -69,6 +69,7 @@ const INVITE_TOKEN_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 const INVITE_TOKEN_SUFFIX_LENGTH = 8;
 const INVITE_TOKEN_MAX_RETRIES = 5;
 const COMPANY_INVITE_TTL_MS = 10 * 60 * 1000;
+const COMPANY_HUMAN_INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function createInviteToken() {
   const bytes = randomBytes(INVITE_TOKEN_SUFFIX_LENGTH);
@@ -85,6 +86,10 @@ function createClaimSecret() {
 
 export function companyInviteExpiresAt(nowMs: number = Date.now()) {
   return new Date(nowMs + COMPANY_INVITE_TTL_MS);
+}
+
+export function companyHumanInviteExpiresAt(nowMs: number = Date.now()) {
+  return new Date(nowMs + COMPANY_HUMAN_INVITE_TTL_MS);
 }
 
 function tokenHashesMatch(left: string, right: string) {
@@ -1917,7 +1922,9 @@ export function accessRoutes(
         input.defaultsPayload ?? null,
         normalizedAgentMessage
       ),
-      expiresAt: companyInviteExpiresAt(),
+      expiresAt: input.allowedJoinTypes === "human"
+        ? companyHumanInviteExpiresAt()
+        : companyInviteExpiresAt(),
       invitedByUserId: input.req.actor.userId ?? null
     };
 
