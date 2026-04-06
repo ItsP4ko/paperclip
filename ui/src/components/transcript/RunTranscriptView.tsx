@@ -1203,7 +1203,7 @@ export function RunTranscriptView({
   density = "comfortable",
   limit,
   streaming = false,
-  collapseStdout = false,
+  collapseStdout = true,
   emptyMessage = "No transcript yet.",
   className,
   thinkingClassName,
