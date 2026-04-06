@@ -1335,28 +1335,42 @@ export function issueService(db: Db) {
 
     remove: (id: string) =>
       db.transaction(async (tx) => {
+        // Collect the full subtree of issue IDs (BFS) so children are deleted too
+        const allIds: string[] = [];
+        let currentLevel = [id];
+        while (currentLevel.length > 0) {
+          allIds.push(...currentLevel);
+          const children = await tx
+            .select({ id: issues.id })
+            .from(issues)
+            .where(inArray(issues.parentId, currentLevel));
+          currentLevel = children.map((r) => r.id);
+        }
+
         const attachmentAssetIds = await tx
           .select({ assetId: issueAttachments.assetId })
           .from(issueAttachments)
-          .where(eq(issueAttachments.issueId, id));
+          .where(inArray(issueAttachments.issueId, allIds));
         const issueDocumentIds = await tx
           .select({ documentId: issueDocuments.documentId })
           .from(issueDocuments)
-          .where(eq(issueDocuments.issueId, id));
+          .where(inArray(issueDocuments.issueId, allIds));
 
-        const removedIssue = await tx
+        // Delete all issues in the subtree. PostgreSQL evaluates FK constraints
+        // after the full DELETE statement, so deleting the whole set at once is safe.
+        const removedIssues = await tx
           .delete(issues)
-          .where(eq(issues.id, id))
-          .returning()
-          .then((rows) => rows[0] ?? null);
+          .where(inArray(issues.id, allIds))
+          .returning();
+        const removedIssue = removedIssues.find((r) => r.id === id) ?? null;
 
-        if (removedIssue && attachmentAssetIds.length > 0) {
+        if (removedIssues.length > 0 && attachmentAssetIds.length > 0) {
           await tx
             .delete(assets)
             .where(inArray(assets.id, attachmentAssetIds.map((row) => row.assetId)));
         }
 
-        if (removedIssue && issueDocumentIds.length > 0) {
+        if (removedIssues.length > 0 && issueDocumentIds.length > 0) {
           await tx
             .delete(documents)
             .where(inArray(documents.id, issueDocumentIds.map((row) => row.documentId)));

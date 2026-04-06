@@ -22,6 +22,7 @@ interface IssueRowProps {
   onMarkRead?: () => void;
   onArchive?: () => void;
   archiveDisabled?: boolean;
+  onDelete?: () => void;
   className?: string;
 }
 
@@ -39,6 +40,7 @@ export function IssueRow({
   onMarkRead,
   onArchive,
   archiveDisabled,
+  onDelete,
   className,
 }: IssueRowProps) {
   const issuePathId = issue.identifier ?? issue.id;
@@ -97,6 +99,26 @@ export function IssueRow({
           ) : null}
         </span>
       ) : null}
+      {onDelete && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onDelete();
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            event.stopPropagation();
+            onDelete();
+          }}
+          className="hidden h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 sm:inline-flex"
+          aria-label="Delete issue"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
       {showUnreadSlot ? (
         <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center self-center">
           {showUnreadDot ? (

@@ -1,5 +1,5 @@
 import { startTransition, useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { pickTextColorForPillBg } from "@/lib/color-contrast";
 import { useDialog } from "../context/DialogContext";
 import { useCompany } from "../context/CompanyContext";
@@ -231,6 +231,15 @@ export function IssuesList({
 }: IssuesListProps) {
   const { selectedCompanyId } = useCompany();
   const { openNewIssue } = useDialog();
+  const queryClient = useQueryClient();
+  const deleteIssueMutation = useMutation({
+    mutationFn: (id: string) => issuesApi.remove(id),
+    onSuccess: () => {
+      if (selectedCompanyId) {
+        void queryClient.invalidateQueries({ queryKey: ["issues", selectedCompanyId] });
+      }
+    },
+  });
   const { data: session } = useQuery({
     queryKey: queryKeys.auth.session,
     queryFn: () => authApi.getSession(),
@@ -721,6 +730,7 @@ export function IssuesList({
                   issue={issue}
                   issueLinkState={issueLinkState}
                   desktopLeadingSpacer
+                  onDelete={() => deleteIssueMutation.mutate(issue.id)}
                   mobileLeading={(
                     <span
                       onClick={(e) => {
