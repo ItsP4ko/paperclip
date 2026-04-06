@@ -66,7 +66,12 @@ See: milestones/v1.2-ROADMAP.md for full phase details
   3. A user can revoke a specific session from the list; the targeted session becomes invalid within the cookie-cache TTL (60s); all other sessions remain active
   4. A user can revoke all sessions except the current one with a single button action; the current session remains active
   5. WS upgrade requests to the live-events endpoint no longer expose the session token value in pino HTTP access logs (the `?token=` query param is redacted)
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 15-01-PLAN.md — Wave 0 test stubs for login rate limiter and WS token redaction
+- [ ] 15-02-PLAN.md — Backend: login rate limiter (AUTH-01) and WS token log redaction (AUTH-05)
+- [ ] 15-03-PLAN.md — Frontend: session management UI with list/revoke (AUTH-02, AUTH-03, AUTH-04)
 
 ### Phase 16: API Hardening
 **Goal**: Every mutation and relevant GET route validates its input with Zod; production 5xx responses never expose internal details; the CSRF non-implementation decision is permanently documented
@@ -117,7 +122,7 @@ See: milestones/v1.2-ROADMAP.md for full phase details
 | 12. Aggressive Caching | v1.2 | 2/2 | Complete | 2026-04-05 |
 | 13. Mobile Cross-Origin Auth | v1.2 | 2/2 | Complete | 2026-04-05 |
 | 14. WebSocket Optimization | v1.2 | 2/2 | Complete | 2026-04-06 |
-| 15. Auth Hardening | v1.3 | 0/TBD | Not started | — |
+| 15. Auth Hardening | v1.3 | 0/3 | Planning | — |
 | 16. API Hardening | v1.3 | 0/TBD | Not started | — |
 | 17. Frontend / XSS Hardening | v1.3 | 0/TBD | Not started | — |
 | 18. Audit Logs | v1.3 | 0/TBD | Not started | — |
