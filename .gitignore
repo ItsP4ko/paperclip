@@ -1,6 +1,11 @@
 node_modules/
 dist/
 .env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
 *.tsbuildinfo
 drizzle/meta/
 .vite/
