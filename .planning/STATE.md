@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.3
-milestone_name: TBD
+milestone_name: Security Hardening
 status: planning
-stopped_at: v1.2 milestone complete
-last_updated: "2026-04-06T23:10:00.000Z"
+stopped_at: defining requirements
+last_updated: "2026-04-05T00:00:00.000Z"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -19,12 +19,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-06)
 
 **Core value:** A human can receive, work on, and complete tasks inside Paperclip exactly as an AI agent does — without friction, from the web app.
-**Current focus:** Planning next milestone (v1.3)
+**Current focus:** v1.3 Security Hardening — defining requirements
 
 ## Current Position
 
-Milestone v1.2 complete — all 5 phases shipped, 17/17 requirements satisfied.
-Ready to define v1.3 with `/gsd:new-milestone`.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-05 — Milestone v1.3 started
 
 ## Accumulated Context
 

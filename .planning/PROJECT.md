@@ -8,9 +8,15 @@ Extensión de Paperclip para soportar agentes humanos reales junto a los agentes
 
 Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactamente como lo hace un agente de IA — sin fricción, desde la web app.
 
-## Current Milestone: v1.3 (Planning)
+## Current Milestone: v1.3 Security Hardening
 
-*Next milestone to be defined. Run `/gsd:new-milestone` to start.*
+**Goal:** Endurecer la seguridad de la app en cuatro ejes — auth, API, frontend, y visibilidad — preparando el stack para Cloudflare Pages.
+
+**Target features:**
+- Auth hardening: sesiones activas (ver + revocar por dispositivo) + brute-force login protection
+- API hardening: validación Zod en todos los endpoints + errores seguros sin stack traces + CSRF protection
+- Frontend / XSS: CSP estricta + sanitización de contenido renderizado + headers compatibles con Cloudflare Pages
+- Audit logs: panel owner-only con logs de acciones sensibles (logins, invites, asignaciones, cambios de rol)
 
 ## Current State
 
@@ -72,7 +78,12 @@ The platform is live and functional for multi-user testing. All v1.2 requirement
 
 ### Active
 
-*(Empty — define with `/gsd:new-milestone`)*
+<!-- v1.3 Security Hardening — defined 2026-04-05 -->
+
+- [ ] Auth hardening: sesiones activas (ver + revocar) + brute-force protection
+- [ ] API hardening: validación Zod + errores seguros + CSRF protection
+- [ ] Frontend / XSS: CSP estricta + sanitización + headers Cloudflare Pages-compatible
+- [ ] Audit logs: panel owner-only con logs de acciones sensibles
 
 ### Out of Scope
 
@@ -128,4 +139,4 @@ Performance is significantly improved — optimistic UI, 2-minute cache, and WS 
 | reconnectAttempt > 0 guard for cache invalidation | Initial connect should not flush cache; only true reconnects need recovery | ✓ Good — no spurious invalidations on first load |
 
 ---
-*Last updated: 2026-04-06 after v1.2 milestone complete*
+*Last updated: 2026-04-05 after v1.3 milestone started*
