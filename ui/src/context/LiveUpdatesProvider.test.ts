@@ -243,6 +243,77 @@ describe("LiveUpdatesProvider run lifecycle toasts", () => {
   });
 });
 
+describe("LiveUpdatesProvider reconnect cache invalidation", () => {
+  it("invalidates issue lists, detail prefix, sidebar badges, and dashboard", () => {
+    const invalidations: unknown[] = [];
+    const queryClient = {
+      invalidateQueries: (input: unknown) => {
+        invalidations.push(input);
+      },
+    };
+
+    __liveUpdatesTestUtils.invalidateOnReconnect(
+      queryClient as never,
+      "company-1",
+    );
+
+    // Issue lists
+    expect(invalidations).toContainEqual({
+      queryKey: queryKeys.issues.list("company-1"),
+    });
+    expect(invalidations).toContainEqual({
+      queryKey: queryKeys.issues.listAssignedToMe("company-1"),
+    });
+    expect(invalidations).toContainEqual({
+      queryKey: queryKeys.issues.listMineByMe("company-1"),
+    });
+    expect(invalidations).toContainEqual({
+      queryKey: queryKeys.issues.listTouchedByMe("company-1"),
+    });
+    expect(invalidations).toContainEqual({
+      queryKey: queryKeys.issues.listUnreadTouchedByMe("company-1"),
+    });
+
+    // Issue detail prefix (matches all detail queries)
+    expect(invalidations).toContainEqual({
+      queryKey: ["issues", "detail"],
+    });
+
+    // Sidebar and dashboard
+    expect(invalidations).toContainEqual({
+      queryKey: queryKeys.sidebarBadges("company-1"),
+    });
+    expect(invalidations).toContainEqual({
+      queryKey: queryKeys.dashboard("company-1"),
+    });
+  });
+
+  it("does NOT invalidate non-issue queries (agents, costs, etc.)", () => {
+    const invalidations: unknown[] = [];
+    const queryClient = {
+      invalidateQueries: (input: unknown) => {
+        invalidations.push(input);
+      },
+    };
+
+    __liveUpdatesTestUtils.invalidateOnReconnect(
+      queryClient as never,
+      "company-1",
+    );
+
+    const allKeys = invalidations.map((i: any) => JSON.stringify(i.queryKey));
+    expect(allKeys.some((k: string) => k.includes("agents"))).toBe(false);
+    expect(allKeys.some((k: string) => k.includes("costs"))).toBe(false);
+    expect(allKeys.some((k: string) => k.includes("heartbeats"))).toBe(false);
+  });
+});
+
+describe("LiveUpdatesProvider heartbeat constants", () => {
+  it("exports invalidateOnReconnect in test utils", () => {
+    expect(typeof __liveUpdatesTestUtils.invalidateOnReconnect).toBe("function");
+  });
+});
+
 describe("LiveUpdatesProvider socket helpers", () => {
   it("waits for the selected company object to catch up before connecting", () => {
     expect(__liveUpdatesTestUtils.resolveLiveCompanyId("company-1", null)).toBeNull();
