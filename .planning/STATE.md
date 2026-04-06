@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Security Hardening
 status: unknown
-stopped_at: Completed 16-02-PLAN.md
-last_updated: "2026-04-06T14:56:02.575Z"
+stopped_at: Completed 17-01-PLAN.md
+last_updated: "2026-04-06T21:03:49.533Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 7
+  completed_plans: 6
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-06)
 
 **Core value:** A human can receive, work on, and complete tasks inside Paperclip exactly as an AI agent does — without friction, from the web app.
-**Current focus:** Phase 16 — api-hardening
+**Current focus:** Phase 17 — frontend-xss-hardening
 
 ## Current Position
 
-Phase: 16 (api-hardening) — EXECUTING
-Plan: 2 of 2
+Phase: 17 (frontend-xss-hardening) — EXECUTING
+Plan: 1 of 2
 
 ## Performance Metrics
 
@@ -63,6 +63,8 @@ Key v1.3 architectural decisions (from research):
 - [Phase 16-api-hardening]: validateQuery uses schema.parse(req.query) cast — consistent with validate() body pattern; HttpError 5xx responses now scrubbed to Internal server error; CSRF non-implementation documented in auth.ts with OWASP reference
 - [Phase 16]: Object.defineProperty used in validateQuery for Express 5 req.query getter compatibility — direct assignment throws TypeError in ESM strict mode
 - [Phase 16]: Inline Zod schemas per route file pattern confirmed — no shared schema module, matches project convention
+- [Phase 17]: @types/dompurify placed in devDependencies; dompurify 3.x ships own types
+- [Phase 17]: SHA-256 hash sha256-2oMWziIOZ3clEgoBlgQGv6iO60JrWMqbpz+42WnDniA= verified against exact inline script bytes in ui/index.html including surrounding newlines
 
 ### Pending Todos
 
@@ -95,6 +97,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T14:51:50.202Z
-Stopped at: Completed 16-02-PLAN.md
+Last session: 2026-04-06T21:03:49.531Z
+Stopped at: Completed 17-01-PLAN.md
 Resume: `/gsd:plan-phase 16`

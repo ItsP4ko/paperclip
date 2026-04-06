@@ -25,9 +25,9 @@ Requirements for v1.3 Security Hardening. Each maps to roadmap phases.
 
 ### Frontend / XSS
 
-- [ ] **CSP-01**: `Content-Security-Policy-Report-Only` desplegado en `vercel.json` cubriendo el SPA
+- [x] **CSP-01**: `Content-Security-Policy-Report-Only` desplegado en `vercel.json` cubriendo el SPA
 - [ ] **CSP-02**: CSP promovido a enforcing tras periodo de observacion limpio (48-72h sin violaciones)
-- [ ] **CSP-03**: `dompurify` instalado en UI package y aplicado en todos los sitios con `dangerouslySetInnerHTML`
+- [x] **CSP-03**: `dompurify` instalado en UI package y aplicado en todos los sitios con `dangerouslySetInnerHTML`
 
 ### Audit Logs
 
@@ -75,9 +75,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-02 | Phase 16 | Complete |
 | API-03 | Phase 16 | Complete |
 | API-04 | Phase 16 | Complete |
-| CSP-01 | Phase 17 | Pending |
+| CSP-01 | Phase 17 | Complete |
 | CSP-02 | Phase 17 | Pending |
-| CSP-03 | Phase 17 | Pending |
+| CSP-03 | Phase 17 | Complete |
 | AUDIT-01 | Phase 18 | Pending |
 | AUDIT-02 | Phase 18 | Pending |
 
