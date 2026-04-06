@@ -3569,11 +3569,15 @@ export function heartbeatService(db: Db) {
       .where(and(eq(heartbeatRuns.agentId, agentId), inArray(heartbeatRuns.status, ["queued", "running"])))
       .orderBy(desc(heartbeatRuns.createdAt));
 
+    // Timer wakeups without a specific task scope should coalesce with any active run
+    // to avoid stacking wasteful heartbeats when the agent is already busy.
+    const isUnscopedTimerWakeup = source === "timer" && !taskKey;
+
     const sameScopeQueuedRun = activeRuns.find(
-      (candidate) => candidate.status === "queued" && isSameTaskScope(runTaskKey(candidate), taskKey),
+      (candidate) => candidate.status === "queued" && (isUnscopedTimerWakeup || isSameTaskScope(runTaskKey(candidate), taskKey)),
     );
     const sameScopeRunningRun = activeRuns.find(
-      (candidate) => candidate.status === "running" && isSameTaskScope(runTaskKey(candidate), taskKey),
+      (candidate) => candidate.status === "running" && (isUnscopedTimerWakeup || isSameTaskScope(runTaskKey(candidate), taskKey)),
     );
     const shouldQueueFollowupForCommentWake =
       Boolean(wakeCommentId) && Boolean(sameScopeRunningRun) && !sameScopeQueuedRun;
