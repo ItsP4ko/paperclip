@@ -27,7 +27,18 @@ import {
   readPaperclipSkillSyncPreference,
   writePaperclipSkillSyncPreference,
 } from "@paperclipai/adapter-utils/server-utils";
-import { validate } from "../middleware/validate.js";
+import { z } from "zod";
+import { validate, validateQuery } from "../middleware/validate.js";
+
+const heartbeatEventsQuerySchema = z.object({
+  afterSeq: z.coerce.number().int().min(0).optional().default(0),
+  limit:    z.coerce.number().int().min(1).max(1000).optional().default(200),
+});
+
+const logReadQuerySchema = z.object({
+  offset:     z.coerce.number().int().min(0).optional().default(0),
+  limitBytes: z.coerce.number().int().min(1).max(1048576).optional().default(256000),
+});
 import {
   agentService,
   agentInstructionsService,
@@ -2275,7 +2286,7 @@ export function agentRoutes(db: Db) {
     res.json(run);
   });
 
-  router.get("/heartbeat-runs/:runId/events", async (req, res) => {
+  router.get("/heartbeat-runs/:runId/events", validateQuery(heartbeatEventsQuerySchema), async (req, res) => {
     const runId = req.params.runId as string;
     const run = await heartbeat.getRun(runId);
     if (!run) {
@@ -2284,9 +2295,9 @@ export function agentRoutes(db: Db) {
     }
     assertCompanyAccess(req, run.companyId);
 
-    const afterSeq = Number(req.query.afterSeq ?? 0);
-    const limit = Number(req.query.limit ?? 200);
-    const events = await heartbeat.listEvents(runId, Number.isFinite(afterSeq) ? afterSeq : 0, Number.isFinite(limit) ? limit : 200);
+    const afterSeq = req.query.afterSeq as unknown as number;
+    const limit = req.query.limit as unknown as number;
+    const events = await heartbeat.listEvents(runId, afterSeq, limit);
     const currentUserRedactionOptions = await getCurrentUserRedactionOptions();
     const redactedEvents = events.map((event) =>
       redactCurrentUserValue({
@@ -2297,7 +2308,7 @@ export function agentRoutes(db: Db) {
     res.json(redactedEvents);
   });
 
-  router.get("/heartbeat-runs/:runId/log", async (req, res) => {
+  router.get("/heartbeat-runs/:runId/log", validateQuery(logReadQuerySchema), async (req, res) => {
     const runId = req.params.runId as string;
     const run = await heartbeat.getRun(runId);
     if (!run) {
@@ -2306,12 +2317,9 @@ export function agentRoutes(db: Db) {
     }
     assertCompanyAccess(req, run.companyId);
 
-    const offset = Number(req.query.offset ?? 0);
-    const limitBytes = Number(req.query.limitBytes ?? 256000);
-    const result = await heartbeat.readLog(runId, {
-      offset: Number.isFinite(offset) ? offset : 0,
-      limitBytes: Number.isFinite(limitBytes) ? limitBytes : 256000,
-    });
+    const offset = req.query.offset as unknown as number;
+    const limitBytes = req.query.limitBytes as unknown as number;
+    const result = await heartbeat.readLog(runId, { offset, limitBytes });
 
     res.json(result);
   });
@@ -2331,7 +2339,7 @@ export function agentRoutes(db: Db) {
     res.json(redactCurrentUserValue(operations, await getCurrentUserRedactionOptions()));
   });
 
-  router.get("/workspace-operations/:operationId/log", async (req, res) => {
+  router.get("/workspace-operations/:operationId/log", validateQuery(logReadQuerySchema), async (req, res) => {
     const operationId = req.params.operationId as string;
     const operation = await workspaceOperations.getById(operationId);
     if (!operation) {
@@ -2340,12 +2348,9 @@ export function agentRoutes(db: Db) {
     }
     assertCompanyAccess(req, operation.companyId);
 
-    const offset = Number(req.query.offset ?? 0);
-    const limitBytes = Number(req.query.limitBytes ?? 256000);
-    const result = await workspaceOperations.readLog(operationId, {
-      offset: Number.isFinite(offset) ? offset : 0,
-      limitBytes: Number.isFinite(limitBytes) ? limitBytes : 256000,
-    });
+    const offset = req.query.offset as unknown as number;
+    const limitBytes = req.query.limitBytes as unknown as number;
+    const result = await workspaceOperations.readLog(operationId, { offset, limitBytes });
 
     res.json(result);
   });

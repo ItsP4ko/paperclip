@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { z } from "zod";
 import type { Db } from "@paperclipai/db";
 import {
   createRoutineSchema,
@@ -8,7 +9,11 @@ import {
   updateRoutineSchema,
   updateRoutineTriggerSchema,
 } from "@paperclipai/shared";
-import { validate } from "../middleware/validate.js";
+import { validate, validateQuery } from "../middleware/validate.js";
+
+const routineRunsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).optional().default(50),
+});
 import { accessService, logActivity, routineService } from "../services/index.js";
 import { assertCompanyAccess, getActorInfo } from "./authz.js";
 import { forbidden, unauthorized } from "../errors.js";
@@ -130,15 +135,15 @@ export function routineRoutes(db: Db) {
     res.json(updated);
   });
 
-  router.get("/routines/:id/runs", async (req, res) => {
+  router.get("/routines/:id/runs", validateQuery(routineRunsQuerySchema), async (req, res) => {
     const routine = await svc.get(req.params.id as string);
     if (!routine) {
       res.status(404).json({ error: "Routine not found" });
       return;
     }
     assertCompanyAccess(req, routine.companyId);
-    const limit = Number(req.query.limit ?? 50);
-    const result = await svc.listRuns(routine.id, Number.isFinite(limit) ? limit : 50);
+    const limit = req.query.limit as unknown as number;
+    const result = await svc.listRuns(routine.id, limit);
     res.json(result);
   });
 
