@@ -5,6 +5,22 @@ import { pinoHttp } from "pino-http";
 import { readConfigFile } from "../config-file.js";
 import { resolveDefaultLogsDir, resolveHomeAwarePath } from "../home-paths.js";
 
+export function sanitizeLogUrl(url: string | undefined): string {
+  if (!url) return "";
+  if (!url.includes("token=")) return url;
+  try {
+    const qIdx = url.indexOf("?");
+    if (qIdx === -1) return url;
+    const base = url.slice(0, qIdx);
+    const params = new URLSearchParams(url.slice(qIdx + 1));
+    params.delete("token");
+    const remaining = params.toString();
+    return remaining ? `${base}?${remaining}` : base;
+  } catch {
+    return url.replace(/([?&])token=[^&]*/g, "");
+  }
+}
+
 function resolveServerLogDir(): string {
   const envOverride = process.env.PAPERCLIP_LOG_DIR?.trim();
   if (envOverride) return resolveHomeAwarePath(envOverride);
@@ -51,12 +67,26 @@ export const httpLogger = pinoHttp({
     return "info";
   },
   customSuccessMessage(req, res) {
-    return `${req.method} ${req.url} ${res.statusCode}`;
+    return `${req.method} ${sanitizeLogUrl(req.url)} ${res.statusCode}`;
   },
   customErrorMessage(req, res, err) {
     const ctx = (res as any).__errorContext;
     const errMsg = ctx?.error?.message || err?.message || (res as any).err?.message || "unknown error";
-    return `${req.method} ${req.url} ${res.statusCode} — ${errMsg}`;
+    return `${req.method} ${sanitizeLogUrl(req.url)} ${res.statusCode} — ${errMsg}`;
+  },
+  serializers: {
+    req(req) {
+      return {
+        id: req.id,
+        method: req.method,
+        url: sanitizeLogUrl(req.url),
+        query: req.query,
+        params: req.params,
+        headers: req.headers,
+        remoteAddress: req.remoteAddress,
+        remotePort: req.remotePort,
+      };
+    },
   },
   customProps(req, res) {
     if (res.statusCode >= 400) {
