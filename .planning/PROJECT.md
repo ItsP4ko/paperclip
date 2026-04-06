@@ -23,11 +23,12 @@ Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactam
 **v1.0 shipped** (2026-04-04) — Human agents MVP: My Tasks, invite flow, task work surface, bidirectional handoff.
 **v1.1 shipped** (2026-04-05) — Deployment & SaaS Readiness: Three-tier deployment (Vercel + Easypanel + Supabase), cross-origin auth, API hardening (Helmet + rate limiting + Redis cache), full E2E verification.
 **v1.2 Phase 12 complete** (2026-04-05) — Aggressive caching: staleTime 2 min on issue queries, listAssignedToMe invalidation at all call-sites. My Tasks empty-render bug fixed.
+**v1.2 Phase 14 complete** (2026-04-06) — WebSocket optimization: per-message deflate compression disabled (WS-02), client-side heartbeat for dead-connection detection within 25s (WS-01), targeted cache invalidation on reconnect (WS-03).
 
 The platform is live and functional for multi-user testing. All 28 v1.1 requirements verified. The full invite → join → work → handoff → real-time cycle works end-to-end on the deployed stack.
 
 **Known tech debt (v1.1):** 9 items — see `milestones/v1.1-MILESTONE-AUDIT.md`. Key items:
-- WebSocket real-time updates are slow/laggy on live deployment
+- ✓ WebSocket real-time optimization complete (Phase 14)
 - File attachments use local disk (lost on container replacement — PROD-02 deferred)
 - My Tasks page renders empty despite badge count (tasks accessible via Issues > Assigned to me)
 - Vercel 404 on nested SPA routes like /PAC/dashboard
@@ -115,4 +116,4 @@ Performance is a known concern — WebSocket updates are slow, general UI respon
 | Gap closure phase for audit gaps | Phase 9 addressed rate-limit bug + manual E2E verification | ✓ Good — all 28 requirements closed |
 
 ---
-*Last updated: 2026-04-05 after Phase 12: aggressive-caching complete*
+*Last updated: 2026-04-06 after Phase 14: websocket-optimization complete*
