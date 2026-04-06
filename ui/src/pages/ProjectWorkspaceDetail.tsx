@@ -448,7 +448,10 @@ export function ProjectWorkspaceDetail() {
                   />
                 </Field>
                 <div className="flex items-end">
-                  <ChoosePathButton />
+                  <ChoosePathButton
+                    directory
+                    onSelect={(path) => setForm((current) => current ? { ...current, cwd: path } : current)}
+                  />
                 </div>
               </div>
 

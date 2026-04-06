@@ -42,7 +42,13 @@ export function CursorLocalConfigFields({
           className={inputClass}
           placeholder="/absolute/path/to/AGENTS.md"
         />
-        <ChoosePathButton />
+        <ChoosePathButton
+          onSelect={(path) =>
+            isCreate
+              ? set!({ instructionsFilePath: path })
+              : mark("adapterConfig", "instructionsFilePath", path || undefined)
+          }
+        />
       </div>
     </Field>
   );

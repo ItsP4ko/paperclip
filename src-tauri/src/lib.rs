@@ -94,6 +94,7 @@ fn check_for_updates(handle: tauri::AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
         .manage(RunnerState(Mutex::new(None)))
         .setup(|app| {
             let handle = app.handle().clone();

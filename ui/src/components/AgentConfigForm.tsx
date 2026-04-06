@@ -672,7 +672,14 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
                   className="w-full bg-transparent outline-none text-sm font-mono placeholder:text-muted-foreground/40"
                   placeholder="/path/to/project"
                 />
-                <ChoosePathButton />
+                <ChoosePathButton
+                  directory
+                  onSelect={(path) =>
+                    isCreate
+                      ? set!({ cwd: path })
+                      : mark("adapterConfig", "cwd", path || undefined)
+                  }
+                />
               </div>
             </Field>
           )}

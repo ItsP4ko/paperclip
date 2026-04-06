@@ -119,12 +119,47 @@ export function PathInstructionsModal({
   );
 }
 
+function isTauriEnv(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    ("__TAURI__" in window || "__TAURI_INTERNALS__" in window)
+  );
+}
+
 /**
- * Small "Choose" button that opens the PathInstructionsModal.
- * Drop-in replacement for the old showDirectoryPicker buttons.
+ * Small "Choose" button.
+ * - In Tauri: opens the native OS file/folder picker and calls onSelect with the result.
+ * - In web: opens the PathInstructionsModal with copy-path instructions.
  */
-export function ChoosePathButton({ className }: { className?: string }) {
+export function ChoosePathButton({
+  className,
+  onSelect,
+  directory = false,
+}: {
+  className?: string;
+  /** Called with the selected path. Required for native picker to take effect in Tauri. */
+  onSelect?: (path: string) => void;
+  /** true = folder picker, false = file picker (Tauri only). Default: false. */
+  directory?: boolean;
+}) {
   const [open, setOpen] = useState(false);
+
+  const handleClick = async () => {
+    if (isTauriEnv() && onSelect) {
+      try {
+        const { open: openDialog } = await import("@tauri-apps/plugin-dialog");
+        const selected = await openDialog({ directory, multiple: false });
+        if (typeof selected === "string" && selected) {
+          onSelect(selected);
+        }
+      } catch {
+        setOpen(true);
+      }
+    } else {
+      setOpen(true);
+    }
+  };
+
   return (
     <>
       <button
@@ -133,7 +168,7 @@ export function ChoosePathButton({ className }: { className?: string }) {
           "inline-flex items-center rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent/50 transition-colors shrink-0",
           className,
         )}
-        onClick={() => setOpen(true)}
+        onClick={handleClick}
       >
         Choose
       </button>

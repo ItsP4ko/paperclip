@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link } from "@/lib/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Project } from "@paperclipai/shared";
@@ -212,6 +212,13 @@ function ArchiveDangerZone({
         </Button>
       )}
     </div>
+  );
+}
+
+function isTauriEnv(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    ("__TAURI__" in window || "__TAURI_INTERNALS__" in window)
   );
 }
 
@@ -441,6 +448,26 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
     setWorkspaceError(null);
     setMemberLocalFolder.mutate(cwd);
   };
+
+  const handleChangeLocalFolder = useCallback(async () => {
+    if (isTauriEnv()) {
+      try {
+        const { open } = await import("@tauri-apps/plugin-dialog");
+        const selected = await open({ directory: true, multiple: false });
+        if (typeof selected === "string" && selected) {
+          setMemberLocalFolder.mutate(selected);
+        }
+      } catch {
+        setWorkspaceMode("local");
+        setWorkspaceCwd(codebase.localFolder ?? "");
+        setWorkspaceError(null);
+      }
+    } else {
+      setWorkspaceMode("local");
+      setWorkspaceCwd(codebase.localFolder ?? "");
+      setWorkspaceError(null);
+    }
+  }, [codebase.localFolder, setMemberLocalFolder]);
 
   const submitRepoWorkspace = () => {
     const repoUrl = workspaceRepoUrl.trim();
@@ -708,11 +735,7 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
                     variant="outline"
                     size="xs"
                     className="h-6 px-2"
-                    onClick={() => {
-                      setWorkspaceMode("local");
-                      setWorkspaceCwd(codebase.localFolder ?? "");
-                      setWorkspaceError(null);
-                    }}
+                    onClick={handleChangeLocalFolder}
                   >
                     {codebase.localFolder ? "Change local folder" : "Set local folder"}
                   </Button>
@@ -791,7 +814,7 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
                   onChange={(e) => setWorkspaceCwd(e.target.value)}
                   placeholder="/absolute/path/to/workspace"
                 />
-                <ChoosePathButton />
+                <ChoosePathButton directory onSelect={setWorkspaceCwd} />
               </div>
               <div className="flex items-center gap-2">
                 <Button
