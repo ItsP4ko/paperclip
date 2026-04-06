@@ -37,7 +37,7 @@ interface WsServer {
 const require = createRequire(import.meta.url);
 const { WebSocket, WebSocketServer } = require("ws") as {
   WebSocket: { OPEN: number };
-  WebSocketServer: new (opts: { noServer: boolean }) => WsServer;
+  WebSocketServer: new (opts: { noServer: boolean; perMessageDeflate?: boolean }) => WsServer;
 };
 
 interface UpgradeContext {
@@ -225,7 +225,7 @@ export function setupLiveEventsWebSocketServer(
     resolveSessionFromHeaders?: (headers: Headers) => Promise<BetterAuthSessionResult | null>;
   },
 ) {
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({ noServer: true, perMessageDeflate: false });
   const cleanupByClient = new Map<WsSocket, () => void>();
   const aliveByClient = new Map<WsSocket, boolean>();
 
