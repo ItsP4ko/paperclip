@@ -2092,6 +2092,15 @@ export function heartbeatService(db: Db) {
       return;
     }
 
+    // Early exit for local_runner agents — defer before any server-side workspace setup
+    const runtimeConfEarly = parseObject(agent.runtimeConfig);
+    if (runtimeConfEarly.executionTarget === "local_runner") {
+      await setRunStatus(run.id, "pending_local", {});
+      logger.info({ runId: run.id, agentId: agent.id }, "[heartbeat] deferred to local runner");
+      activeRunExecutions.delete(run.id);
+      return;
+    }
+
     const runtime = await ensureRuntimeState(agent);
     const context = parseObject(run.contextSnapshot);
     const taskKey = deriveTaskKeyWithHeartbeatFallback(context, null);
@@ -2684,14 +2693,6 @@ export function heartbeatService(db: Db) {
         }
       } catch (kbErr) {
         logger.warn({ runId: run.id, err: kbErr }, "Knowledge base injection failed; continuing without KB context");
-      }
-
-      const runtimeConf = parseObject(agent.runtimeConfig);
-      if (runtimeConf.executionTarget === "local_runner") {
-        await setRunStatus(run.id, "pending_local", {});
-        logger.info({ runId: run.id, agentId: agent.id }, "[heartbeat] deferred to local runner");
-        activeRunExecutions.delete(run.id);
-        return;
       }
 
       const adapter = getServerAdapter(agent.adapterType);
