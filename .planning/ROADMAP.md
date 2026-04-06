@@ -50,7 +50,7 @@ See: milestones/v1.2-ROADMAP.md for full phase details
 ### v1.3 Security Hardening (Phases 15-18)
 
 - [x] **Phase 15: Auth Hardening** — Brute-force login protection, active session management UI, and WS token log redaction (completed 2026-04-06)
-- [ ] **Phase 16: API Hardening** — Zod validation coverage across all routes, safe production error responses, and CSRF non-implementation documented
+- [x] **Phase 16: API Hardening** — Zod validation coverage across all routes, safe production error responses, and CSRF non-implementation documented (completed 2026-04-06)
 - [ ] **Phase 17: Frontend / XSS Hardening** — CSP deployed report-only then promoted to enforcing, DOMPurify on all dangerouslySetInnerHTML sites
 - [ ] **Phase 18: Audit Logs** — Owner-only gate on audit routes, graceful 403 in AuditLog UI
 
@@ -82,7 +82,7 @@ Plans:
   2. Sending a non-numeric value to a GET route query param that expects a number (e.g., pagination limit) returns a 400, not a 500 or NaN-propagation
   3. Triggering an unhandled exception in production returns a generic `{"error":"Internal server error"}` body with no stack trace, no file paths, and no internal variable names
   4. A code comment in the auth or middleware layer explicitly states that CSRF protection is not needed and references the technical justification (bearer token architecture + OWASP)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 16-01-PLAN.md — Test infrastructure, validateQuery middleware, error handler 5xx hardening, CSRF documentation (API-03, API-04)
@@ -127,6 +127,6 @@ Plans:
 | 13. Mobile Cross-Origin Auth | v1.2 | 2/2 | Complete | 2026-04-05 |
 | 14. WebSocket Optimization | v1.2 | 2/2 | Complete | 2026-04-06 |
 | 15. Auth Hardening | v1.3 | 3/3 | Complete | 2026-04-06 |
-| 16. API Hardening | 1/2 | In Progress|  | — |
+| 16. API Hardening | 2/2 | Complete   | 2026-04-06 | — |
 | 17. Frontend / XSS Hardening | v1.3 | 0/TBD | Not started | — |
 | 18. Audit Logs | v1.3 | 0/TBD | Not started | — |

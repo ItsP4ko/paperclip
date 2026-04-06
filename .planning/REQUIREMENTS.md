@@ -18,8 +18,8 @@ Requirements for v1.3 Security Hardening. Each maps to roadmap phases.
 
 ### API Hardening
 
-- [ ] **API-01**: Todas las rutas mutation sin validacion tienen esquemas Zod (`validate()` middleware)
-- [ ] **API-02**: GET routes con query params relevantes tienen `validateQuery()` con `z.coerce.*`
+- [x] **API-01**: Todas las rutas mutation sin validacion tienen esquemas Zod (`validate()` middleware)
+- [x] **API-02**: GET routes con query params relevantes tienen `validateQuery()` con `z.coerce.*`
 - [x] **API-03**: Respuestas 5xx en produccion no exponen stack traces ni detalles internos del servidor
 - [x] **API-04**: La decision de no implementar CSRF esta documentada en codigo con justificacion tecnica
 
@@ -71,8 +71,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-03 | Phase 15 | Complete |
 | AUTH-04 | Phase 15 | Complete |
 | AUTH-05 | Phase 15 | Complete |
-| API-01 | Phase 16 | Pending |
-| API-02 | Phase 16 | Pending |
+| API-01 | Phase 16 | Complete |
+| API-02 | Phase 16 | Complete |
 | API-03 | Phase 16 | Complete |
 | API-04 | Phase 16 | Complete |
 | CSP-01 | Phase 17 | Pending |
