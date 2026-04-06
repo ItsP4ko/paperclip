@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Security Hardening
-status: phase_complete
-stopped_at: Completed 15-03-PLAN.md
-last_updated: "2026-04-06T00:00:00.000Z"
+status: unknown
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-04-06T14:40:47.925Z"
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
 ---
 
 # Project State
@@ -19,19 +19,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-06)
 
 **Core value:** A human can receive, work on, and complete tasks inside Paperclip exactly as an AI agent does — without friction, from the web app.
-**Current focus:** Phase 15 — Auth Hardening
+**Current focus:** Phase 16 — api-hardening
 
 ## Current Position
 
-Phase: 15 (Auth Hardening) — COMPLETE (all 3 plans done)
-Plan: 3 of 3 (phase complete)
+Phase: 16 (api-hardening) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
 - Phases this milestone: 4 (15, 16, 17, 18)
 - Requirements covered: 14/14
 - Phases completed: 1/4
-- Plans completed: 3/3 (Phase 15 complete)
+- Plans completed: 4/5 (Phase 15 complete + Phase 16 plan 1 of 2)
 
 ## Accumulated Context
 
@@ -60,6 +60,7 @@ Key v1.3 architectural decisions (from research):
 - [Phase 15]: Test for sanitizeLogUrl imports from logger.ts - consistent with plan spec; login-rate-limit.test.ts uses app.all() for rate limiter mounting
 - [Phase 15-03]: Current session identified via localStorage bearer token match against session.token (not via getSession which returns synthetic paperclip:<source>:<userId> ID)
 - [Phase 15-03]: Route /account placed at top-level outside :companyPrefix to avoid prefix collision with workspace routes
+- [Phase 16-api-hardening]: validateQuery uses schema.parse(req.query) cast — consistent with validate() body pattern; HttpError 5xx responses now scrubbed to Internal server error; CSRF non-implementation documented in auth.ts with OWASP reference
 
 ### Pending Todos
 
@@ -92,6 +93,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T00:00:00.000Z
-Stopped at: Completed 15-03-PLAN.md (Phase 15 complete)
+Last session: 2026-04-06T14:40:47.923Z
+Stopped at: Completed 16-01-PLAN.md
 Resume: `/gsd:plan-phase 16`
