@@ -3849,9 +3849,21 @@ function LogViewer({ run, adapterType }: { run: HeartbeatRun; adapterType: strin
   }, [censorUsernameInLogs, events]);
 
   const adapter = useMemo(() => getUIAdapter(adapterType), [adapterType]);
+  const effectiveLogLines = useMemo(() => {
+    if (logLines.length > 0) return logLines;
+    // When no persisted log exists, derive log lines from events so the transcript
+    // viewer (Nice/Raw) can parse and display them instead of showing empty.
+    return events
+      .filter((e) => e.stream === "stdout" || e.stream === "stderr" || e.stream === "system")
+      .map((e) => ({
+        ts: new Date(e.createdAt).toISOString(),
+        stream: (e.stream ?? "stdout") as "stdout" | "stderr" | "system",
+        chunk: e.message ?? (e.payload ? JSON.stringify(e.payload) : ""),
+      }));
+  }, [logLines, events]);
   const transcript = useMemo(
-    () => buildTranscript(logLines, adapter.parseStdoutLine, { censorUsernameInLogs }),
-    [adapter, censorUsernameInLogs, logLines],
+    () => buildTranscript(effectiveLogLines, adapter.parseStdoutLine, { censorUsernameInLogs }),
+    [adapter, censorUsernameInLogs, effectiveLogLines],
   );
 
   useEffect(() => {
@@ -4002,7 +4014,7 @@ function LogViewer({ run, adapterType }: { run: HeartbeatRun; adapterType: strin
           entries={transcript}
           mode={transcriptMode}
           streaming={isLive}
-          emptyMessage={run.logRef ? "Waiting for transcript..." : "No persisted transcript for this run."}
+          emptyMessage={run.logRef ? "Waiting for transcript..." : events.length > 0 ? "Parsing events..." : "No persisted transcript for this run."}
         />
         {logError && (
           <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/[0.06] px-3 py-2 text-xs text-red-700 dark:text-red-300">

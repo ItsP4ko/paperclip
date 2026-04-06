@@ -3,8 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "@/lib/router";
 import { accessApi } from "../api/access";
 import { authApi } from "../api/auth";
+import { companiesApi } from "../api/companies";
 import { healthApi } from "../api/health";
 import { queryKeys } from "../lib/queryKeys";
+import type { Company } from "@paperclipai/shared";
 import { Button } from "@/components/ui/button";
 import { AGENT_ADAPTER_TYPES } from "@paperclipai/shared";
 import type { AgentAdapterType, JoinRequest } from "@paperclipai/shared";
@@ -124,12 +126,21 @@ export function InviteLandingPage() {
     onSuccess: async (payload) => {
       setError(null);
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.session });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
       const action = resolvePostAcceptAction(payload);
       if (action === "navigate-home") {
-        navigate("/", { replace: true });
+        // Refetch companies (wait for fresh data) so we can navigate directly to
+        // the joined company's dashboard — avoids landing on the "create company"
+        // page when the user has no prior companies.
+        const freshCompanies = await queryClient.fetchQuery<Company[]>({
+          queryKey: queryKeys.companies.all,
+          queryFn: () => companiesApi.list(),
+          staleTime: 0,
+        });
+        const first = freshCompanies[0];
+        navigate(first ? `/${first.issuePrefix}/dashboard` : "/", { replace: true });
         return;
       }
+      await queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
       setResult({ kind: action === "show-bootstrap" ? "bootstrap" : "join", payload });
     },
     onError: (err) => {

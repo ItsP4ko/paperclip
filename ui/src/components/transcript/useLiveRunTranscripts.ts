@@ -69,6 +69,8 @@ export function useLiveRunTranscripts({
   const seenChunkKeysRef = useRef(new Set<string>());
   const pendingLogRowsByRunRef = useRef(new Map<string, string>());
   const logOffsetByRunRef = useRef(new Map<string, number>());
+  // Tracks runs where we already loaded from events fallback (to avoid redundant re-fetches)
+  const eventSeqByRunRef = useRef(new Map<string, number>());
   const { data: generalSettings } = useQuery({
     queryKey: queryKeys.instance.generalSettings,
     queryFn: () => instanceSettingsApi.getGeneral(),
@@ -130,6 +132,11 @@ export function useLiveRunTranscripts({
         logOffsetByRunRef.current.delete(runId);
       }
     }
+    for (const runId of eventSeqByRunRef.current.keys()) {
+      if (!knownRunIds.has(runId)) {
+        eventSeqByRunRef.current.delete(runId);
+      }
+    }
   }, [runs]);
 
   useEffect(() => {
@@ -143,17 +150,36 @@ export function useLiveRunTranscripts({
         const result = await heartbeatsApi.log(run.id, offset, LOG_READ_LIMIT_BYTES);
         if (cancelled) return;
 
-        appendChunks(run.id, parsePersistedLogContent(run.id, result.content, pendingLogRowsByRunRef.current));
+        const logChunks = parsePersistedLogContent(run.id, result.content, pendingLogRowsByRunRef.current);
+        if (logChunks.length > 0) {
+          appendChunks(run.id, logChunks);
+          if (result.nextOffset !== undefined) {
+            logOffsetByRunRef.current.set(run.id, result.nextOffset);
+          } else if (result.content.length > 0) {
+            logOffsetByRunRef.current.set(run.id, offset + result.content.length);
+          }
+          return; // log data is available — no need for events fallback
+        }
 
-        if (result.nextOffset !== undefined) {
-          logOffsetByRunRef.current.set(run.id, result.nextOffset);
-          return;
-        }
-        if (result.content.length > 0) {
-          logOffsetByRunRef.current.set(run.id, offset + result.content.length);
-        }
+        // No log content — fall back to events API so the transcript viewer
+        // can show parsed output even when no log file was persisted.
+        const afterSeq = eventSeqByRunRef.current.get(run.id) ?? 0;
+        const events = await heartbeatsApi.events(run.id, afterSeq, 500);
+        if (cancelled || events.length === 0) return;
+        const maxSeq = Math.max(...events.map((e) => e.seq));
+        eventSeqByRunRef.current.set(run.id, maxSeq);
+        const eventChunks = events
+          .filter((e) => e.stream === "stdout" || e.stream === "stderr" || e.stream === "system")
+          .map((e) => ({
+            ts: new Date(e.createdAt).toISOString(),
+            stream: (e.stream ?? "stdout") as "stdout" | "stderr" | "system",
+            chunk: e.message ?? (e.payload ? JSON.stringify(e.payload) : ""),
+            dedupeKey: `event:${run.id}:${e.id}`,
+          }))
+          .filter((c) => c.chunk.trim().length > 0);
+        appendChunks(run.id, eventChunks);
       } catch {
-        // Ignore log read errors while output is initializing.
+        // Ignore log/event read errors while output is initializing.
       }
     };
 
