@@ -41,7 +41,7 @@ See: milestones/v1.1-ROADMAP.md for full phase details
 - [x] **Phase 11: Backend Deploy Gaps** - Redeploy Easypanel backend with missing routes; fix sidebar routing; re-run E2E for phases 3, 4, 5 (completed 2026-04-05)
 - [x] **Phase 12: Aggressive Caching** - Navigation between previously-visited pages is instant; My Tasks renders correctly (completed 2026-04-05)
 - [x] **Phase 13: Mobile Cross-Origin Auth** - iOS Safari and Android Chrome users can log in and maintain authenticated sessions (completed 2026-04-05)
-- [ ] **Phase 14: WebSocket Optimization** - Dead connections detected and reconnected; per-message latency reduced; cache recovered after reconnect
+- [x] **Phase 14: WebSocket Optimization** - Dead connections detected and reconnected; per-message latency reduced; cache recovered after reconnect (completed 2026-04-06)
 
 ## Phase Details
 
@@ -110,7 +110,7 @@ Plans:
   1. After a network drop or silent NAT timeout, the client detects the dead connection within 25 seconds and automatically reconnects without user action
   2. WebSocket message round-trip latency on the live Easypanel deployment is measurably lower than before (`perMessageDeflate` disabled)
   3. After a WebSocket reconnect, any issues or lists the user has open reflect the current server state — events missed during the disconnect window are not silently lost
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 14-01-PLAN.md — Explicit perMessageDeflate: false in WS server constructor (WS-02)
 - [ ] 14-02-PLAN.md — Client heartbeat for dead-connection detection + cache invalidation on reconnect (WS-01, WS-03)
@@ -132,4 +132,4 @@ Plans:
 | 11. Backend Deploy Gaps | v1.2 | Complete    | 2026-04-05 | - |
 | 12. Aggressive Caching | 2/2 | Complete    | 2026-04-05 | - |
 | 13. Mobile Cross-Origin Auth | 2/2 | Complete    | 2026-04-06 | - |
-| 14. WebSocket Optimization | 1/2 | In Progress|  | - |
+| 14. WebSocket Optimization | 2/2 | Complete   | 2026-04-06 | - |

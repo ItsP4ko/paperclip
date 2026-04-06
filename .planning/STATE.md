@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Performance & Mobile Fix
 status: unknown
-stopped_at: Completed 14-02-PLAN.md — phase 14 plan 02 complete, heartbeat + reconnect cache invalidation
-last_updated: "2026-04-06T01:43:51.187Z"
+stopped_at: Completed 14-01-PLAN.md
+last_updated: "2026-04-06T01:45:32.340Z"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -49,6 +49,7 @@ Plan: 2 of 2 (complete)
 | Phase 13 P02 | 15 | 2 tasks | 6 files |
 | Phase 13 P02 | 45 | 3 tasks | 7 files |
 | Phase 14 P02 | 3m | 2 tasks | 2 files |
+| Phase 14 P01 | 4m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,7 @@ Plan: 2 of 2 (complete)
 - [Phase 14]: queryKey ['issues', 'detail'] prefix matching invalidates ALL issue detail queries on reconnect without iterating known IDs
 - [Phase 14]: invalidateOnReconnect skips agent, cost, heartbeat, run queries — only issue-visible data needs reconnect recovery
 - [Phase 14]: reconnectAttempt > 0 guard ensures initial connection does not fire cache invalidation, only true reconnects do
+- [Phase 14-01]: ESM import replaces createRequire for ws — vitest vi.mock cannot intercept createRequire-based require() calls; ESM import goes through vitest's module system enabling mock spy assertion
 
 ### Pending Todos
 
@@ -95,6 +97,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T01:43:51.185Z
-Stopped at: Completed 14-02-PLAN.md — phase 14 plan 02 complete, heartbeat + reconnect cache invalidation
+Last session: 2026-04-06T01:45:32.338Z
+Stopped at: Completed 14-01-PLAN.md
 Resume file: None
