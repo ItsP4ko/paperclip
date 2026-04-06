@@ -50,6 +50,7 @@ export function handle401(): void {
   }
   // Only redirect if not already on /auth to avoid redirect loops
   if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
-    window.location.href = "/auth";
+    const next = encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.href = `/auth?next=${next}`;
   }
 }

@@ -131,11 +131,20 @@ export function InviteLandingPage() {
         // Refetch companies (wait for fresh data) so we can navigate directly to
         // the joined company's dashboard — avoids landing on the "create company"
         // page when the user has no prior companies.
-        const freshCompanies = await queryClient.fetchQuery<Company[]>({
+        let freshCompanies = await queryClient.fetchQuery<Company[]>({
           queryKey: queryKeys.companies.all,
           queryFn: () => companiesApi.list(),
           staleTime: 0,
         });
+        // Retry once if empty — membership creation may not yet be visible.
+        if (freshCompanies.length === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          freshCompanies = await queryClient.fetchQuery<Company[]>({
+            queryKey: queryKeys.companies.all,
+            queryFn: () => companiesApi.list(),
+            staleTime: 0,
+          });
+        }
         const first = freshCompanies[0];
         navigate(first ? `/${first.issuePrefix}/dashboard` : "/", { replace: true });
         return;
