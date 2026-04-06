@@ -234,3 +234,23 @@ describe("authorizeUpgrade user session resolution", () => {
     expect(capturedHeaders!.get("authorization")).toBe(`Bearer ${testToken}`);
   });
 });
+
+describe("setupLiveEventsWebSocketServer options", () => {
+  it("passes perMessageDeflate: false to WebSocketServer constructor", async () => {
+    const { WebSocketServer: MockedWSS } = await import("ws");
+    const { setupLiveEventsWebSocketServer } = await import("../realtime/live-events-ws.js");
+
+    const mockServer = {
+      on: vi.fn(),
+    };
+
+    setupLiveEventsWebSocketServer(mockServer as any, {} as any, {
+      deploymentMode: "local_trusted",
+    });
+
+    expect(MockedWSS).toHaveBeenCalledWith({
+      noServer: true,
+      perMessageDeflate: false,
+    });
+  });
+});

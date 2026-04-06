@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import type { IncomingMessage, Server as HttpServer } from "node:http";
-import { createRequire } from "node:module";
 import type { Duplex } from "node:stream";
 import { and, eq, isNull } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
@@ -34,11 +33,13 @@ interface WsServer {
   emit(event: "connection", ws: WsSocket, req: IncomingMessage): boolean;
 }
 
-const require = createRequire(import.meta.url);
-const { WebSocket, WebSocketServer } = require("ws") as {
-  WebSocket: { OPEN: number };
-  WebSocketServer: new (opts: { noServer: boolean; perMessageDeflate?: boolean }) => WsServer;
-};
+import { WebSocket as WsWebSocket, WebSocketServer as WsWebSocketServer } from "ws";
+
+const WebSocket = WsWebSocket as unknown as { OPEN: number };
+const WebSocketServer = WsWebSocketServer as unknown as new (opts: {
+  noServer: boolean;
+  perMessageDeflate?: boolean;
+}) => WsServer;
 
 interface UpgradeContext {
   companyId: string;
