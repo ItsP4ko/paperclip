@@ -1,8 +1,37 @@
 import { Router } from "express";
+import { z } from "zod";
 import type { Db } from "@paperclipai/db";
 import { notFound } from "../errors.js";
 import { assertCompanyAccess } from "./authz.js";
 import { pipelineService } from "../services/pipelines.js";
+import { validate } from "../middleware/validate.js";
+
+const createPipelineSchema = z.object({
+  name:        z.string().min(1),
+  description: z.string().optional(),
+  status:      z.string().optional(),
+});
+
+const updatePipelineSchema = z.object({
+  name:        z.string().min(1).optional(),
+  description: z.string().optional(),
+  status:      z.string().optional(),
+});
+
+const createPipelineStepSchema = z.object({
+  name:      z.string().min(1),
+  agentId:   z.string().optional(),
+  dependsOn: z.array(z.string()).optional(),
+  position:  z.number().optional(),
+  config:    z.record(z.unknown()).optional(),
+});
+
+const updatePipelineStepSchema = createPipelineStepSchema.partial();
+
+const triggerPipelineRunSchema = z.object({
+  projectId:   z.string().optional(),
+  triggeredBy: z.string().optional(),
+});
 
 export function pipelineRoutes(db: Db) {
   const router = Router();
@@ -17,14 +46,10 @@ export function pipelineRoutes(db: Db) {
   });
 
   // Create pipeline
-  router.post("/companies/:companyId/pipelines", async (req, res) => {
+  router.post("/companies/:companyId/pipelines", validate(createPipelineSchema), async (req, res) => {
     const { companyId } = req.params;
     assertCompanyAccess(req, companyId);
     const { name, description, status } = req.body;
-    if (!name || typeof name !== "string") {
-      res.status(400).json({ error: "name is required" });
-      return;
-    }
     const pipeline = await svc.create(companyId, { name, description, status });
     res.status(201).json(pipeline);
   });
@@ -39,7 +64,7 @@ export function pipelineRoutes(db: Db) {
   });
 
   // Update pipeline
-  router.patch("/companies/:companyId/pipelines/:pipelineId", async (req, res) => {
+  router.patch("/companies/:companyId/pipelines/:pipelineId", validate(updatePipelineSchema), async (req, res) => {
     const { companyId, pipelineId } = req.params;
     assertCompanyAccess(req, companyId);
     const { name, description, status } = req.body;
@@ -57,14 +82,10 @@ export function pipelineRoutes(db: Db) {
   });
 
   // Create step
-  router.post("/companies/:companyId/pipelines/:pipelineId/steps", async (req, res) => {
+  router.post("/companies/:companyId/pipelines/:pipelineId/steps", validate(createPipelineStepSchema), async (req, res) => {
     const { companyId, pipelineId } = req.params;
     assertCompanyAccess(req, companyId);
     const { name, agentId, dependsOn, position, config } = req.body;
-    if (!name || typeof name !== "string") {
-      res.status(400).json({ error: "name is required" });
-      return;
-    }
     const step = await svc.createStep(companyId, pipelineId, {
       name,
       agentId,
@@ -79,6 +100,7 @@ export function pipelineRoutes(db: Db) {
   // Update step
   router.patch(
     "/companies/:companyId/pipelines/:pipelineId/steps/:stepId",
+    validate(updatePipelineStepSchema),
     async (req, res) => {
       const { companyId, pipelineId, stepId } = req.params;
       assertCompanyAccess(req, companyId);
@@ -109,6 +131,7 @@ export function pipelineRoutes(db: Db) {
   // Trigger run
   router.post(
     "/companies/:companyId/pipelines/:pipelineId/run",
+    validate(triggerPipelineRunSchema),
     async (req, res) => {
       const { companyId, pipelineId } = req.params;
       assertCompanyAccess(req, companyId);

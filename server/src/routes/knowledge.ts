@@ -1,8 +1,39 @@
 import { Router } from "express";
+import { z } from "zod";
 import type { Db } from "@paperclipai/db";
 import { knowledgeService } from "../services/knowledge.js";
 import { assertCompanyAccess } from "./authz.js";
-import { badRequest, notFound } from "../errors.js";
+import { notFound } from "../errors.js";
+import { validate, validateQuery } from "../middleware/validate.js";
+
+const createKnowledgeSchema = z.object({
+  title:      z.string().min(1),
+  content:    z.string().min(1),
+  agentId:    z.string().optional(),
+  category:   z.string().optional(),
+  tags:       z.array(z.string()).optional(),
+  pinned:     z.boolean().optional(),
+  sourceType: z.string().optional(),
+  sourceRef:  z.string().optional(),
+  metadata:   z.record(z.unknown()).optional(),
+});
+
+const updateKnowledgeSchema = createKnowledgeSchema.partial();
+
+const knowledgeListQuerySchema = z.object({
+  agentId:  z.string().optional(),
+  category: z.string().optional(),
+  pinned:   z.string().optional(),
+  q:        z.string().optional(),
+  limit:    z.coerce.number().int().min(1).max(200).optional(),
+  offset:   z.coerce.number().int().min(0).optional(),
+});
+
+const knowledgeSearchQuerySchema = z.object({
+  q:       z.string().min(1),
+  agentId: z.string().optional(),
+  limit:   z.coerce.number().int().min(1).max(200).optional(),
+});
 
 export function knowledgeRoutes(db: Db) {
   const router = Router();
@@ -11,7 +42,7 @@ export function knowledgeRoutes(db: Db) {
   /**
    * List knowledge entries for a company (with optional agent/category/pinned filters).
    */
-  router.get("/companies/:companyId/knowledge", async (req, res) => {
+  router.get("/companies/:companyId/knowledge", validateQuery(knowledgeListQuerySchema), async (req, res) => {
     const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
 
@@ -21,8 +52,8 @@ export function knowledgeRoutes(db: Db) {
       category: req.query.category as string | undefined,
       pinned: req.query.pinned === "true" ? true : req.query.pinned === "false" ? false : undefined,
       q: req.query.q as string | undefined,
-      limit: req.query.limit ? Number(req.query.limit) : undefined,
-      offset: req.query.offset ? Number(req.query.offset) : undefined,
+      limit: req.query.limit as number | undefined,
+      offset: req.query.offset as number | undefined,
     });
 
     res.json(rows);
@@ -31,16 +62,15 @@ export function knowledgeRoutes(db: Db) {
   /**
    * Full-text search across knowledge entries.
    */
-  router.get("/companies/:companyId/knowledge/search", async (req, res) => {
+  router.get("/companies/:companyId/knowledge/search", validateQuery(knowledgeSearchQuerySchema), async (req, res) => {
     const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
 
-    const q = req.query.q as string | undefined;
-    if (!q || !q.trim()) throw badRequest("'q' query parameter is required");
+    const q = req.query.q as string;  // validated by Zod
 
     const rows = await knowledge.search(companyId, q, {
       agentId: req.query.agentId as string | undefined,
-      limit: req.query.limit ? Number(req.query.limit) : undefined,
+      limit: req.query.limit as number | undefined,
     });
 
     res.json(rows);
@@ -71,12 +101,11 @@ export function knowledgeRoutes(db: Db) {
   /**
    * Create a new knowledge entry.
    */
-  router.post("/companies/:companyId/knowledge", async (req, res) => {
+  router.post("/companies/:companyId/knowledge", validate(createKnowledgeSchema), async (req, res) => {
     const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
 
     const { title, content, agentId, category, tags, pinned, sourceType, sourceRef, metadata } = req.body;
-    if (!title || !content) throw badRequest("'title' and 'content' are required");
 
     const entry = await knowledge.create({
       companyId,
@@ -97,7 +126,7 @@ export function knowledgeRoutes(db: Db) {
   /**
    * Update a knowledge entry.
    */
-  router.patch("/companies/:companyId/knowledge/:entryId", async (req, res) => {
+  router.patch("/companies/:companyId/knowledge/:entryId", validate(updateKnowledgeSchema), async (req, res) => {
     const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
 
