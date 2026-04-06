@@ -21,6 +21,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@/lib/router";
 import { SidebarSection } from "./SidebarSection";
 import { SidebarNavItem } from "./SidebarNavItem";
 import { SidebarProjects } from "./SidebarProjects";
@@ -162,9 +163,13 @@ export function Sidebar() {
 
       {session && (
         <div className="shrink-0 border-t border-border px-3 py-2 flex items-center gap-2">
-          <span className="flex-1 text-xs text-muted-foreground truncate">
+          <Link
+            to="/account"
+            className="flex-1 text-xs text-muted-foreground truncate hover:text-foreground transition-colors"
+            title="Account Settings"
+          >
             {session.user.email ?? session.user.name ?? "Account"}
-          </span>
+          </Link>
           <Button
             variant="ghost"
             size="icon-sm"
