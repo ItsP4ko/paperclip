@@ -127,6 +127,6 @@ Plans:
 | 13. Mobile Cross-Origin Auth | v1.2 | 2/2 | Complete | 2026-04-05 |
 | 14. WebSocket Optimization | v1.2 | 2/2 | Complete | 2026-04-06 |
 | 15. Auth Hardening | v1.3 | 3/3 | Complete | 2026-04-06 |
-| 16. API Hardening | 2/2 | Complete   | 2026-04-06 | — |
+| 16. API Hardening | 2/2 | Complete    | 2026-04-06 | — |
 | 17. Frontend / XSS Hardening | v1.3 | 0/TBD | Not started | — |
 | 18. Audit Logs | v1.3 | 0/TBD | Not started | — |
