@@ -110,7 +110,10 @@ Plans:
   1. After a network drop or silent NAT timeout, the client detects the dead connection within 25 seconds and automatically reconnects without user action
   2. WebSocket message round-trip latency on the live Easypanel deployment is measurably lower than before (`perMessageDeflate` disabled)
   3. After a WebSocket reconnect, any issues or lists the user has open reflect the current server state — events missed during the disconnect window are not silently lost
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 14-01-PLAN.md — Explicit perMessageDeflate: false in WS server constructor (WS-02)
+- [ ] 14-02-PLAN.md — Client heartbeat for dead-connection detection + cache invalidation on reconnect (WS-01, WS-03)
 
 ## Progress
 
@@ -129,4 +132,4 @@ Plans:
 | 11. Backend Deploy Gaps | v1.2 | Complete    | 2026-04-05 | - |
 | 12. Aggressive Caching | 2/2 | Complete    | 2026-04-05 | - |
 | 13. Mobile Cross-Origin Auth | 2/2 | Complete    | 2026-04-06 | - |
-| 14. WebSocket Optimization | v1.2 | 0/? | Not started | - |
+| 14. WebSocket Optimization | v1.2 | 0/2 | Not started | - |
