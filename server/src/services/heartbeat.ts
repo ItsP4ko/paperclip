@@ -16,6 +16,7 @@ import {
   heartbeatRuns,
   issues,
   projects,
+  projectMemberLocalFolders,
   projectWorkspaces,
 } from "@paperclipai/db";
 import { conflict, notFound } from "../errors.js";
@@ -1242,6 +1243,43 @@ export function heartbeatService(db: Db) {
       repoUrl: readNonEmptyString(workspace.repoUrl),
       repoRef: readNonEmptyString(workspace.repoRef),
     }));
+
+    // Collect member local folder paths for this project — any that exist on this machine take priority
+    if (workspaceProjectId) {
+      const memberFolderRows = await db
+        .select({
+          cwd: projectMemberLocalFolders.cwd,
+        })
+        .from(projectMemberLocalFolders)
+        .where(
+          and(
+            eq(projectMemberLocalFolders.companyId, agent.companyId),
+            eq(projectMemberLocalFolders.projectId, workspaceProjectId),
+          ),
+        );
+
+      const primaryWs = projectWorkspaceRows.find((ws) => ws.isPrimary) ?? projectWorkspaceRows[0] ?? null;
+      for (const memberFolder of memberFolderRows) {
+        const memberCwd = readNonEmptyString(memberFolder.cwd);
+        if (!memberCwd) continue;
+        const cwdExists = await fs
+          .stat(memberCwd)
+          .then((stats) => stats.isDirectory())
+          .catch(() => false);
+        if (cwdExists) {
+          return {
+            cwd: memberCwd,
+            source: "project_primary" as const,
+            projectId: resolvedProjectId,
+            workspaceId: primaryWs?.id ?? null,
+            repoUrl: primaryWs?.repoUrl ?? null,
+            repoRef: primaryWs?.repoRef ?? null,
+            workspaceHints,
+            warnings: [],
+          };
+        }
+      }
+    }
 
     if (projectWorkspaceRows.length > 0) {
       const preferredWorkspace = preferredProjectWorkspaceId

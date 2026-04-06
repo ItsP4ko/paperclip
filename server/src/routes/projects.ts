@@ -69,6 +69,25 @@ export function projectRoutes(db: Db) {
       return;
     }
     assertCompanyAccess(req, project.companyId);
+
+    // Overlay member local folder for board (user) actors
+    if (req.actor.type === "board" && req.actor.userId) {
+      const memberFolder = await svc.getMemberLocalFolder(id, "user", req.actor.userId);
+      if (memberFolder) {
+        const overlaidProject = {
+          ...project,
+          codebase: {
+            ...project.codebase,
+            localFolder: memberFolder.cwd,
+            effectiveLocalFolder: memberFolder.cwd,
+            origin: "local_folder" as const,
+          },
+        };
+        res.json(overlaidProject);
+        return;
+      }
+    }
+
     res.json(project);
   });
 
@@ -401,6 +420,59 @@ export function projectRoutes(db: Db) {
     });
 
     res.json(workspace);
+  });
+
+  router.get("/projects/:id/member-local-folder", async (req, res) => {
+    const id = req.params.id as string;
+    const existing = await svc.getById(id);
+    if (!existing) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    assertCompanyAccess(req, existing.companyId);
+    if (req.actor.type !== "board" || !req.actor.userId) {
+      res.status(403).json({ error: "User authentication required" });
+      return;
+    }
+    const folder = await svc.getMemberLocalFolder(id, "user", req.actor.userId);
+    res.json(folder ?? { cwd: null });
+  });
+
+  router.put("/projects/:id/member-local-folder", async (req, res) => {
+    const id = req.params.id as string;
+    const existing = await svc.getById(id);
+    if (!existing) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    assertCompanyAccess(req, existing.companyId);
+    if (req.actor.type !== "board" || !req.actor.userId) {
+      res.status(403).json({ error: "User authentication required" });
+      return;
+    }
+    const cwd = typeof req.body?.cwd === "string" ? req.body.cwd.trim() : null;
+    if (!cwd) {
+      res.status(422).json({ error: "cwd is required" });
+      return;
+    }
+    const folder = await svc.setMemberLocalFolder(id, existing.companyId, "user", req.actor.userId, cwd);
+    res.json(folder);
+  });
+
+  router.delete("/projects/:id/member-local-folder", async (req, res) => {
+    const id = req.params.id as string;
+    const existing = await svc.getById(id);
+    if (!existing) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    assertCompanyAccess(req, existing.companyId);
+    if (req.actor.type !== "board" || !req.actor.userId) {
+      res.status(403).json({ error: "User authentication required" });
+      return;
+    }
+    await svc.deleteMemberLocalFolder(id, "user", req.actor.userId);
+    res.status(204).send();
   });
 
   router.delete("/projects/:id", async (req, res) => {

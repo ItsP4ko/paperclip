@@ -318,6 +318,22 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
     },
   });
 
+  const setMemberLocalFolder = useMutation({
+    mutationFn: (cwd: string) => projectsApi.setMemberLocalFolder(project.id, cwd),
+    onSuccess: () => {
+      setWorkspaceCwd("");
+      setWorkspaceMode(null);
+      invalidateProject();
+    },
+  });
+
+  const deleteMemberLocalFolder = useMutation({
+    mutationFn: () => projectsApi.deleteMemberLocalFolder(project.id),
+    onSuccess: () => {
+      invalidateProject();
+    },
+  });
+
   const removeGoal = (goalId: string) => {
     if (!onUpdate && !onFieldUpdate) return;
     commitField("goals", { goalIds: linkedGoalIds.filter((id) => id !== goalId) });
@@ -414,7 +430,8 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
     const cwd = workspaceCwd.trim();
     if (!cwd) {
       setWorkspaceError(null);
-      persistCodebase({ cwd: null });
+      deleteMemberLocalFolder.mutate();
+      setWorkspaceMode(null);
       return;
     }
     if (!isAbsolutePath(cwd)) {
@@ -422,7 +439,7 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
       return;
     }
     setWorkspaceError(null);
-    persistCodebase({ cwd });
+    setMemberLocalFolder.mutate(cwd);
   };
 
   const submitRepoWorkspace = () => {
@@ -441,13 +458,9 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
   };
 
   const clearLocalWorkspace = () => {
-    const confirmed = window.confirm(
-      codebase.repoUrl
-        ? "Clear local folder from this workspace?"
-        : "Delete this workspace local folder?",
-    );
+    const confirmed = window.confirm("Clear your local folder from this project?");
     if (!confirmed) return;
-    persistCodebase({ cwd: null });
+    deleteMemberLocalFolder.mutate();
   };
 
   const clearRepoWorkspace = () => {
@@ -611,7 +624,7 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top">
-                Repo identifies the source of truth. Local folder is the default place agents write code.
+                Repo is shared across the team. Local folder is your personal path on this machine.
               </TooltipContent>
             </Tooltip>
           </div>
@@ -680,7 +693,7 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
             </div>
 
             <div className="space-y-1">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Local folder</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Local folder <span className="normal-case">(yours)</span></div>
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0 space-y-1">
                   <div className="min-w-0 truncate font-mono text-xs text-muted-foreground">
@@ -785,7 +798,7 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
                   variant="outline"
                   size="xs"
                   className="h-6 px-2"
-                  disabled={(!workspaceCwd.trim() && !primaryCodebaseWorkspace) || createWorkspace.isPending || updateWorkspace.isPending}
+                  disabled={(!workspaceCwd.trim() && !primaryCodebaseWorkspace) || createWorkspace.isPending || updateWorkspace.isPending || setMemberLocalFolder.isPending || deleteMemberLocalFolder.isPending}
                   onClick={submitLocalWorkspace}
                 >
                   Save

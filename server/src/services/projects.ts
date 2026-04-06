@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
-import { projects, projectGoals, goals, projectWorkspaces, workspaceRuntimeServices } from "@paperclipai/db";
+import { projects, projectGoals, goals, projectWorkspaces, workspaceRuntimeServices, projectMemberLocalFolders } from "@paperclipai/db";
 import {
   PROJECT_COLORS,
   deriveProjectUrlKey,
@@ -785,6 +785,94 @@ export function projectService(db: Db) {
       });
 
       return updated ? toWorkspace(updated) : null;
+    },
+
+    getMemberLocalFolder: async (
+      projectId: string,
+      principalType: string,
+      principalId: string,
+    ): Promise<{ id: string; cwd: string } | null> => {
+      const row = await db
+        .select()
+        .from(projectMemberLocalFolders)
+        .where(
+          and(
+            eq(projectMemberLocalFolders.projectId, projectId),
+            eq(projectMemberLocalFolders.principalType, principalType),
+            eq(projectMemberLocalFolders.principalId, principalId),
+          ),
+        )
+        .then((rows) => rows[0] ?? null);
+      return row ? { id: row.id, cwd: row.cwd } : null;
+    },
+
+    setMemberLocalFolder: async (
+      projectId: string,
+      companyId: string,
+      principalType: string,
+      principalId: string,
+      cwd: string,
+    ): Promise<{ id: string; cwd: string }> => {
+      const existing = await db
+        .select({ id: projectMemberLocalFolders.id })
+        .from(projectMemberLocalFolders)
+        .where(
+          and(
+            eq(projectMemberLocalFolders.projectId, projectId),
+            eq(projectMemberLocalFolders.principalType, principalType),
+            eq(projectMemberLocalFolders.principalId, principalId),
+          ),
+        )
+        .then((rows) => rows[0] ?? null);
+
+      if (existing) {
+        const updated = await db
+          .update(projectMemberLocalFolders)
+          .set({ cwd, updatedAt: new Date() })
+          .where(eq(projectMemberLocalFolders.id, existing.id))
+          .returning()
+          .then((rows) => rows[0]!);
+        return { id: updated.id, cwd: updated.cwd };
+      }
+
+      const inserted = await db
+        .insert(projectMemberLocalFolders)
+        .values({ projectId, companyId, principalType, principalId, cwd })
+        .returning()
+        .then((rows) => rows[0]!);
+      return { id: inserted.id, cwd: inserted.cwd };
+    },
+
+    deleteMemberLocalFolder: async (
+      projectId: string,
+      principalType: string,
+      principalId: string,
+    ): Promise<boolean> => {
+      const deleted = await db
+        .delete(projectMemberLocalFolders)
+        .where(
+          and(
+            eq(projectMemberLocalFolders.projectId, projectId),
+            eq(projectMemberLocalFolders.principalType, principalType),
+            eq(projectMemberLocalFolders.principalId, principalId),
+          ),
+        )
+        .returning()
+        .then((rows) => rows[0] ?? null);
+      return Boolean(deleted);
+    },
+
+    listMemberLocalFolders: async (
+      projectId: string,
+    ): Promise<Array<{ principalType: string; principalId: string; cwd: string }>> => {
+      return db
+        .select({
+          principalType: projectMemberLocalFolders.principalType,
+          principalId: projectMemberLocalFolders.principalId,
+          cwd: projectMemberLocalFolders.cwd,
+        })
+        .from(projectMemberLocalFolders)
+        .where(eq(projectMemberLocalFolders.projectId, projectId));
     },
 
     removeWorkspace: async (projectId: string, workspaceId: string): Promise<ProjectWorkspace | null> => {

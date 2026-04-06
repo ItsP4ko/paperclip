@@ -39,5 +39,11 @@ export const projectsApi = {
     ),
   removeWorkspace: (projectId: string, workspaceId: string, companyId?: string) =>
     api.delete<ProjectWorkspace>(projectPath(projectId, companyId, `/workspaces/${encodeURIComponent(workspaceId)}`)),
+  getMemberLocalFolder: (projectId: string, companyId?: string) =>
+    api.get<{ cwd: string | null }>(projectPath(projectId, companyId, "/member-local-folder")),
+  setMemberLocalFolder: (projectId: string, cwd: string, companyId?: string) =>
+    api.put<{ id: string; cwd: string }>(projectPath(projectId, companyId, "/member-local-folder"), { cwd }),
+  deleteMemberLocalFolder: (projectId: string, companyId?: string) =>
+    api.delete<void>(projectPath(projectId, companyId, "/member-local-folder")),
   remove: (id: string, companyId?: string) => api.delete<Project>(projectPath(id, companyId)),
 };
