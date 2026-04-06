@@ -92,6 +92,8 @@ interface Overlay {
   adapterConfig: Record<string, unknown>;
   heartbeat: Record<string, unknown>;
   runtime: Record<string, unknown>;
+  /** Top-level keys to merge into runtimeConfig (e.g. executionTarget). */
+  runtimeTopLevel: Record<string, unknown>;
 }
 
 const emptyOverlay: Overlay = {
@@ -99,6 +101,7 @@ const emptyOverlay: Overlay = {
   adapterConfig: {},
   heartbeat: {},
   runtime: {},
+  runtimeTopLevel: {},
 };
 
 /** Stable empty object used as fallback for missing env config to avoid new-object-per-render. */
@@ -110,7 +113,8 @@ function isOverlayDirty(o: Overlay): boolean {
     o.adapterType !== undefined ||
     Object.keys(o.adapterConfig).length > 0 ||
     Object.keys(o.heartbeat).length > 0 ||
-    Object.keys(o.runtime).length > 0
+    Object.keys(o.runtime).length > 0 ||
+    Object.keys(o.runtimeTopLevel).length > 0
   );
 }
 
@@ -274,10 +278,13 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
       const existing = (agent.adapterConfig ?? {}) as Record<string, unknown>;
       patch.adapterConfig = { ...existing, ...overlay.adapterConfig };
     }
-    if (Object.keys(overlay.heartbeat).length > 0) {
+    if (Object.keys(overlay.heartbeat).length > 0 || Object.keys(overlay.runtimeTopLevel).length > 0) {
       const existingRc = (agent.runtimeConfig ?? {}) as Record<string, unknown>;
       const existingHb = (existingRc.heartbeat ?? {}) as Record<string, unknown>;
-      patch.runtimeConfig = { ...existingRc, heartbeat: { ...existingHb, ...overlay.heartbeat } };
+      const mergedHb = Object.keys(overlay.heartbeat).length > 0
+        ? { ...existingHb, ...overlay.heartbeat }
+        : existingHb;
+      patch.runtimeConfig = { ...existingRc, ...overlay.runtimeTopLevel, heartbeat: mergedHb };
     }
     if (Object.keys(overlay.runtime).length > 0) {
       Object.assign(patch, overlay.runtime);
@@ -923,6 +930,16 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
           }
           <div className={cn(cards ? "border border-border rounded-lg overflow-hidden" : "")}>
             <div className={cn(cards ? "p-4 space-y-3" : "px-4 pb-3 space-y-3")}>
+              <ToggleField
+                label="Run locally (local runner)"
+                hint="Queue runs as pending_local so a relaycontrol runner start process on your machine executes them instead of the server."
+                checked={
+                  eff("runtimeTopLevel", "executionTarget", runtimeConfig.executionTarget ?? "server") === "local_runner"
+                }
+                onChange={(v) =>
+                  mark("runtimeTopLevel", "executionTarget", v ? "local_runner" : "server")
+                }
+              />
               <ToggleWithNumber
                 label="Heartbeat on interval"
                 hint={help.heartbeatInterval}

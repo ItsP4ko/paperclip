@@ -24,6 +24,7 @@ import { registerWorktreeCommands } from "./commands/worktree.js";
 import { registerPluginCommands } from "./commands/client/plugin.js";
 import { registerClientAuthCommands } from "./commands/client/auth.js";
 import { registerConnectCommand } from "./commands/connect.js";
+import { registerRunnerCommands } from "./commands/runner.js";
 import { cliVersion } from "./version.js";
 
 const program = new Command();
@@ -148,6 +149,7 @@ registerFeedbackCommands(program);
 registerWorktreeCommands(program);
 registerPluginCommands(program);
 registerConnectCommand(program);
+registerRunnerCommands(program);
 
 const auth = program.command("auth").description("Authentication and bootstrap utilities");
 

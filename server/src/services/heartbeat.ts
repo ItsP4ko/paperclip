@@ -2059,7 +2059,8 @@ export function heartbeatService(db: Db) {
   async function executeRun(runId: string) {
     let run = await getRun(runId);
     if (!run) return;
-    if (run.status !== "queued" && run.status !== "running") return;
+    if (run.status !== "queued" && run.status !== "running" && run.status !== "pending_local") return;
+    if (run.status === "pending_local") return; // deferred to local runner — do not re-process
 
     if (run.status === "queued") {
       const claimed = await claimQueuedRun(run);
@@ -2681,6 +2682,14 @@ export function heartbeatService(db: Db) {
         }
       } catch (kbErr) {
         logger.warn({ runId: run.id, err: kbErr }, "Knowledge base injection failed; continuing without KB context");
+      }
+
+      const runtimeConf = parseObject(agent.runtimeConfig);
+      if (runtimeConf.executionTarget === "local_runner") {
+        await setRunStatus(run.id, "pending_local", {});
+        logger.info({ runId: run.id, agentId: agent.id }, "[heartbeat] deferred to local runner");
+        activeRunExecutions.delete(run.id);
+        return;
       }
 
       const adapter = getServerAdapter(agent.adapterType);
@@ -4043,6 +4052,138 @@ export function heartbeatService(db: Db) {
         .orderBy(desc(heartbeatRuns.startedAt))
         .limit(1);
       return run ?? null;
+    },
+
+    // --- Local runner API ---
+
+    listPendingLocalRuns: async (companyIds: string[]) => {
+      if (companyIds.length === 0) return [];
+      return db
+        .select({
+          id: heartbeatRuns.id,
+          companyId: heartbeatRuns.companyId,
+          agentId: heartbeatRuns.agentId,
+          status: heartbeatRuns.status,
+          contextSnapshot: heartbeatRuns.contextSnapshot,
+          createdAt: heartbeatRuns.createdAt,
+          agentName: agents.name,
+          agentAdapterType: agents.adapterType,
+          agentAdapterConfig: agents.adapterConfig,
+          agentRuntimeConfig: agents.runtimeConfig,
+        })
+        .from(heartbeatRuns)
+        .innerJoin(agents, eq(heartbeatRuns.agentId, agents.id))
+        .where(
+          and(
+            eq(heartbeatRuns.status, "pending_local"),
+            inArray(heartbeatRuns.companyId, companyIds),
+          ),
+        )
+        .orderBy(asc(heartbeatRuns.createdAt));
+    },
+
+    claimLocalRun: async (runId: string) => {
+      const run = await getRun(runId);
+      if (!run) throw notFound("Run not found");
+      if (run.status !== "pending_local") {
+        if (run.status === "running") throw conflict("Run already claimed");
+        throw conflict(`Run is in status '${run.status}', expected 'pending_local'`);
+      }
+      const claimed = await db
+        .update(heartbeatRuns)
+        .set({ status: "running", startedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(heartbeatRuns.id, runId), eq(heartbeatRuns.status, "pending_local")))
+        .returning()
+        .then((rows) => rows[0] ?? null);
+      if (!claimed) throw conflict("Run was already claimed by another worker");
+      publishLiveEvent({
+        companyId: claimed.companyId,
+        type: "heartbeat.run.status",
+        payload: { runId: claimed.id, agentId: claimed.agentId, status: claimed.status },
+      });
+      activeRunExecutions.add(runId);
+      const agent = await getAgent(claimed.agentId);
+      return { run: claimed, agent };
+    },
+
+    appendLocalRunLog: async (runId: string, stream: "stdout" | "stderr", chunk: string) => {
+      const run = await getRun(runId);
+      if (!run) throw notFound("Run not found");
+      if (run.status !== "running" && run.status !== "pending_local") return;
+      const seq = await nextRunEventSeq(runId);
+      await appendRunEvent(run, seq, {
+        eventType: "log",
+        stream,
+        level: stream === "stderr" ? "warn" : "info",
+        message: chunk,
+      });
+    },
+
+    completeLocalRun: async (
+      runId: string,
+      result: {
+        exitCode: number | null;
+        signal: string | null;
+        timedOut: boolean;
+        errorMessage?: string | null;
+        errorCode?: string | null;
+        resultJson?: Record<string, unknown> | null;
+      },
+    ) => {
+      const run = await getRun(runId);
+      if (!run) throw notFound("Run not found");
+      if (run.status !== "running" && run.status !== "pending_local") {
+        throw conflict(`Run is in status '${run.status}', cannot complete`);
+      }
+
+      const outcome: "succeeded" | "failed" | "timed_out" =
+        result.timedOut
+          ? "timed_out"
+          : (result.exitCode ?? 0) === 0 && !result.errorMessage
+            ? "succeeded"
+            : "failed";
+
+      const status =
+        outcome === "succeeded" ? "succeeded" : outcome === "timed_out" ? "timed_out" : "failed";
+
+      const finalizedRun = await setRunStatus(runId, status, {
+        finishedAt: new Date(),
+        error:
+          outcome !== "succeeded"
+            ? (result.errorMessage ?? (outcome === "timed_out" ? "Timed out" : "Run failed"))
+            : null,
+        errorCode:
+          outcome === "timed_out"
+            ? "timeout"
+            : outcome === "failed"
+              ? (result.errorCode ?? "runner_failed")
+              : null,
+        exitCode: result.exitCode,
+        signal: result.signal,
+        resultJson: result.resultJson ?? null,
+      });
+
+      await setWakeupStatus(run.wakeupRequestId, outcome === "succeeded" ? "completed" : status, {
+        finishedAt: new Date(),
+        error: result.errorMessage ?? null,
+      });
+
+      if (finalizedRun) {
+        const seq = await nextRunEventSeq(finalizedRun.id);
+        await appendRunEvent(finalizedRun, seq, {
+          eventType: "lifecycle",
+          stream: "system",
+          level: outcome === "succeeded" ? "info" : "error",
+          message: `run ${outcome}`,
+          payload: { status, exitCode: result.exitCode },
+        });
+        await releaseIssueExecutionAndPromote(finalizedRun);
+      }
+
+      const agent = await getAgent(run.agentId);
+      if (agent) await finalizeAgentStatus(agent.id, outcome);
+      activeRunExecutions.delete(runId);
+      return finalizedRun;
     },
   };
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PatchInstanceGeneralSettings } from "@paperclipai/shared";
-import { SlidersHorizontal, Terminal, Check, Copy, RefreshCw, KeyRound, CircleCheck, CircleX, CircleDashed, LogIn } from "lucide-react";
+import { SlidersHorizontal, Terminal, Check, Copy, RefreshCw, KeyRound, CircleCheck, CircleX, CircleDashed, LogIn, Cpu } from "lucide-react";
 import { instanceSettingsApi } from "@/api/instanceSettings";
 import { Button } from "@/components/ui/button";
 import { API_BASE } from "@/lib/api-base";
@@ -585,6 +585,54 @@ export function InstanceGeneralSettings() {
           </div>
         </div>
       </section>
+
+      <LocalRunnerSetupSection />
     </div>
+  );
+}
+
+function LocalRunnerSetupSection() {
+  const [copied, setCopied] = useState(false);
+  const instanceUrl = import.meta.env.VITE_API_URL?.trim().replace(/\/+$/, "") || window.location.origin;
+  const command = `relaycontrol runner start --api-base ${instanceUrl}`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(command).catch(() => undefined);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-5">
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <Cpu className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold">Local Runner Setup</h2>
+          </div>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            Run agents on your own machine instead of on this server. Enable{" "}
+            <span className="font-medium text-foreground">Run locally</span> in an agent's Run Policy, then start the runner below.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs font-mono text-foreground select-all overflow-x-auto whitespace-nowrap">
+            {command}
+          </code>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-xs font-medium hover:bg-accent transition-colors"
+          >
+            {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Requires the <code className="font-mono">relaycontrol</code> CLI and Node.js 20+. Authenticate first with{" "}
+          <code className="font-mono">relaycontrol auth login --api-base {instanceUrl}</code>.
+        </p>
+      </div>
+    </section>
   );
 }
