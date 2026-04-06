@@ -35,18 +35,22 @@ async function fetchAdapterAuthStatus(type: string): Promise<AdapterAuthStatus> 
   return res.json() as Promise<AdapterAuthStatus>;
 }
 
-async function triggerAdapterLogin(type: string): Promise<void> {
+async function triggerAdapterLogin(type: string): Promise<{ authUrl?: string }> {
   const res = await fetch(`${API_BASE}/instance/adapter-auth/${type}/login`, {
     method: "POST",
     credentials: "include",
   });
   if (!res.ok) throw new Error(`Failed to start login for ${type}`);
+  return res.json() as Promise<{ authUrl?: string }>;
 }
+
+const MAX_AUTH_POLLS = 40; // ~2 minutes
 
 function AdapterAuthRow({ adapter }: { adapter: AdapterAuthInfo }) {
   const [loginStarted, setLoginStarted] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
+  const [authUrl, setAuthUrl] = useState<string | null>(null);
 
   const statusQuery = useQuery({
     queryKey: ["adapter-auth-status", adapter.type, pollCount],
@@ -57,18 +61,20 @@ function AdapterAuthRow({ adapter }: { adapter: AdapterAuthInfo }) {
 
   const refresh = useCallback(() => setPollCount((n) => n + 1), []);
 
-  // Poll every 3s after login is triggered
+  // Poll every 3s after login is triggered, stop after MAX_AUTH_POLLS
   useEffect(() => {
-    if (!loginStarted || statusQuery.data?.loggedIn) return;
+    if (!loginStarted || statusQuery.data?.loggedIn || pollCount >= MAX_AUTH_POLLS) return;
     const id = setTimeout(refresh, 3000);
     return () => clearTimeout(id);
   }, [loginStarted, statusQuery.data?.loggedIn, pollCount, refresh]);
 
   async function handleLogin() {
     setLoginError(null);
+    setAuthUrl(null);
     try {
-      await triggerAdapterLogin(adapter.type);
+      const result = await triggerAdapterLogin(adapter.type);
       setLoginStarted(true);
+      if (result.authUrl) setAuthUrl(result.authUrl);
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : "Failed to start login");
     }
@@ -111,9 +117,30 @@ function AdapterAuthRow({ adapter }: { adapter: AdapterAuthInfo }) {
         <div className="text-sm font-medium">{adapter.label}</div>
         <StatusBadge />
         {loginStarted && !status?.loggedIn && (
-          <p className="text-xs text-muted-foreground">
-            Complete login in your browser. Checking automatically...
-          </p>
+          <div className="space-y-1">
+            {authUrl ? (
+              <p className="text-xs text-muted-foreground">
+                Open this URL to authenticate:{" "}
+                <a
+                  href={authUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline break-all"
+                >
+                  {authUrl}
+                </a>
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Complete login in your browser. Checking automatically...
+              </p>
+            )}
+            {pollCount >= MAX_AUTH_POLLS && (
+              <p className="text-xs text-destructive">
+                Timed out waiting for login. Click refresh to check status.
+              </p>
+            )}
+          </div>
         )}
         {loginError && (
           <p className="text-xs text-destructive">{loginError}</p>

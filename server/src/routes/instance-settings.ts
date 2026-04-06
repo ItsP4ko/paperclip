@@ -252,13 +252,38 @@ export function instanceSettingsRoutes(db: Db, redisClient?: RedisClientType) {
     }
 
     try {
-      spawn(loginCmd.cmd, loginCmd.args, {
+      const proc = spawn(loginCmd.cmd, loginCmd.args, {
         env,
         detached: true,
-        stdio: "ignore",
-      }).unref();
-      logger.info(`[adapter-auth] spawned login for ${type}`);
-      res.json({ started: true });
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+
+      // Capture the auth URL from CLI output (wait up to 10s)
+      const authUrl = await new Promise<string | undefined>((resolve) => {
+        const timer = setTimeout(() => resolve(undefined), 10000);
+        const urlRe = /https?:\/\/[^\s"'<>]+/;
+
+        const handleData = (chunk: Buffer | string) => {
+          const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+          const match = urlRe.exec(text);
+          if (match) {
+            clearTimeout(timer);
+            resolve(match[0]);
+          }
+        };
+
+        proc.stdout?.on("data", handleData);
+        proc.stderr?.on("data", handleData);
+        proc.on("exit", () => { clearTimeout(timer); resolve(undefined); });
+      });
+
+      // Drain streams so the process doesn't block on write, then detach
+      proc.stdout?.resume();
+      proc.stderr?.resume();
+      proc.unref();
+
+      logger.info(`[adapter-auth] spawned login for ${type}, authUrl=${authUrl ?? "none"}`);
+      res.json({ started: true, authUrl });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: msg });
