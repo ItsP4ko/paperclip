@@ -594,7 +594,7 @@ export function InstanceGeneralSettings() {
 function LocalRunnerSetupSection() {
   const [copied, setCopied] = useState(false);
   const instanceUrl = import.meta.env.VITE_API_URL?.trim().replace(/\/+$/, "") || window.location.origin;
-  const command = `relaycontrol runner start --api-base ${instanceUrl}`;
+  const command = `npx relaycontrol@latest runner start --api-base ${instanceUrl}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(command).catch(() => undefined);
@@ -629,8 +629,7 @@ function LocalRunnerSetupSection() {
           </button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Requires the <code className="font-mono">relaycontrol</code> CLI and Node.js 20+. Authenticate first with{" "}
-          <code className="font-mono">relaycontrol auth login --api-base {instanceUrl}</code>.
+          Requires Node.js 20+. No installation needed — <code className="font-mono">npx</code> downloads it automatically.
         </p>
       </div>
     </section>
