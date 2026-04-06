@@ -32,9 +32,9 @@ Requirements for v1.2 Performance & Mobile Fix milestone.
 
 ### WebSocket
 
-- [ ] **WS-01**: Client detects dead/silent WebSocket connections within 25 seconds and reconnects automatically
+- [x] **WS-01**: Client detects dead/silent WebSocket connections within 25 seconds and reconnects automatically
 - [ ] **WS-02**: Server disables `perMessageDeflate` compression (overhead exceeds benefit for small JSON event payloads)
-- [ ] **WS-03**: Client invalidates relevant cache queries after a WebSocket reconnect to recover missed real-time events
+- [x] **WS-03**: Client invalidates relevant cache queries after a WebSocket reconnect to recover missed real-time events
 
 ## Future Requirements
 
@@ -74,9 +74,9 @@ Requirements for v1.2 Performance & Mobile Fix milestone.
 | MAUTH-03 | Phase 12 | Complete |
 | MAUTH-04 | Phase 12 | Complete |
 | MAUTH-05 | Phase 12 | Complete |
-| WS-01 | Phase 13 | Pending |
+| WS-01 | Phase 13 | Complete |
 | WS-02 | Phase 13 | Pending |
-| WS-03 | Phase 13 | Pending |
+| WS-03 | Phase 13 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 17 total
