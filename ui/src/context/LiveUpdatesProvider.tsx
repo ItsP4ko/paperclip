@@ -17,6 +17,8 @@ const TOAST_COOLDOWN_MAX = 3;
 const RECONNECT_SUPPRESS_MS = 2000;
 const SOCKET_CONNECTING = 0;
 const SOCKET_OPEN = 1;
+const HEARTBEAT_INTERVAL_MS = 10_000;
+const HEARTBEAT_DEADLINE_MS = 12_000;
 
 type LiveUpdatesSocketLike = {
   readyState: number;
@@ -582,6 +584,17 @@ function invalidateActivityQueries(
   }
 }
 
+function invalidateOnReconnect(queryClient: QueryClient, companyId: string) {
+  queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(companyId) });
+  queryClient.invalidateQueries({ queryKey: queryKeys.issues.listAssignedToMe(companyId) });
+  queryClient.invalidateQueries({ queryKey: queryKeys.issues.listMineByMe(companyId) });
+  queryClient.invalidateQueries({ queryKey: queryKeys.issues.listTouchedByMe(companyId) });
+  queryClient.invalidateQueries({ queryKey: queryKeys.issues.listUnreadTouchedByMe(companyId) });
+  queryClient.invalidateQueries({ queryKey: ["issues", "detail"] });
+  queryClient.invalidateQueries({ queryKey: queryKeys.sidebarBadges(companyId) });
+  queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(companyId) });
+}
+
 interface ToastGate {
   cooldownHits: Map<string, number[]>;
   suppressUntil: number;
@@ -727,6 +740,7 @@ export const __liveUpdatesTestUtils = {
   buildRunStatusToast,
   closeSocketQuietly,
   invalidateActivityQueries,
+  invalidateOnReconnect,
   resolveLiveCompanyId,
   shouldSuppressActivityToastForVisibleIssue,
   shouldSuppressRunStatusToastForVisibleIssue,
@@ -780,6 +794,14 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    let heartbeatTimer: number | null = null;
+    let deadlineTimer: number | null = null;
+
+    const clearHeartbeat = () => {
+      if (heartbeatTimer !== null) { window.clearTimeout(heartbeatTimer); heartbeatTimer = null; }
+      if (deadlineTimer !== null) { window.clearTimeout(deadlineTimer); deadlineTimer = null; }
+    };
+
     const scheduleReconnect = () => {
       if (closed) return;
       reconnectAttempt += 1;
@@ -804,6 +826,18 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
       const nextSocket = new WebSocket(url);
       socket = nextSocket;
 
+      const scheduleHeartbeat = () => {
+        clearHeartbeat();
+        heartbeatTimer = window.setTimeout(() => {
+          if (closed || socket !== nextSocket || nextSocket.readyState !== SOCKET_OPEN) return;
+          nextSocket.send(JSON.stringify({ type: "ping" }));
+          deadlineTimer = window.setTimeout(() => {
+            if (closed || socket !== nextSocket) return;
+            nextSocket.close(1000, "heartbeat_timeout");
+          }, HEARTBEAT_DEADLINE_MS);
+        }, HEARTBEAT_INTERVAL_MS);
+      };
+
       nextSocket.onopen = () => {
         if (closed || socket !== nextSocket) {
           closeSocketQuietly(nextSocket, "stale_connection");
@@ -811,11 +845,16 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
         }
         if (reconnectAttempt > 0) {
           gateRef.current.suppressUntil = Date.now() + RECONNECT_SUPPRESS_MS;
+          invalidateOnReconnect(queryClient, liveCompanyId);
         }
         reconnectAttempt = 0;
+        scheduleHeartbeat();
       };
 
       nextSocket.onmessage = (message) => {
+        clearHeartbeat();
+        scheduleHeartbeat();
+
         const raw = typeof message.data === "string" ? message.data : "";
         if (!raw) return;
 
@@ -836,6 +875,7 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
       };
 
       nextSocket.onclose = () => {
+        clearHeartbeat();
         if (socket !== nextSocket) return;
         socket = null;
         if (closed) return;
@@ -852,6 +892,7 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
       closed = true;
       window.clearTimeout(connectTimer);
       clearReconnect();
+      clearHeartbeat();
       const activeSocket = socket;
       socket = null;
       closeSocketQuietly(activeSocket, "provider_unmount");
