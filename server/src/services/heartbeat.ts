@@ -1881,6 +1881,15 @@ export function heartbeatService(db: Db) {
       }
 
       const tracksLocalChild = isTrackedLocalChildProcessAdapter(adapterType);
+
+      // If a local-child adapter run has no processPid recorded, the server never
+      // spawned it directly — it is likely being executed by an external relay runner.
+      // Skip it in the periodic reaper (staleThresholdMs > 0); the startup reaper
+      // (staleThresholdMs === 0) handles true orphans left by a server crash.
+      if (tracksLocalChild && !run.processPid && staleThresholdMs > 0) {
+        continue;
+      }
+
       if (tracksLocalChild && run.processPid && isProcessAlive(run.processPid)) {
         if (run.errorCode !== DETACHED_PROCESS_ERROR_CODE) {
           const detachedMessage = `Lost in-memory process handle, but child pid ${run.processPid} is still alive`;

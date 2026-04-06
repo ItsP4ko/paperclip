@@ -1065,6 +1065,10 @@ function TranscriptEventRow({
             <div className={cn("whitespace-pre-wrap break-words text-sky-700 dark:text-sky-300", compact ? "text-[11px]" : "text-xs")}>
               {block.text}
             </div>
+          ) : block.label === "system" ? (
+            <div className={cn("whitespace-pre-wrap break-words", compact ? "text-[11px]" : "text-xs")}>
+              {block.text}
+            </div>
           ) : (
             <div className={cn("whitespace-pre-wrap break-words", compact ? "text-[11px]" : "text-xs")}>
               <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70">
