@@ -113,6 +113,9 @@ async function getCodexAuthStatus(): Promise<AdapterAuthStatus> {
   }
 }
 
+// Holds references to active `claude auth login` processes so we can write the code to stdin
+const activeLoginProcesses = new Map<string, ReturnType<typeof spawn>>();
+
 function assertCanManageInstanceSettings(req: Request) {
   if (req.actor.type !== "board") {
     throw forbidden("Board access required");
@@ -270,11 +273,18 @@ export function instanceSettingsRoutes(db: Db, redisClient?: RedisClientType) {
     }
 
     try {
+      // Kill any previous login process for this adapter
+      const existing = activeLoginProcesses.get(type);
+      if (existing) { try { existing.kill(); } catch { /* ignore */ } }
+
       const proc = spawn(loginCmd.cmd, loginCmd.args, {
         env,
-        detached: true,
-        stdio: ["ignore", "pipe", "pipe"],
+        detached: false,
+        stdio: ["pipe", "pipe", "pipe"], // keep stdin open so we can write the auth code
       });
+
+      activeLoginProcesses.set(type, proc);
+      proc.on("exit", () => activeLoginProcesses.delete(type));
 
       // Capture the auth URL from CLI output (wait up to 10s)
       const authUrl = await new Promise<string | undefined>((resolve) => {
@@ -295,10 +305,9 @@ export function instanceSettingsRoutes(db: Db, redisClient?: RedisClientType) {
         proc.on("exit", () => { clearTimeout(timer); resolve(undefined); });
       });
 
-      // Drain streams so the process doesn't block on write, then detach
+      // Drain stdout/stderr so process doesn't block writing to them
       proc.stdout?.resume();
       proc.stderr?.resume();
-      proc.unref();
 
       logger.info(`[adapter-auth] spawned login for ${type}, authUrl=${authUrl ?? "none"}`);
       res.json({ started: true, authUrl });
@@ -306,6 +315,25 @@ export function instanceSettingsRoutes(db: Db, redisClient?: RedisClientType) {
       const msg = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: msg });
     }
+  });
+
+  // --- Submit the auth code that the user copies from the browser ---
+  router.post("/instance/adapter-auth/:type/login/code", async (req, res) => {
+    assertCanManageInstanceSettings(req);
+    const type = req.params.type;
+    const { code } = req.body as { code?: string };
+    if (!code?.trim()) {
+      res.status(400).json({ error: "code is required" });
+      return;
+    }
+    const proc = activeLoginProcesses.get(type);
+    if (!proc) {
+      res.status(409).json({ error: "No active login session. Click Login again to restart." });
+      return;
+    }
+    proc.stdin?.write(code.trim() + "\n");
+    logger.info(`[adapter-auth] submitted auth code for ${type}`);
+    res.json({ submitted: true });
   });
 
   return router;

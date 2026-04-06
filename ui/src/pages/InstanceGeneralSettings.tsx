@@ -44,6 +44,19 @@ async function triggerAdapterLogin(type: string): Promise<{ authUrl?: string }> 
   return res.json() as Promise<{ authUrl?: string }>;
 }
 
+async function submitAdapterAuthCode(type: string, code: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/instance/adapter-auth/${type}/login/code`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error ?? "Failed to submit code");
+  }
+}
+
 const MAX_AUTH_POLLS = 40; // ~2 minutes
 
 function AdapterAuthRow({ adapter }: { adapter: AdapterAuthInfo }) {
@@ -51,6 +64,10 @@ function AdapterAuthRow({ adapter }: { adapter: AdapterAuthInfo }) {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
   const [authUrl, setAuthUrl] = useState<string | null>(null);
+  const [authCode, setAuthCode] = useState("");
+  const [codeSubmitting, setCodeSubmitting] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [codeSubmitted, setCodeSubmitted] = useState(false);
 
   const statusQuery = useQuery({
     queryKey: ["adapter-auth-status", adapter.type, pollCount],
@@ -71,12 +88,32 @@ function AdapterAuthRow({ adapter }: { adapter: AdapterAuthInfo }) {
   async function handleLogin() {
     setLoginError(null);
     setAuthUrl(null);
+    setAuthCode("");
+    setCodeError(null);
+    setCodeSubmitted(false);
     try {
       const result = await triggerAdapterLogin(adapter.type);
       setLoginStarted(true);
       if (result.authUrl) setAuthUrl(result.authUrl);
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : "Failed to start login");
+    }
+  }
+
+  async function handleCodeSubmit() {
+    if (!authCode.trim()) return;
+    setCodeError(null);
+    setCodeSubmitting(true);
+    try {
+      await submitAdapterAuthCode(adapter.type, authCode.trim());
+      setCodeSubmitted(true);
+      setAuthCode("");
+      // Trigger an immediate status check
+      refresh();
+    } catch (err) {
+      setCodeError(err instanceof Error ? err.message : "Failed to submit code");
+    } finally {
+      setCodeSubmitting(false);
     }
   }
 
@@ -117,27 +154,57 @@ function AdapterAuthRow({ adapter }: { adapter: AdapterAuthInfo }) {
         <div className="text-sm font-medium">{adapter.label}</div>
         <StatusBadge />
         {loginStarted && !status?.loggedIn && (
-          <div className="space-y-1">
+          <div className="space-y-2 mt-1">
             {authUrl ? (
-              <p className="text-xs text-muted-foreground">
-                Open this URL to authenticate:{" "}
-                <a
-                  href={authUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline break-all"
-                >
-                  {authUrl}
-                </a>
-              </p>
+              <>
+                <p className="text-xs text-muted-foreground">
+                  1.{" "}
+                  <a
+                    href={authUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    Open this URL to authenticate
+                  </a>
+                </p>
+                {!codeSubmitted ? (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">
+                      2. Copy the code shown on the Claude Platform page and paste it here:
+                    </p>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={authCode}
+                        onChange={(e) => setAuthCode(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") void handleCodeSubmit(); }}
+                        placeholder="Paste authentication code..."
+                        className="h-7 flex-1 rounded border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => void handleCodeSubmit()}
+                        disabled={codeSubmitting || !authCode.trim()}
+                      >
+                        {codeSubmitting ? "Submitting..." : "Submit"}
+                      </Button>
+                    </div>
+                    {codeError && <p className="text-xs text-destructive">{codeError}</p>}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Code submitted. Checking status...</p>
+                )}
+              </>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Complete login in your browser. Checking automatically...
+                Starting login... Checking automatically.
               </p>
             )}
             {pollCount >= MAX_AUTH_POLLS && (
               <p className="text-xs text-destructive">
-                Timed out waiting for login. Click refresh to check status.
+                Timed out. Click Login again to restart.
               </p>
             )}
           </div>
