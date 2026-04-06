@@ -2960,7 +2960,7 @@ function RunsTab({
 }) {
   const { isMobile } = useSidebar();
   const queryClient = useQueryClient();
-  const { showToast } = useToast();
+  const { pushToast } = useToast();
   const [clearing, setClearing] = useState(false);
 
   async function handleClearAllRuns() {
@@ -2969,9 +2969,9 @@ function RunsTab({
     try {
       const result = await heartbeatsApi.deleteAllForAgent(agentId);
       await queryClient.invalidateQueries({ queryKey: queryKeys.heartbeats(companyId, agentId) });
-      showToast(`Deleted ${result.deleted} run${result.deleted === 1 ? "" : "s"}.`, "success");
+      pushToast({ message: `Deleted ${result.deleted} run${result.deleted === 1 ? "" : "s"}.`, tone: "success" });
     } catch {
-      showToast("Failed to delete runs.", "error");
+      pushToast({ message: "Failed to delete runs.", tone: "error" });
     } finally {
       setClearing(false);
     }
