@@ -1,10 +1,11 @@
 ---
 phase: 12
 slug: aggressive-caching
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-05
+audited: 2026-04-06
 ---
 
 # Phase 12 — Validation Strategy
@@ -38,15 +39,15 @@ created: 2026-04-05
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 12-01-01 | 01 | 0 | CACHE-01 | unit | `pnpm --filter ui test --run Issues` | ❌ W0 | ⬜ pending |
-| 12-01-02 | 01 | 0 | CACHE-02 | unit | `pnpm --filter ui test --run IssueDetail` | ❌ W0 | ⬜ pending |
-| 12-01-03 | 01 | 0 | CACHE-03 | unit | `pnpm --filter ui test --run LiveUpdatesProvider` | ✅ (new case) | ⬜ pending |
-| 12-01-04 | 01 | 0 | CACHE-04 | unit | `pnpm --filter ui test --run IssueDetail` | ❌ W0 | ⬜ pending |
-| 12-02-01 | 02 | 1 | CACHE-01 | unit | `pnpm --filter ui test --run Issues` | ❌ W0 | ⬜ pending |
-| 12-02-02 | 02 | 1 | CACHE-01 | unit | `pnpm --filter ui test --run MyIssues` | ✅ (extend) | ⬜ pending |
-| 12-02-03 | 02 | 1 | CACHE-02 | unit | `pnpm --filter ui test --run IssueDetail` | ❌ W0 | ⬜ pending |
-| 12-02-04 | 02 | 1 | CACHE-03 | unit | `pnpm --filter ui test --run LiveUpdatesProvider` | ✅ (new case) | ⬜ pending |
-| 12-02-05 | 02 | 1 | CACHE-04 | unit | `pnpm --filter ui test --run IssueDetail` | ❌ W0 | ⬜ pending |
+| 12-01-01 | 01 | 0 | CACHE-01 | unit | `pnpm --filter ui test --run Issues` | ✅ | ✅ green |
+| 12-01-02 | 01 | 0 | CACHE-02 | unit | `pnpm --filter ui test --run IssueDetail` | ✅ | ✅ green |
+| 12-01-03 | 01 | 0 | CACHE-03 | unit | `pnpm --filter ui test --run LiveUpdatesProvider` | ✅ | ✅ green |
+| 12-01-04 | 01 | 0 | CACHE-04 | unit | `pnpm --filter ui test --run IssueDetail` | ✅ | ✅ green |
+| 12-02-01 | 02 | 1 | CACHE-01 | unit | `pnpm --filter ui test --run Issues` | ✅ | ✅ green |
+| 12-02-02 | 02 | 1 | CACHE-01 | unit | `pnpm --filter ui test --run MyIssues` | ✅ | ✅ green |
+| 12-02-03 | 02 | 1 | CACHE-02 | unit | `pnpm --filter ui test --run IssueDetail` | ✅ | ✅ green |
+| 12-02-04 | 02 | 1 | CACHE-03 | unit | `pnpm --filter ui test --run LiveUpdatesProvider` | ✅ | ✅ green |
+| 12-02-05 | 02 | 1 | CACHE-04 | unit | `pnpm --filter ui test --run IssueDetail` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -54,11 +55,10 @@ created: 2026-04-05
 
 ## Wave 0 Requirements
 
-- [ ] `ui/src/pages/Issues.test.tsx` — unit test asserting `staleTime: 120_000` on `queryKeys.issues.list` query (CACHE-01)
-- [ ] `ui/src/pages/IssueDetail.test.tsx` — unit tests asserting `staleTime: 120_000` on detail query (CACHE-02) and `listAssignedToMe` in `invalidateIssue()` (CACHE-04)
-- [ ] New test case in `ui/src/context/LiveUpdatesProvider.test.ts` — assert `listAssignedToMe` is invalidated on `activity.logged` WS event with `entityType === "issue"` (CACHE-03)
-
-*Note: `ui/src/pages/MyIssues.test.tsx` already exists — extend to assert `staleTime: 120_000` on the `listAssignedToMe` useQuery call.*
+- [x] `ui/src/pages/Issues.test.tsx` — unit test asserting `staleTime: 120_000` on `queryKeys.issues.list` query (CACHE-01) — written during plan 12-01 execution (commit 348d83ae)
+- [x] `ui/src/pages/IssueDetail.test.tsx` — unit tests asserting `staleTime: 120_000` on detail query (CACHE-02) and `listAssignedToMe` in `invalidateIssue()` (CACHE-04) — written during plan 12-01/02 execution
+- [x] `ui/src/context/LiveUpdatesProvider.test.ts` — 2 tests asserting `listAssignedToMe` is invalidated on `activity.logged` (inside and outside `isMutating` guard) (CACHE-03) — written during plan 12-02 execution (commit 0dbdf61c)
+- [x] `ui/src/pages/MyIssues.test.tsx` — extended to assert `staleTime: 120_000` on the `listAssignedToMe` useQuery call — written during plan 12-01 execution
 
 ---
 
@@ -75,11 +75,23 @@ created: 2026-04-05
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** 2026-04-06 — Retroactive Nyquist audit
+
+---
+
+## Validation Audit 2026-04-06
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 (all tests written during execution) |
+| Escalated | 0 |
+
+All 9 tasks covered by automated tests. 21/21 tests pass. Wave 0 requirements were implemented during plan execution (TDD red-green cycle). No additional test writing required.
