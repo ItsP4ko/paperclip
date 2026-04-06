@@ -1027,19 +1027,33 @@ export function issueService(db: Db) {
 
     archiveInbox: async (companyId: string, issueId: string, userId: string, archivedAt: Date = new Date()) => {
       const now = new Date();
+
+      // Compute current issueLastActivityAt so the archive covers all existing activity.
+      // Without this, a concurrent agent comment/update (whose timestamp may equal or
+      // slightly exceed `archivedAt`) would immediately re-surface the issue.
+      const lastActivityExpr = issueLastActivityAtExpr(companyId, userId);
+      const [activityRow] = await db
+        .select({ lastActivityAt: lastActivityExpr })
+        .from(issues)
+        .where(and(eq(issues.companyId, companyId), eq(issues.id, issueId)));
+      const lastActivityAt = activityRow?.lastActivityAt;
+      const baseMs = Math.max(archivedAt.getTime(), lastActivityAt?.getTime() ?? 0);
+      // +1ms so the archive is strictly after all observed activity
+      const effectiveArchivedAt = new Date(baseMs + 1);
+
       const [row] = await db
         .insert(issueInboxArchives)
         .values({
           companyId,
           issueId,
           userId,
-          archivedAt,
+          archivedAt: effectiveArchivedAt,
           updatedAt: now,
         })
         .onConflictDoUpdate({
           target: [issueInboxArchives.companyId, issueInboxArchives.issueId, issueInboxArchives.userId],
           set: {
-            archivedAt,
+            archivedAt: effectiveArchivedAt,
             updatedAt: now,
           },
         })
