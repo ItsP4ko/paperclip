@@ -5,6 +5,15 @@ export type AuthSession = {
   user: { id: string; email: string | null; name: string | null };
 };
 
+export type SessionEntry = {
+  id: string;
+  token: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  expiresAt: string;
+};
+
 function toSession(value: unknown): AuthSession | null {
   if (!value || typeof value !== "object") return null;
   const record = value as Record<string, unknown>;
@@ -92,5 +101,45 @@ export const authApi = {
     await authPost("/sign-out", {});
     // Clear bearer token from localStorage (cookie is cleared server-side)
     try { localStorage.removeItem("paperclip_session_token"); } catch {}
+  },
+
+  listSessions: async (): Promise<SessionEntry[]> => {
+    const res = await fetch(`${API_BASE}/auth/list-sessions`, {
+      credentials: "include",
+      headers: { Accept: "application/json", ...getBearerHeaders() },
+    });
+    if (res.status === 401) { handle401(); return []; }
+    if (!res.ok) throw new Error(`Failed to list sessions (${res.status})`);
+    return res.json();
+  },
+
+  revokeSession: async (token: string): Promise<void> => {
+    const res = await fetch(`${API_BASE}/auth/revoke-session`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...getBearerHeaders() },
+      body: JSON.stringify({ token }),
+    });
+    if (res.status === 401) { handle401(); return; }
+    if (!res.ok) throw new Error(`Failed to revoke session (${res.status})`);
+  },
+
+  revokeOtherSessions: async (): Promise<void> => {
+    const res = await fetch(`${API_BASE}/auth/revoke-other-sessions`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...getBearerHeaders() },
+      body: JSON.stringify({}),
+    });
+    if (res.status === 401) { handle401(); return; }
+    if (!res.ok) throw new Error(`Failed to revoke other sessions (${res.status})`);
+  },
+
+  getCurrentSessionToken: (): string | null => {
+    try {
+      return localStorage.getItem("paperclip_session_token");
+    } catch {
+      return null;
+    }
   },
 };
