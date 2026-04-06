@@ -109,6 +109,7 @@ export async function createApp(
         }
       },
       credentials: true,
+      exposedHeaders: ["set-auth-token"],
     }),
   );
 

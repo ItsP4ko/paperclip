@@ -48,8 +48,8 @@ export function handle401(): void {
   } catch {
     // localStorage unavailable
   }
-  // Only redirect if not already on /login to avoid redirect loops
-  if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-    window.location.href = "/login";
+  // Only redirect if not already on /auth to avoid redirect loops
+  if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
+    window.location.href = "/auth";
   }
 }
