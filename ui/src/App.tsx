@@ -133,7 +133,6 @@ function boardRoutes() {
       <Route path="dashboard" element={<Dashboard />} />
       <Route path="onboarding" element={<OnboardingRoutePage />} />
       <Route path="companies" element={<Companies />} />
-      <Route path="account" element={<AccountSettings />} />
       <Route path="company/settings" element={<CompanySettings />} />
       <Route path="company/export/*" element={<CompanyExport />} />
       <Route path="company/import" element={<CompanyImport />} />
@@ -388,6 +387,9 @@ export function App() {
           <Route path="inbox/all" element={<UnprefixedBoardRedirect />} />
           <Route path="org" element={<UnprefixedBoardRedirect />} />
           <Route path="dashboard" element={<UnprefixedBoardRedirect />} />
+          <Route path="account" element={<Layout />}>
+            <Route index element={<AccountSettings />} />
+          </Route>
           <Route path=":companyPrefix" element={<Layout />}>
             {boardRoutes()}
           </Route>
