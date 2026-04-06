@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Security Hardening
-status: unknown
-stopped_at: Completed 15-01-PLAN.md
-last_updated: "2026-04-06T13:29:54.789Z"
+status: phase_complete
+stopped_at: Completed 15-03-PLAN.md
+last_updated: "2026-04-06T00:00:00.000Z"
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 3
 ---
 
 # Project State
@@ -23,15 +23,15 @@ See: .planning/PROJECT.md (updated 2026-04-06)
 
 ## Current Position
 
-Phase: 15 (Auth Hardening) — EXECUTING
-Plan: 1 of 3
+Phase: 15 (Auth Hardening) — COMPLETE (all 3 plans done)
+Plan: 3 of 3 (phase complete)
 
 ## Performance Metrics
 
 - Phases this milestone: 4 (15, 16, 17, 18)
 - Requirements covered: 14/14
-- Phases completed: 0/4
-- Plans completed: 0/TBD
+- Phases completed: 1/4
+- Plans completed: 3/3 (Phase 15 complete)
 
 ## Accumulated Context
 
@@ -58,6 +58,8 @@ Key v1.3 architectural decisions (from research):
 - `dompurify` needed in UI package (browser-side); server already has it — do NOT use `isomorphic-dompurify` (adds jsdom unnecessarily)
 - CSP-01 and CSP-02 are time-gated and inseparable — both in Phase 17; enforce only after 48-72h clean observation window
 - [Phase 15]: Test for sanitizeLogUrl imports from logger.ts - consistent with plan spec; login-rate-limit.test.ts uses app.all() for rate limiter mounting
+- [Phase 15-03]: Current session identified via localStorage bearer token match against session.token (not via getSession which returns synthetic paperclip:<source>:<userId> ID)
+- [Phase 15-03]: Route /account placed at top-level outside :companyPrefix to avoid prefix collision with workspace routes
 
 ### Pending Todos
 
@@ -90,6 +92,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T13:29:54.787Z
-Stopped at: Completed 15-01-PLAN.md
-Resume: `/gsd:plan-phase 15`
+Last session: 2026-04-06T00:00:00.000Z
+Stopped at: Completed 15-03-PLAN.md (Phase 15 complete)
+Resume: `/gsd:plan-phase 16`
