@@ -39,7 +39,7 @@ export function pipelineRoutes(db: Db) {
 
   // List pipelines
   router.get("/companies/:companyId/pipelines", async (req, res) => {
-    const { companyId } = req.params;
+    const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
     const rows = await svc.list(companyId);
     res.json(rows);
@@ -47,7 +47,7 @@ export function pipelineRoutes(db: Db) {
 
   // Create pipeline
   router.post("/companies/:companyId/pipelines", validate(createPipelineSchema), async (req, res) => {
-    const { companyId } = req.params;
+    const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
     const { name, description, status } = req.body;
     const pipeline = await svc.create(companyId, { name, description, status });
@@ -56,7 +56,8 @@ export function pipelineRoutes(db: Db) {
 
   // Get pipeline detail (with steps)
   router.get("/companies/:companyId/pipelines/:pipelineId", async (req, res) => {
-    const { companyId, pipelineId } = req.params;
+    const companyId = req.params.companyId as string;
+    const pipelineId = req.params.pipelineId as string;
     assertCompanyAccess(req, companyId);
     const pipeline = await svc.getById(companyId, pipelineId);
     if (!pipeline) throw notFound("Pipeline not found");
@@ -65,7 +66,8 @@ export function pipelineRoutes(db: Db) {
 
   // Update pipeline
   router.patch("/companies/:companyId/pipelines/:pipelineId", validate(updatePipelineSchema), async (req, res) => {
-    const { companyId, pipelineId } = req.params;
+    const companyId = req.params.companyId as string;
+    const pipelineId = req.params.pipelineId as string;
     assertCompanyAccess(req, companyId);
     const { name, description, status } = req.body;
     const pipeline = await svc.update(companyId, pipelineId, { name, description, status });
@@ -75,7 +77,8 @@ export function pipelineRoutes(db: Db) {
 
   // Delete pipeline
   router.delete("/companies/:companyId/pipelines/:pipelineId", async (req, res) => {
-    const { companyId, pipelineId } = req.params;
+    const companyId = req.params.companyId as string;
+    const pipelineId = req.params.pipelineId as string;
     assertCompanyAccess(req, companyId);
     await svc.delete(companyId, pipelineId);
     res.status(204).send();
@@ -83,7 +86,8 @@ export function pipelineRoutes(db: Db) {
 
   // Create step
   router.post("/companies/:companyId/pipelines/:pipelineId/steps", validate(createPipelineStepSchema), async (req, res) => {
-    const { companyId, pipelineId } = req.params;
+    const companyId = req.params.companyId as string;
+    const pipelineId = req.params.pipelineId as string;
     assertCompanyAccess(req, companyId);
     const { name, agentId, dependsOn, position, config } = req.body;
     const step = await svc.createStep(companyId, pipelineId, {
@@ -102,7 +106,9 @@ export function pipelineRoutes(db: Db) {
     "/companies/:companyId/pipelines/:pipelineId/steps/:stepId",
     validate(updatePipelineStepSchema),
     async (req, res) => {
-      const { companyId, pipelineId, stepId } = req.params;
+      const companyId = req.params.companyId as string;
+      const pipelineId = req.params.pipelineId as string;
+      const stepId = req.params.stepId as string;
       assertCompanyAccess(req, companyId);
       const { name, agentId, dependsOn, position, config } = req.body;
       const step = await svc.updateStep(companyId, pipelineId, stepId, {
@@ -121,7 +127,9 @@ export function pipelineRoutes(db: Db) {
   router.delete(
     "/companies/:companyId/pipelines/:pipelineId/steps/:stepId",
     async (req, res) => {
-      const { companyId, pipelineId, stepId } = req.params;
+      const companyId = req.params.companyId as string;
+      const pipelineId = req.params.pipelineId as string;
+      const stepId = req.params.stepId as string;
       assertCompanyAccess(req, companyId);
       await svc.deleteStep(companyId, pipelineId, stepId);
       res.status(204).send();
@@ -133,7 +141,8 @@ export function pipelineRoutes(db: Db) {
     "/companies/:companyId/pipelines/:pipelineId/run",
     validate(triggerPipelineRunSchema),
     async (req, res) => {
-      const { companyId, pipelineId } = req.params;
+      const companyId = req.params.companyId as string;
+      const pipelineId = req.params.pipelineId as string;
       assertCompanyAccess(req, companyId);
       const { projectId, triggeredBy } = req.body;
       const run = await svc.triggerRun(companyId, pipelineId, { projectId, triggeredBy });
@@ -144,7 +153,7 @@ export function pipelineRoutes(db: Db) {
 
   // List runs for company (optionally filtered by pipeline)
   router.get("/companies/:companyId/pipeline-runs", async (req, res) => {
-    const { companyId } = req.params;
+    const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
     const pipelineId = typeof req.query.pipelineId === "string" ? req.query.pipelineId : undefined;
     const rows = await svc.listRuns(companyId, pipelineId);
@@ -153,7 +162,8 @@ export function pipelineRoutes(db: Db) {
 
   // Get run detail (with step statuses)
   router.get("/companies/:companyId/pipeline-runs/:runId", async (req, res) => {
-    const { companyId, runId } = req.params;
+    const companyId = req.params.companyId as string;
+    const runId = req.params.runId as string;
     assertCompanyAccess(req, companyId);
     const run = await svc.getRunById(companyId, runId);
     if (!run) throw notFound("Run not found");
