@@ -10,11 +10,11 @@ Requirements for v1.3 Security Hardening. Each maps to roadmap phases.
 
 ### Auth Hardening
 
-- [ ] **AUTH-01**: El endpoint de login tiene rate limit por IP (hard 429 after 10 attempts per 15-minute window) con Redis — montado antes del BetterAuth handler. _Updated 2026-04-06: changed from "progressive delay, no hard lockout" to hard 429. Research confirmed `express-slow-down` is not installed and `express-rate-limit` (already installed) provides the proven pattern. Phase success criterion specifies hard rate limit._
+- [x] **AUTH-01**: El endpoint de login tiene rate limit por IP (hard 429 after 10 attempts per 15-minute window) con Redis — montado antes del BetterAuth handler. _Updated 2026-04-06: changed from "progressive delay, no hard lockout" to hard 429. Research confirmed `express-slow-down` is not installed and `express-rate-limit` (already installed) provides the proven pattern. Phase success criterion specifies hard rate limit._
 - [ ] **AUTH-02**: Usuario puede ver lista de sesiones activas (dispositivo, navegador, IP, fecha) en Account Settings
 - [ ] **AUTH-03**: Usuario puede revocar una sesion individual desde Account Settings
 - [ ] **AUTH-04**: Usuario puede revocar todas las sesiones excepto la actual con un boton
-- [ ] **AUTH-05**: El token de sesion WS (`?token=`) es redactado de los access logs de pino
+- [x] **AUTH-05**: El token de sesion WS (`?token=`) es redactado de los access logs de pino
 
 ### API Hardening
 
@@ -66,11 +66,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 15 | Pending |
+| AUTH-01 | Phase 15 | Complete |
 | AUTH-02 | Phase 15 | Pending |
 | AUTH-03 | Phase 15 | Pending |
 | AUTH-04 | Phase 15 | Pending |
-| AUTH-05 | Phase 15 | Pending |
+| AUTH-05 | Phase 15 | Complete |
 | API-01 | Phase 16 | Pending |
 | API-02 | Phase 16 | Pending |
 | API-03 | Phase 16 | Pending |

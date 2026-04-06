@@ -66,7 +66,7 @@ See: milestones/v1.2-ROADMAP.md for full phase details
   3. A user can revoke a specific session from the list; the targeted session becomes invalid within the cookie-cache TTL (60s); all other sessions remain active
   4. A user can revoke all sessions except the current one with a single button action; the current session remains active
   5. WS upgrade requests to the live-events endpoint no longer expose the session token value in pino HTTP access logs (the `?token=` query param is redacted)
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 15-01-PLAN.md — Wave 0 test stubs for login rate limiter and WS token redaction
@@ -122,7 +122,7 @@ Plans:
 | 12. Aggressive Caching | v1.2 | 2/2 | Complete | 2026-04-05 |
 | 13. Mobile Cross-Origin Auth | v1.2 | 2/2 | Complete | 2026-04-05 |
 | 14. WebSocket Optimization | v1.2 | 2/2 | Complete | 2026-04-06 |
-| 15. Auth Hardening | v1.3 | 0/3 | Planning | — |
+| 15. Auth Hardening | 1/3 | In Progress|  | — |
 | 16. API Hardening | v1.3 | 0/TBD | Not started | — |
 | 17. Frontend / XSS Hardening | v1.3 | 0/TBD | Not started | — |
 | 18. Audit Logs | v1.3 | 0/TBD | Not started | — |
