@@ -10,6 +10,8 @@ import {
   agentRuntimeState,
   agentTaskSessions,
   agentWakeupRequests,
+  costEvents,
+  financeEvents,
   heartbeatRunEvents,
   heartbeatRuns,
   issues,
@@ -4195,6 +4197,8 @@ export function heartbeatService(db: Db) {
       if (runs.length === 0) return 0;
       const runIds = runs.map((r) => r.id);
       await db.delete(heartbeatRunEvents).where(inArray(heartbeatRunEvents.runId, runIds));
+      await db.update(costEvents).set({ heartbeatRunId: null }).where(inArray(costEvents.heartbeatRunId, runIds));
+      await db.update(financeEvents).set({ heartbeatRunId: null }).where(inArray(financeEvents.heartbeatRunId, runIds));
       await db.delete(heartbeatRuns).where(inArray(heartbeatRuns.id, runIds));
       return runIds.length;
     },

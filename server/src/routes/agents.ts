@@ -2248,7 +2248,7 @@ export function agentRoutes(db: Db) {
   router.delete("/agents/:id/runs", async (req, res) => {
     assertBoard(req);
     const agentId = req.params.id as string;
-    const agent = await getAgent(agentId);
+    const agent = await svc.getById(agentId);
     if (!agent) { res.status(404).json({ error: "Agent not found" }); return; }
     assertCompanyAccess(req, agent.companyId);
     const deleted = await heartbeat.deleteRunsByAgent(agentId, agent.companyId);
