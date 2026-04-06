@@ -97,11 +97,11 @@ Plans:
   1. The deployed Vercel app sends a `Content-Security-Policy-Report-Only` header on every HTML response; the browser console shows no CSP violation reports for normal app usage (navigation, login, issue management, Mermaid rendering)
   2. After a clean 48-72h observation window with zero violations, the header is promoted to `Content-Security-Policy` (enforcing); shadcn/ui components (Toast, NavMenu), Mermaid SVG rendering, and WebSocket connections all continue to work without CSP blocks
   3. Any location in the UI codebase that uses `dangerouslySetInnerHTML` passes its content through `DOMPurify.sanitize()` before rendering; the DOMPurify call is visible in the source, not abstracted away
-**Plans:** 1/2 plans executed
+**Plans:** 1/2 plans complete (Plan 02 deferred — awaiting 48-72h CSP observation window)
 
 Plans:
-- [ ] 17-01-PLAN.md — DOMPurify sanitization on Mermaid SVG + CSP-Report-Only header in vercel.json (CSP-01, CSP-03)
-- [ ] 17-02-PLAN.md — Promote CSP to enforcing after 48-72h observation window (CSP-02)
+- [x] 17-01-PLAN.md — DOMPurify sanitization on Mermaid SVG + CSP-Report-Only header in vercel.json (CSP-01, CSP-03)
+- [ ] 17-02-PLAN.md — Promote CSP to enforcing after 48-72h observation window (CSP-02) **[DEFERRED: resume 2026-04-08+]**
 
 ### Phase 18: Audit Logs
 **Goal**: The owner-only audit log is correctly gated so non-owners cannot access it via the API or UI, and the UI handles the 403 gracefully
@@ -132,5 +132,5 @@ Plans:
 | 14. WebSocket Optimization | v1.2 | 2/2 | Complete | 2026-04-06 |
 | 15. Auth Hardening | v1.3 | 3/3 | Complete | 2026-04-06 |
 | 16. API Hardening | v1.3 | 2/2 | Complete | 2026-04-06 |
-| 17. Frontend / XSS Hardening | 1/2 | In Progress|  | — |
+| 17. Frontend / XSS Hardening | v1.3 | 1/2 | Deferred (Plan 02 awaiting 48-72h CSP window) | — |
 | 18. Audit Logs | v1.3 | 0/TBD | Not started | — |
