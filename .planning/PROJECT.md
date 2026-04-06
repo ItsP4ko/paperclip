@@ -2,36 +2,30 @@
 
 ## What This Is
 
-Extensión de Paperclip para soportar agentes humanos reales junto a los agentes de IA. Los dueños de organizaciones pueden invitar personas, asignarles tareas desde un dashboard, y los humanos las gestionan (cambian estado, adjuntan archivos, crean subtareas, reasignan a agentes IA). Flujo bidireccional humano ↔ IA dentro del mismo sistema de issues. Auto-approval en invites para onboarding sin fricción. Desplegado en producción como SaaS de tres capas: Vercel CDN (frontend), Easypanel VPS (backend), Supabase (PostgreSQL).
+Extensión de Paperclip para soportar agentes humanos reales junto a los agentes de IA. Los dueños de organizaciones pueden invitar personas, asignarles tareas desde un dashboard, y los humanos las gestionan (cambian estado, adjuntan archivos, crean subtareas, reasignan a agentes IA). Flujo bidireccional humano ↔ IA dentro del mismo sistema de issues. Auto-approval en invites para onboarding sin fricción. Desplegado en producción como SaaS de tres capas: Vercel CDN (frontend), Easypanel VPS (backend), Supabase (PostgreSQL). UI reactiva con optimistic updates, caché agresivo de 2 min, y WebSocket confiable con heartbeat y reconexión automática.
 
 ## Core Value
 
 Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactamente como lo hace un agente de IA — sin fricción, desde la web app.
 
-## Current Milestone: v1.2 Performance & Mobile Fix
+## Current Milestone: v1.3 (Planning)
 
-**Goal:** Make every interaction feel instant via optimistic UI and aggressive caching, and fix cross-origin auth so mobile browsers can log in.
-
-**Target features:**
-- Optimistic UI updates for status changes, assignments, and mutations
-- Aggressive client-side caching for lists and issue data
-- WebSocket real-time optimization (reduce latency on live deployment)
-- Mobile login fix (cross-origin cookie/session persistence on iOS/Android)
+*Next milestone to be defined. Run `/gsd:new-milestone` to start.*
 
 ## Current State
 
 **v1.0 shipped** (2026-04-04) — Human agents MVP: My Tasks, invite flow, task work surface, bidirectional handoff.
 **v1.1 shipped** (2026-04-05) — Deployment & SaaS Readiness: Three-tier deployment (Vercel + Easypanel + Supabase), cross-origin auth, API hardening (Helmet + rate limiting + Redis cache), full E2E verification.
-**v1.2 Phase 12 complete** (2026-04-05) — Aggressive caching: staleTime 2 min on issue queries, listAssignedToMe invalidation at all call-sites. My Tasks empty-render bug fixed.
-**v1.2 Phase 14 complete** (2026-04-06) — WebSocket optimization: per-message deflate compression disabled (WS-02), client-side heartbeat for dead-connection detection within 25s (WS-01), targeted cache invalidation on reconnect (WS-03).
+**v1.2 shipped** (2026-04-06) — Performance & Mobile Fix: Optimistic UI, aggressive caching, mobile auth (iOS Safari + Android Chrome), WebSocket heartbeat + reconnect cache recovery.
 
-The platform is live and functional for multi-user testing. All 28 v1.1 requirements verified. The full invite → join → work → handoff → real-time cycle works end-to-end on the deployed stack.
+The platform is live and functional for multi-user testing. All v1.2 requirements verified. The full invite → join → work → handoff → real-time cycle works end-to-end on the deployed stack. Mobile users can authenticate via bearer token strategy on both iOS Safari and Android Chrome.
 
-**Known tech debt (v1.1):** 9 items — see `milestones/v1.1-MILESTONE-AUDIT.md`. Key items:
-- ✓ WebSocket real-time optimization complete (Phase 14)
-- File attachments use local disk (lost on container replacement — PROD-02 deferred)
-- My Tasks page renders empty despite badge count (tasks accessible via Issues > Assigned to me)
-- Vercel 404 on nested SPA routes like /PAC/dashboard
+**Tech stack:** React 19 + Vite + Tailwind v4 + shadcn/ui (frontend), Express 5 + Drizzle ORM (backend), BetterAuth (auth with bearer plugin), Supabase PostgreSQL (database), Redis (caching + rate limiting). Deployed: Vercel CDN (frontend), Easypanel VPS (backend).
+
+**Known tech debt (v1.2):** 9 items — see `milestones/v1.2-MILESTONE-AUDIT.md`. Key deferred items:
+- File attachments use local disk (lost on container replacement — future: S3/Supabase Storage)
+- Android Chrome end-to-end manually unverified (code path identical to iOS Safari)
+- Server doesn't echo client WS ping — idle sessions reconnect every ~22s unnecessarily (future: add server ping echo)
 
 ## Requirements
 
@@ -62,15 +56,23 @@ The platform is live and functional for multi-user testing. All 28 v1.1 requirem
 - ✓ End-to-end multi-user testing (invite → join → work → handoff) — v1.1
 - ✓ Cross-origin auth (CORS, SameSite cookies, secret validation) — v1.1
 - ✓ API hardening (Helmet security headers, rate limiting) — v1.1
+- ✓ Optimistic UI: status/assignment/subtask changes reflect immediately with rollback on failure — v1.2
+- ✓ WS isMutating guard: real-time events don't overwrite in-flight optimistic mutations — v1.2
+- ✓ Issue lists cached 2 min — navigating back shows data instantly without spinner — v1.2
+- ✓ Issue detail cached 2 min — reopening a visited issue is instant — v1.2
+- ✓ My Tasks page renders assigned issues correctly (empty-render bug fixed) — v1.2
+- ✓ Cache invalidates correctly after any mutation — v1.2
+- ✓ iOS Safari login and authenticated session (bearer token strategy) — v1.2
+- ✓ Android Chrome login and authenticated session (same bearer code path) — v1.2
+- ✓ WebSocket user session auth via ?token= query param — v1.2
+- ✓ Nested SPA routes on Vercel load correctly without 404 — v1.2
+- ✓ Dead WebSocket connections detected within 22s and reconnected automatically — v1.2
+- ✓ perMessageDeflate compression disabled on WS server — v1.2
+- ✓ Cache recovery after WebSocket reconnect (issue lists + detail + sidebar + dashboard) — v1.2
 
 ### Active
 
-- [ ] Optimistic UI: status changes reflect immediately in the UI while server processes in background
-- [ ] Optimistic UI: assignment/reassignment changes reflect immediately
-- [ ] Client-side cache for issue lists — navigation feels instant on revisit
-- [ ] WebSocket latency reduced — real-time updates arrive noticeably faster on live deployment
-- [ ] Mobile login fix — users can log in and maintain session on iOS Safari and Android Chrome
-- [ ] My Tasks page renders correctly (currently empty despite badge count)
+*(Empty — define with `/gsd:new-milestone`)*
 
 ### Out of Scope
 
@@ -82,12 +84,13 @@ The platform is live and functional for multi-user testing. All 28 v1.1 requirem
 - Row-Level Security (RLS) — future SaaS hardening, single-tenant testing first
 - CI/CD pipeline — manual deploys sufficient for testing phase
 - Kubernetes / container orchestration — Easypanel handles this
+- Cloud file storage (S3/Supabase Storage) — deferred, local disk sufficient for current volume
 
 ## Context
 
-v1.1 shipped. Tech stack: React 19 + Vite + Tailwind v4 + shadcn/ui (frontend), Express 5 + Drizzle ORM (backend), BetterAuth (auth), Supabase PostgreSQL (database), Redis (caching + rate limiting). Deployed: Vercel CDN (frontend), Easypanel VPS (backend). 23 commits, +10,594 lines across 185 files for v1.1 milestone.
+v1.2 shipped. Tech stack: React 19 + Vite + Tailwind v4 + shadcn/ui (frontend), Express 5 + Drizzle ORM (backend), BetterAuth with bearer plugin (auth), Supabase PostgreSQL (database), Redis (caching + rate limiting). Deployed: Vercel CDN (frontend), Easypanel VPS (backend). v1.2 added 11,531 lines across 99 files over 2 days.
 
-Performance is a known concern — WebSocket updates are slow, general UI responsiveness needs improvement. User wants to explore more aggressive caching and async patterns for v1.2.
+Performance is significantly improved — optimistic UI, 2-minute cache, and WS heartbeat/reconnect are all live. Mobile auth works on iOS Safari (human-verified) and should work on Android Chrome (same code path, not device-tested).
 
 ## Constraints
 
@@ -114,6 +117,15 @@ Performance is a known concern — WebSocket updates are slow, general UI respon
 | Redis optional (graceful degradation) | Server starts without REDIS_URL, falls back to in-memory | ✓ Good — no hard dependency |
 | Hardening after E2E verification | Rate limits interfere with auth/CORS debugging | ✓ Good — clean E2E baseline first |
 | Gap closure phase for audit gaps | Phase 9 addressed rate-limit bug + manual E2E verification | ✓ Good — all 28 requirements closed |
+| isMutating guard for WS invalidation | Suppresses issue list/detail invalidations during in-flight mutations only; non-optimistic keys always invalidate | ✓ Good — prevents UI flicker without blocking activity/comment updates |
+| Per-query staleTime override (not global) | 120s staleTime on issue list/detail only; polling queries and global default unchanged | ✓ Good — targeted, no regressions |
+| listAssignedToMe outside isMutating guard | Filtered list not touched by optimistic writes; safe to always invalidate alongside other list queries | ✓ Good — fixed My Tasks empty-render |
+| Bearer() plugin strategy for mobile auth | Solves HTTP and WS auth in one pass; cookie-only flows unaffected | ✓ Good — iOS Safari verified, same path for Android |
+| encodeURIComponent() for WS token param | BetterAuth signed tokens contain URL-special chars (., +, =) | ✓ Good — prevents token corruption in query string |
+| vercel.json routes + filesystem handle | rewrites cannot coexist with routes; filesystem handle required for static assets | ✓ Good — SPA routing fixed, assets still served |
+| ESM import for ws package | vitest vi.mock cannot intercept createRequire(); ESM import goes through vitest module system | ✓ Good — unit test mock interception works |
+| scheduleHeartbeat inside connect() closure | nextSocket must be captured in closure; clearHeartbeat stays at useEffect level | ✓ Good — no timer leaks |
+| reconnectAttempt > 0 guard for cache invalidation | Initial connect should not flush cache; only true reconnects need recovery | ✓ Good — no spurious invalidations on first load |
 
 ---
-*Last updated: 2026-04-06 after Phase 14: websocket-optimization complete*
+*Last updated: 2026-04-06 after v1.2 milestone complete*

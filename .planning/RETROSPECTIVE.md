@@ -88,6 +88,51 @@
 
 ---
 
+## Milestone: v1.2 — Performance & Mobile Fix
+
+**Shipped:** 2026-04-06
+**Phases:** 5 (10-14) | **Plans:** 10 | **Commits:** 76 | **Files:** 99 | **Lines:** +11,531 / -113
+
+### What Was Built
+- Optimistic UI mutations: status, assignment, subtask changes reflect immediately with rollback on failure; WS race guarded by isMutating
+- Backend deploy gap closure: all Easypanel routes active, sidebar routing fixed to company-prefixed paths
+- Aggressive caching: 2-minute staleTime on issue queries; My Tasks empty-render bug fixed via listAssignedToMe invalidation
+- Mobile cross-origin auth: bearer() BetterAuth plugin + frontend token injection; WS user session auth via ?token=; Vercel SPA routing fixed
+- WebSocket reliability: 22s dead-connection detection via heartbeat; perMessageDeflate disabled; cache flushed on reconnect
+
+### What Worked
+- bearer() plugin strategy solved HTTP and WS auth in one pass — no Vercel proxy needed
+- ESM import for ws package unlocked vitest mock interception — cleaner than the createRequire CJS workaround
+- scheduleHeartbeat inside connect() closure pattern — zero timer leaks across all socket lifecycle events
+- 3-source requirements cross-reference (VERIFICATION + SUMMARY + REQUIREMENTS) confirmed as reliable gap detector across two milestones
+- Nyquist validation: all 3 audited phases reached nyquist_compliant: true before milestone close (vs 1/3 in first pass)
+
+### What Was Inefficient
+- Phase 12 SUMMARY.md frontmatter used `dependency_graph.provides` instead of `requirements-completed` — caused "missing" in 3-source cross-reference even though requirements were satisfied
+- REQUIREMENTS.md traceability table had stale phase numbers (off by 1 across all 3 active phases) — accumulated from not updating when phases were renumbered
+- Server-side WS ping (30s) and client-side heartbeat (22s) are asymmetric: server never responds to client JSON ping, causing idle sessions to reconnect every 22s unnecessarily — discovered by integration checker, not caught during execution
+- Nyquist validation required two rounds: first milestone audit found phases 12 and 14 non-compliant, then `/gsd:validate-phase` fixed them before completion
+
+### Patterns Established
+- Bearer token strategy for mobile auth: bearer() plugin + exposedHeaders: ["set-auth-token"] + localStorage token + getBearerHeaders() single source of truth
+- WS token auth: encodeURIComponent(?token=) in URL + synthetic Authorization header in authorizeUpgrade for session resolution
+- Heartbeat pattern: scheduleHeartbeat inside connect() captures nextSocket; clearHeartbeat at useEffect level; every received message resets both timers
+- Per-query staleTime override: apply 120s only to navigational queries (list/detail); leave polling queries and global default unchanged
+- isMutating guard scope: suppress only issue list/detail keys; activity/comment/run keys always invalidate regardless of mutation state
+
+### Key Lessons
+1. SUMMARY frontmatter `requirements-completed` must always be populated — the `dependency_graph.provides` alias is not read by the audit tooling
+2. Integration checker reliably catches cross-phase interaction bugs that phase-level verification misses (dual heartbeat asymmetry found this way)
+3. Mobile auth always needs real-device testing — iOS Simulator does not enforce ITP; Android Chrome requires a real device or emulator
+4. Nyquist validation is worth running before milestone close, not after — Phase 14's validation run was clean first try once the test runner was correctly set to vitest
+5. REQUIREMENTS.md traceability table phase references drift when phases are renumbered — keep it in sync or accept it as a known documentation debt
+
+### Cost Observations
+- Model mix: ~5% opus (orchestrator), ~93% sonnet (executors, verifiers, integration checker, research), ~2% haiku
+- Notable: Execution time per plan was extremely fast (3-11 min each) — well-researched plans with clear task breakdown are the main driver of speed
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -96,17 +141,21 @@
 |-----------|--------|-------|------------|
 | v1.0 | 4 | 11 | First milestone — established TDD, wave-based execution, 3-source requirements audit |
 | v1.1 | 5 | 13 | Gap closure phase pattern, Chrome DevTools MCP for E2E verification, integration checker agent |
+| v1.2 | 5 | 10 | Nyquist validation, bearer token mobile auth pattern, WS heartbeat pattern |
 
 ### Cumulative Quality
 
-| Milestone | Test Files | Verification Score | Tech Debt Items |
-|-----------|-----------|-------------------|-----------------|
-| v1.0 | 8 new | 49/49 must-haves | 9 |
-| v1.1 | 4 new (21 tests) | 33/33 must-haves | 9 |
+| Milestone | Test Files | Verification Score | Tech Debt Items | Nyquist Compliant |
+|-----------|-----------|-------------------|-----------------|-------------------|
+| v1.0 | 8 new | 49/49 must-haves | 9 | — (pre-Nyquist) |
+| v1.1 | 4 new (21 tests) | 33/33 must-haves | 9 | — (pre-Nyquist) |
+| v1.2 | 6 new (22 tests added to phase 12-14) | 19/19 must-haves | 9 | 3/3 phases |
 
 ### Top Lessons (Verified Across Milestones)
 
 1. Zero-migration approaches (reusing existing schema) dramatically reduce risk and speed
 2. Register all requirement IDs upfront — phantom IDs create audit noise
 3. Isolate concerns by phase: code changes before infrastructure, hardening after E2E baseline (verified v1.1)
-4. SUMMARY frontmatter discipline: always populate `requirements-completed` — saves audit rework (lesson from both v1.0 and v1.1)
+4. SUMMARY frontmatter discipline: always populate `requirements-completed` — saves audit rework (lesson from v1.0, v1.1, and v1.2)
+5. Integration checker catches cross-phase interaction bugs that phase-level verification misses — run it before milestone close (verified v1.2)
+6. Real-device testing is mandatory for mobile auth — simulators don't enforce ITP (new: v1.2)

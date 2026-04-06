@@ -1,5 +1,23 @@
 # Milestones
 
+## v1.2 Performance & Mobile Fix (Shipped: 2026-04-06)
+
+**Phases completed:** 5 phases (10-14), 10 plans | 76 commits | +11,531 / -113 lines | 99 files
+**Timeline:** 2026-04-05 → 2026-04-06 (2 days)
+**Git range:** 0ac55ef8..f9ffd5de
+
+**Key accomplishments:**
+
+1. Optimistic UI mutations — status, assignment, and subtask changes reflect immediately with visible rollback on failure; WS race prevented by isMutating guard (Phase 10)
+2. Backend deploy gaps resolved — all routes (Knowledge Base, Cost Recommendations, Pipelines) active on Easypanel; sidebar routing fixed to company-prefixed paths (Phase 11)
+3. Aggressive caching — 2-minute staleTime on issue list, detail, and My Tasks queries; My Tasks empty-render bug fixed via listAssignedToMe invalidation at all missing call-sites (Phase 12)
+4. Mobile cross-origin auth — iOS Safari login and session persistence via bearer() BetterAuth plugin + frontend token injection + WS user session auth via ?token= param; Vercel SPA routing fixed (Phase 13)
+5. WebSocket optimization — dead-connection detection within 22s (10s heartbeat + 12s deadline); perMessageDeflate compression disabled; targeted cache invalidation on reconnect (Phase 14)
+
+**Tech Debt (accepted):** 9 items — see milestones/v1.2-MILESTONE-AUDIT.md
+
+---
+
 ## v1.1 Deployment & SaaS Readiness (Shipped: 2026-04-05)
 
 **Phases completed:** 5 phases, 13 plans | 23 commits | +10,594 / -1,075 lines | 185 files
