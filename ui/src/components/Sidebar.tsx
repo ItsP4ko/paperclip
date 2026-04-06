@@ -18,8 +18,9 @@ import {
   Zap,
   GitBranch,
   Users,
+  LogOut,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SidebarSection } from "./SidebarSection";
 import { SidebarNavItem } from "./SidebarNavItem";
 import { SidebarProjects } from "./SidebarProjects";
@@ -28,6 +29,7 @@ import { useDialog } from "../context/DialogContext";
 import { useCompany } from "../context/CompanyContext";
 import { heartbeatsApi } from "../api/heartbeats";
 import { sidebarBadgesApi } from "../api/sidebarBadges";
+import { authApi } from "../api/auth";
 import { queryKeys } from "../lib/queryKeys";
 import { useInboxBadge } from "../hooks/useInboxBadge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +38,18 @@ import { PluginSlotOutlet } from "@/plugins/slots";
 export function Sidebar() {
   const { openNewIssue } = useDialog();
   const { selectedCompanyId, selectedCompany } = useCompany();
+  const queryClient = useQueryClient();
+  const { data: session } = useQuery({
+    queryKey: queryKeys.auth.session,
+    queryFn: () => authApi.getSession(),
+    staleTime: Infinity,
+  });
+
+  async function handleSignOut() {
+    await authApi.signOut();
+    queryClient.clear();
+    window.location.href = "/auth";
+  }
   const inboxBadge = useInboxBadge(selectedCompanyId);
   const { data: liveRuns } = useQuery({
     queryKey: queryKeys.liveRuns(selectedCompanyId!),
@@ -145,6 +159,23 @@ export function Sidebar() {
           missingBehavior="placeholder"
         />
       </nav>
+
+      {session && (
+        <div className="shrink-0 border-t border-border px-3 py-2 flex items-center gap-2">
+          <span className="flex-1 text-xs text-muted-foreground truncate">
+            {session.user.email ?? session.user.name ?? "Account"}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="text-muted-foreground shrink-0"
+            onClick={handleSignOut}
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </aside>
   );
 }
