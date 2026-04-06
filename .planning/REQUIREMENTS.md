@@ -2,7 +2,7 @@
 
 **Defined:** 2026-04-05
 **Milestone:** v1.3 Security Hardening
-**Core Value:** Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactamente como lo hace un agente de IA — sin fricción, desde la web app.
+**Core Value:** Un humano puede recibir, trabajar y completar tareas dentro de Paperclip exactamente como lo hace un agente de IA — sin friccion, desde la web app.
 
 ## v1.3 Requirements
 
@@ -10,23 +10,23 @@ Requirements for v1.3 Security Hardening. Each maps to roadmap phases.
 
 ### Auth Hardening
 
-- [ ] **AUTH-01**: El endpoint de login tiene rate limit por IP (progressive delay, no hard lockout) con Redis — montado antes del BetterAuth handler
+- [ ] **AUTH-01**: El endpoint de login tiene rate limit por IP (hard 429 after 10 attempts per 15-minute window) con Redis — montado antes del BetterAuth handler. _Updated 2026-04-06: changed from "progressive delay, no hard lockout" to hard 429. Research confirmed `express-slow-down` is not installed and `express-rate-limit` (already installed) provides the proven pattern. Phase success criterion specifies hard rate limit._
 - [ ] **AUTH-02**: Usuario puede ver lista de sesiones activas (dispositivo, navegador, IP, fecha) en Account Settings
-- [ ] **AUTH-03**: Usuario puede revocar una sesión individual desde Account Settings
-- [ ] **AUTH-04**: Usuario puede revocar todas las sesiones excepto la actual con un botón
-- [ ] **AUTH-05**: El token de sesión WS (`?token=`) es redactado de los access logs de pino
+- [ ] **AUTH-03**: Usuario puede revocar una sesion individual desde Account Settings
+- [ ] **AUTH-04**: Usuario puede revocar todas las sesiones excepto la actual con un boton
+- [ ] **AUTH-05**: El token de sesion WS (`?token=`) es redactado de los access logs de pino
 
 ### API Hardening
 
-- [ ] **API-01**: Todas las rutas mutation sin validación tienen esquemas Zod (`validate()` middleware)
+- [ ] **API-01**: Todas las rutas mutation sin validacion tienen esquemas Zod (`validate()` middleware)
 - [ ] **API-02**: GET routes con query params relevantes tienen `validateQuery()` con `z.coerce.*`
-- [ ] **API-03**: Respuestas 5xx en producción no exponen stack traces ni detalles internos del servidor
-- [ ] **API-04**: La decisión de no implementar CSRF está documentada en código con justificación técnica
+- [ ] **API-03**: Respuestas 5xx en produccion no exponen stack traces ni detalles internos del servidor
+- [ ] **API-04**: La decision de no implementar CSRF esta documentada en codigo con justificacion tecnica
 
 ### Frontend / XSS
 
 - [ ] **CSP-01**: `Content-Security-Policy-Report-Only` desplegado en `vercel.json` cubriendo el SPA
-- [ ] **CSP-02**: CSP promovido a enforcing tras período de observación limpio (48-72h sin violaciones)
+- [ ] **CSP-02**: CSP promovido a enforcing tras periodo de observacion limpio (48-72h sin violaciones)
 - [ ] **CSP-03**: `dompurify` instalado en UI package y aplicado en todos los sitios con `dangerouslySetInnerHTML`
 
 ### Audit Logs
@@ -40,12 +40,12 @@ Deferred to future milestones. Tracked but not in current roadmap.
 
 ### Auth
 
-- **AUTH-F01**: Sesiones con geolocalización por IP
+- **AUTH-F01**: Sesiones con geolocalizacion por IP
 - **AUTH-F02**: Alertas por email en logins desde dispositivos desconocidos
 
 ### Audit Logs
 
-- **AUDIT-F01**: Instrumentación de eventos de seguridad (login success/fail, session revoke, invite, role change, assignment)
+- **AUDIT-F01**: Instrumentacion de eventos de seguridad (login success/fail, session revoke, invite, role change, assignment)
 - **AUDIT-F02**: Export CSV de audit logs filtrados (streaming, solo owner)
 
 ## Out of Scope
@@ -54,10 +54,10 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| CSRF protection | Bearer token architecture es immune por diseño (OWASP confirmado). Añadirlo rompería mobile clients y AI agents con cero beneficio de seguridad |
+| CSRF protection | Bearer token architecture es immune por diseno (OWASP confirmado). Anadirlo romperia mobile clients y AI agents con cero beneficio de seguridad |
 | Hard account lockout | Crea vector DoS donde un attacker puede lockear cualquier cuenta. OWASP prefiere progressive delays con Redis TTL |
 | Row-Level Security (RLS) | Deferred per PROJECT.md — single-tenant testing phase |
-| Cloudflare Pages migration | Considerado para compatibilidad en este milestone, migración en futuro |
+| Cloudflare Pages migration | Considerado para compatibilidad en este milestone, migracion en futuro |
 | Notificaciones push/email de seguridad | Requiere infraestructura de email, out of scope |
 
 ## Traceability
@@ -84,8 +84,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 **Coverage:**
 - v1.3 requirements: 14 total
 - Mapped to phases: 14
-- Unmapped: 0 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-05*
-*Last updated: 2026-04-05 — traceability complete after roadmap creation*
+*Last updated: 2026-04-06 — AUTH-01 updated from progressive delay to hard 429 per research findings*
