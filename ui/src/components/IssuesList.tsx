@@ -234,7 +234,23 @@ export function IssuesList({
   const queryClient = useQueryClient();
   const deleteIssueMutation = useMutation({
     mutationFn: (id: string) => issuesApi.remove(id),
-    onSuccess: () => {
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["issues", selectedCompanyId] });
+      const previousQueries = queryClient.getQueriesData<Issue[]>({ queryKey: ["issues", selectedCompanyId] });
+      queryClient.setQueriesData<Issue[]>(
+        { queryKey: ["issues", selectedCompanyId] },
+        (old) => old?.filter?.((issue) => issue.id !== id) ?? old,
+      );
+      return { previousQueries };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previousQueries) {
+        for (const [queryKey, data] of context.previousQueries) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+    },
+    onSettled: () => {
       if (selectedCompanyId) {
         void queryClient.invalidateQueries({ queryKey: ["issues", selectedCompanyId] });
       }
