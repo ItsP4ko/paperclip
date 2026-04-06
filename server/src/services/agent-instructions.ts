@@ -32,6 +32,7 @@ type AgentLike = {
   companyId: string;
   name: string;
   adapterConfig: unknown;
+  runtimeConfig?: unknown;
 };
 
 type AgentInstructionsFileSummary = {
@@ -457,6 +458,12 @@ export function agentInstructionsService() {
     if (!state.rootPath) return toBundle(agent, state, []);
     const stat = await statIfExists(state.rootPath);
     if (!stat?.isDirectory()) {
+      const runtimeConf = (typeof agent.runtimeConfig === "object" && agent.runtimeConfig !== null)
+        ? agent.runtimeConfig as Record<string, unknown>
+        : {};
+      const isLocalRunner = runtimeConf.executionTarget === "local_runner";
+      // For local_runner agents, external instructions live on the runner machine — skip server-side check
+      if (isLocalRunner) return toBundle(agent, state, []);
       return toBundle(agent, {
         ...state,
         warnings: [...state.warnings, `Instructions root does not exist: ${state.rootPath}`],
