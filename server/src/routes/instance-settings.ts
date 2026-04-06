@@ -36,23 +36,41 @@ type AdapterAuthStatus = {
 };
 
 async function getClaudeAuthStatus(): Promise<AdapterAuthStatus> {
+  // execFile throws on non-zero exit code; capture stdout/stderr from the error object too
+  let stdout = "";
+  let stderr = "";
   try {
-    const { stdout } = await execFileAsync("claude", ["auth", "status"], {
+    const result = await execFileAsync("claude", ["auth", "status", "--json"], {
       env: buildPathEnv(),
-      timeout: 6000,
+      timeout: 8000,
     });
-    const parsed = JSON.parse(stdout.trim()) as Record<string, unknown>;
-    return {
-      available: true,
-      loggedIn: parsed.loggedIn === true,
-      email: typeof parsed.email === "string" ? parsed.email : undefined,
-      method: typeof parsed.authMethod === "string" ? parsed.authMethod : undefined,
-    };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const notFound = msg.includes("ENOENT") || msg.includes("not found");
-    return { available: !notFound, loggedIn: false, detail: notFound ? "claude CLI not found" : msg.slice(0, 120) };
+    stdout = result.stdout;
+  } catch (err: unknown) {
+    const e = err as NodeJS.ErrnoException & { stdout?: string; stderr?: string; code?: string | number };
+    if (e.code === "ENOENT" || String(e.message).includes("not found")) {
+      return { available: false, loggedIn: false, detail: "claude CLI not found" };
+    }
+    // Command exited non-zero but may have output on stdout
+    stdout = e.stdout ?? "";
+    stderr = e.stderr ?? "";
   }
+
+  const raw = stdout.trim() || stderr.trim();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      return {
+        available: true,
+        loggedIn: parsed.loggedIn === true,
+        email: typeof parsed.email === "string" ? parsed.email : undefined,
+        method: typeof parsed.authMethod === "string" ? parsed.authMethod : undefined,
+      };
+    } catch {
+      // not JSON — CLI is available but status format unknown
+    }
+  }
+
+  return { available: true, loggedIn: false };
 }
 
 async function getGeminiAuthStatus(): Promise<AdapterAuthStatus> {

@@ -156,7 +156,7 @@ function AdapterAuthRow({ adapter }: { adapter: AdapterAuthInfo }) {
         {status?.available && !status?.loggedIn && (
           <Button variant="outline" size="sm" onClick={handleLogin} disabled={loginStarted && !status?.loggedIn}>
             <LogIn className="h-3.5 w-3.5" />
-            {loginStarted ? "Browser opened..." : "Login"}
+            {loginStarted ? "Waiting..." : "Login"}
           </Button>
         )}
       </div>
