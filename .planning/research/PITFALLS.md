@@ -1,260 +1,262 @@
 # Pitfalls Research
 
-**Domain:** Adding optimistic UI, aggressive caching, WebSocket optimization, and mobile cross-origin auth to an existing deployed task management app (Paperclip v1.2)
+**Domain:** Security hardening — adding auth, API, frontend, and audit features to a live Express 5 + BetterAuth + React 19 SaaS app
 **Researched:** 2026-04-05
-**Confidence:** HIGH (code-verified against live codebase + community sources + official docs)
+**Confidence:** HIGH (BetterAuth and CSP findings verified against official docs and open GitHub issues; Zod coercion and brute-force patterns from official Zod docs + OWASP; audit log patterns from production engineering experience; all findings cross-checked against the live codebase)
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes in this tier cause complete feature failure, silently broken behavior, or user-visible data corruption.
+### Pitfall 1: BetterAuth Cookie Cache Bypass Defeats Session Revocation
+
+**What goes wrong:**
+When `cookieCache` is enabled (BetterAuth's default for performance), revoking a session — including via `revokeOtherSessions: true` on password change — does NOT immediately invalidate that session on other devices or tabs. The cookie cache TTL continues to serve requests as authenticated even after server-side revocation. A user can change their password to force everyone out, then other parties can re-authenticate using the cached cookie for the remainder of the cache TTL.
+
+**Why it happens:**
+Cookie cache stores session data client-side. The server cannot push cache invalidation to existing browser sessions. BetterAuth processes `/change-password` with the cookie cache still active, so the revocation only removes the DB record while cached credentials remain usable. This was a confirmed bug (GitHub issue #4512, fixed in PR #4530 for sensitive endpoints) — but only for BetterAuth's own sensitive endpoints. Application-layer code that calls `auth.api.getSession()` directly is still affected if it does not pass `{ disableCookieCache: true }`.
+
+**How to avoid:**
+- When calling `auth.api.getSession()` inside any revocation-adjacent handler (e.g., a "revoke device" endpoint you write), pass `disableCookieCache: true`.
+- For the session revocation UI feature (seeing + revoking active sessions), always call the BetterAuth-native `/revoke-session` and `/revoke-other-sessions` endpoints rather than rolling your own; these endpoints use `sensitiveSessionMiddleware` which already bypasses cache.
+- Keep `cookieCache.maxAge` at 60 seconds or below. Short TTL limits the breach window.
+- Do not expose a "revoke all sessions" feature and then have the user immediately trust it is enforced — add UI messaging that active tabs may take up to 60 seconds to expire.
+
+**Warning signs:**
+- After calling revoke, `GET /api/auth/get-session` from the same browser still returns a valid session immediately.
+- Integration tests that revoke and then immediately poll see no 401.
+
+**Phase to address:** Auth Hardening phase (session management feature).
 
 ---
 
-### Pitfall 1: Optimistic update succeeds visually but WS-driven invalidation reverts it before server responds
+### Pitfall 2: WS Session Token in Query Param Survives Session Revocation
 
 **What goes wrong:**
-`LiveUpdatesProvider.tsx` calls `invalidateActivityQueries()` every time an `activity.logged` WS event arrives. If the current user mutates an issue (status change, reassignment) and the server publishes the `activity.logged` event before the mutation's `onSettled` fires client-side, the TanStack Query invalidation triggers a background refetch. That refetch can complete and write server data into the cache while the optimistic value is still showing. The optimistic value is overwritten, creating a flash where the status briefly reverts to the pre-mutation value.
+The current implementation passes the BetterAuth session token as `?token=<encodeURIComponent(token)>` in the WebSocket upgrade URL (confirmed in `live-events-ws.ts`: `url.searchParams.get("token")`). When a session is revoked, the WebSocket connection that already authenticated with that token remains alive. The WS upgrade auth check runs once at connection time; there is no ongoing re-validation. A revoked-session user stays connected and keeps receiving live events until the TCP connection drops naturally.
 
 **Why it happens:**
-The `invalidateActivityQueries` function in `LiveUpdatesProvider.tsx` (lines 480–564) fires unconditionally on every `activity.logged` event for the current company — it does not check whether a mutation for that entity is currently in-flight. TanStack Query's `invalidateQueries` marks the query stale and triggers an immediate background refetch if the query is currently mounted. If that refetch resolves before the mutation's `onSettled` fires, the stale server data overwrites the optimistic cache value.
+WebSocket protocol does not support custom headers during the browser's `new WebSocket()` call, so the only options are query param or cookie. The app correctly chose query param for mobile/bearer compatibility. But the auth check is fire-and-forget — it happens at upgrade time and never repeats for the lifetime of the connection.
 
 **How to avoid:**
-Gate invalidation on `queryClient.isMutating()`. In `onMutate`, give the mutation a stable key (e.g. `mutationKey: ['issues', 'update', issueId]`). In `LiveUpdatesProvider`, before calling `invalidateActivityQueries`, check:
-
-```ts
-if (queryClient.isMutating({ mutationKey: ['issues', 'update'] }) > 0) return;
-```
-
-Alternatively, in each mutation's `onSettled`, call `invalidateQueries` explicitly and cancel automatic WS-driven invalidation for those query keys during the mutation window.
-
-Also: always call `queryClient.cancelQueries(queryKeys.issues.detail(id))` in `onMutate` to abort any in-flight fetches before writing the optimistic value.
+- Add a periodic re-validation step: every N seconds (e.g., every heartbeat cycle, every ~22s which the app already uses), validate that the session token in the connection context is still valid against the DB (not the cookie cache).
+- Alternatively, track `sessionId` at connect time; when any session is revoked, iterate live WS connections and terminate those matching the revoked `sessionId`. More complex but immediate.
+- At minimum, document this limitation: revocation for WS sessions has eventual consistency (up to the heartbeat interval).
+- The token in the query string also appears in server access logs. Ensure the pino HTTP logger redacts `?token=` from WS upgrade URLs before logging.
 
 **Warning signs:**
-- Status badge briefly flashes back to old value after clicking a status button, then settles on the new value
-- Network tab shows a GET for the issue detail completing between the PATCH request and its response
-- Only happens on deployed environment (higher network latency), not localhost
+- After revoking a session via UI, the WS connection in the revoked tab still receives `issue-updated` events.
+- Access log lines contain full `?token=<signed_token>` in plaintext.
 
-**Phase to address:**
-Phase 1 (Optimistic UI mutations) — this is the most common failure mode for optimistic updates in the existing architecture and must be solved before shipping any optimistic mutation.
+**Phase to address:** Auth Hardening phase (session management + revocation).
 
 ---
 
-### Pitfall 2: Aggressive staleTime hides mutations to lists that share the same query key root
+### Pitfall 3: BetterAuth Rate Limiting is Global — Aggressive Limits Throttle Non-Auth Routes
 
 **What goes wrong:**
-The plan is to increase `staleTime` globally (currently 30s) to make navigation feel instant. The issue list query (`queryKeys.issues.list(companyId)`) and the "assigned to me" query (`queryKeys.issues.listAssignedToMe(companyId)`) are separate keys. When a status mutation fires and `onSettled` invalidates `queryKeys.issues.detail(issueId)`, it does NOT automatically invalidate the list query. With a long staleTime the list remains in cache and shows stale data until the WS event arrives and calls `invalidateActivityQueries`.
-
-If the WS connection is slow (the known v1.1 latency issue) or temporarily disconnected, the list will show the old status for seconds or minutes after the user changed it via the detail view.
+BetterAuth's `rateLimit` config applies to all BetterAuth-handled routes, including `/get-session` which is called on every page load. Setting a tight window (e.g., 3 req/10s to protect `/sign-in/email`) via a global limit would throttle session retrieval and break normal app usage. Conversely, setting it loose enough for `/get-session` makes brute-force protection on `/sign-in/email` ineffective.
 
 **Why it happens:**
-TanStack Query's cache is key-granular. Invalidating a detail query does not cascade to list queries unless explicitly programmed. Increasing staleTime extends the window in which stale lists are served from cache. The existing WS-based invalidation is the only mechanism that bridges this gap — and it has known latency.
+BetterAuth's `customRules` let you specify per-path windows and maximums, but there was no way to exclude specific paths from rate limiting entirely until PR #4502. The global counter fires on every BetterAuth route hit, including benign ones. The in-memory default also means rate limit state is lost on server restart, creating a window for brute force after any deploy.
 
 **How to avoid:**
-In each mutation's `onSettled`, invalidate both the detail and all affected list variants:
-
-```ts
-onSettled: () => {
-  queryClient.invalidateQueries({ queryKey: queryKeys.issues.detail(issueId) });
-  queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(companyId) });
-  queryClient.invalidateQueries({ queryKey: queryKeys.issues.listAssignedToMe(companyId) });
-  // ... other list variants the mutation can affect
-}
-```
-
-Do not rely on WS invalidation as the only mechanism for list freshness after a local mutation. WS invalidation is appropriate for other users' changes; the local user's own mutations should drive their own invalidation synchronously.
+- Use `customRules` to set aggressive limits ONLY on auth mutation routes: `/sign-in/email`, `/sign-up/email`, `/forget-password`, `/reset-password`. The default BetterAuth limit on `/sign-in/email` is 3 req/10s — keep that or tighten it.
+- Set a permissive limit on `/get-session` (e.g., 100 req/60s per IP) so normal multi-tab usage is not affected.
+- Configure BetterAuth to use Redis secondary storage for rate limit data so it survives restarts. The app already has Redis optional (`createRateLimiter` in `rate-limit.ts`); the same Redis client should be passed to BetterAuth's `secondaryStorage`.
+- The existing Express-level rate limiter (`express-rate-limit` at 1000 req/15min) is separate from BetterAuth's own limiter. Both run independently. The Express one covers application API routes; BetterAuth's covers its own auth endpoints. Do not conflate them.
 
 **Warning signs:**
-- User changes status on a detail page, navigates back to the list — list still shows old status until WS event arrives
-- "My Tasks" badge count updates correctly (from WS) but the list items show stale data
-- Only reproducible when staleTime is > 0
+- Users report "too many requests" errors when rapidly switching between pages (multiple tabs hitting `/get-session`).
+- After a server restart, brute-force protection resets and an attacker can retry immediately.
 
-**Phase to address:**
-Phase 2 (Aggressive caching) — define the invalidation strategy before tuning staleTime; never increase staleTime without auditing which list queries a mutation affects.
+**Phase to address:** Auth Hardening phase (brute-force protection).
 
 ---
 
-### Pitfall 3: Concurrent rapid mutations (e.g. clicking status multiple times) create window of inconsistency even with cancelQueries
+### Pitfall 4: IP-Based Lockout Locks Out Legitimate Users Behind Shared IPs
 
 **What goes wrong:**
-The TanStack Query `cancelQueries` in `onMutate` only cancels the most-recently-started fetch for that query key. If a user clicks a status button twice quickly (mutation A fires, then mutation B fires while A is still in-flight), mutation B's `onMutate` will find nothing to cancel because A's query has already been cancelled and A's server request is in-flight. When mutation A settles and calls `invalidateQueries`, the background refetch triggered by that invalidation can race with mutation B's optimistic value and overwrite it.
+Blocking by IP after N failed logins locks out all users behind a shared IP (corporate proxy, ISP NAT, mobile carrier). A single attacker who knows this can intentionally trigger the lockout for all users at that IP (denial of service). The reverse also happens: legitimate users in an office who collectively trigger the threshold get locked out.
 
 **Why it happens:**
-`cancelQueries` operates on queries (fetches), not on mutations. It cannot cancel or coordinate with sibling mutations. This is a documented TanStack Query limitation described in the library's official guidance on concurrent optimistic updates.
+IP-based rate limiting is the simplest implementation, so it gets reached for first. The threat model for Paperclip is multi-user SaaS accessed by small teams — likely in shared office networks.
 
 **How to avoid:**
-Use `queryClient.isMutating()` to gate `invalidateQueries` in `onSettled`:
-
-```ts
-onSettled: (_data, _err, variables) => {
-  const key = ['issues', 'update', variables.issueId];
-  // Only invalidate if this is the last mutation for this entity
-  if (queryClient.isMutating({ mutationKey: key }) === 1) {
-    queryClient.invalidateQueries({ queryKey: queryKeys.issues.detail(variables.issueId) });
-  }
-}
-```
-
-`isMutating` returns the count including the current mutation, so `=== 1` means "I am the only in-flight mutation for this key."
-
-Use distinct, scoped `mutationKey` arrays per entity (not per mutation type) so the check is accurate.
+- Rate limit on BOTH dimensions: per-IP (loose) AND per-email/account (tight). Example: IP limit = 20 failed attempts/15min; account limit = 5 failed attempts/15min. This way a distributed attack against one account is blocked even if it comes from many IPs.
+- Use temporary lockouts only (15-30 min), never permanent. Permanent locks require manual admin intervention and create support burden.
+- BetterAuth supports per-IP normalization for IPv6 subnets (`ipv6Subnet` config) — enable this to prevent IPv6 rotation attacks.
+- Log failed login attempts with email, IP, and timestamp so patterns are visible in the audit log.
+- Do NOT apply lockout to the "active sessions" list API — only apply it to mutation endpoints (sign-in, password reset).
 
 **Warning signs:**
-- Status button double-click causes visible flash: status A → status B → status A briefly → status B
-- Only visible at network latency > 50ms (i.e., on live deployment, not localhost)
-- Reproducible by rapidly clicking the same dropdown option twice
+- Support requests from users who cannot log in despite knowing their correct password.
+- Monitoring shows a burst of 429s from a single CIDR block that turns out to be a corporate proxy.
 
-**Phase to address:**
-Phase 1 (Optimistic UI mutations) — implement `isMutating` guard from the first optimistic mutation shipped.
+**Phase to address:** Auth Hardening phase (brute-force protection).
 
 ---
 
-### Pitfall 4: iOS Safari + cross-origin cookies — SameSite=None already in production but CHIPS (partitioned) attribute causes silent session loss
+### Pitfall 5: Zod Validation Too Strict Breaks Existing API Clients
 
 **What goes wrong:**
-The existing `better-auth.ts` already sets `sameSite: "none"` and `secure: true` for HTTPS deployments (lines 103–107 of `better-auth.ts`). This fixed desktop Chrome/Firefox. On iOS Safari, third-party cookie blocking is enforced by default regardless of SameSite attribute. If the backend (`api.paperclipai.com`) and frontend (`app.paperclipai.com`) are on different subdomains of the same root domain, the solution is to enable `crossSubDomainCookies` in better-auth and set the cookie domain to the root domain. If they are on completely different registrable domains (different eTLD+1), no cookie configuration will work — Safari will block them.
+Adding Zod `.parse()` to existing endpoints that previously accepted any body breaks AI agent clients and the CLI that may be sending extra fields, `null` values where `undefined` was expected, or strings where numbers are expected in query params. The current `validate()` middleware in `middleware/validate.ts` calls `schema.parse(req.body)` — which throws for any extra field if the schema uses `.strict()`.
 
 **Why it happens:**
-Safari has enforced full third-party cookie blocking (ITP — Intelligent Tracking Prevention) since iOS 14. Unlike Chrome, Safari does not respect `SameSite=None` as a signal that a cookie is intentionally cross-site; it enforces first-party classification based on the registrable domain (eTLD+1). An `onrender.com`-hosted backend treated as a "public suffix" receives no cookie from a Vercel-hosted frontend even with `SameSite=None; Secure`.
+Zod's default behavior (`.parse()`) strips unknown keys silently. But developers often add `.strict()` "for correctness" when hardening, which breaks clients sending extra fields. Separate issue: query params always arrive as strings in Express. A schema that says `z.number()` for `?limit=10` will throw because `"10" !== 10`. `z.coerce.number()` is required for all query/path param numeric values.
 
 **How to avoid:**
-The registrable domains must share the same eTLD+1 (e.g. both under `paperclipai.com`). Configure better-auth with:
-
-```ts
-crossSubDomainCookies: {
-  enabled: true,
-  domain: ".paperclipai.com", // root domain, note leading dot
-},
-advanced: {
-  defaultCookieAttributes: {
-    sameSite: "none",
-    secure: true,
-  },
-},
-```
-
-If custom domains are not available, the fallback is to use a reverse proxy so the frontend and backend appear to be on the same origin (e.g., Vercel rewrites `/api/*` to the backend). This makes the session cookie first-party from the browser's perspective.
-
-Do NOT use platform default subdomains (e.g., `yourapp.onrender.com`, `yourapp.railway.app`) as the production auth domain — these are public suffix domains and Safari will treat them as third-party even for sub-subdomains.
+- Use `.strip()` behavior (the Zod default) rather than `.strict()` when deploying Zod to existing endpoints. Strip unknown keys silently.
+- For query parameters and URL path params, always use `z.coerce.number()`, `z.coerce.boolean()`, etc., not raw `z.number()`. This is mandatory, not optional.
+- Treat adding Zod to a route as a backward-compatibility operation: the schema must accept everything the existing clients currently send. Audit request logs before writing each schema.
+- Use `.optional()` generously for fields that may or may not be present across client versions.
+- The existing `errorHandler` already returns `{ error: "Validation error", details: err.errors }` with HTTP 400 for `ZodError`. Keep this format consistent — do not change the error shape for Zod errors without updating all clients.
 
 **Warning signs:**
-- Login succeeds on desktop but immediately shows logged-out state on iOS Safari
-- `document.cookie` is empty on iOS despite successful login network call
-- Disabling "Prevent cross-site tracking" in Safari settings fixes the problem (confirms ITP as the cause)
-- Chrome on iOS works (Chrome on iOS uses WebKit but has its own tracking protection behavior)
+- AI agent tasks start failing with 400 errors after Zod rollout.
+- CLI commands that worked pre-hardening now return validation errors.
+- Integration tests that previously passed now fail on routes that received Zod schemas.
 
-**Phase to address:**
-Phase 3 (Mobile cross-origin auth fix) — verify the custom domain setup with a real iOS device before marking the phase complete. Simulators do not enforce ITP the same way real devices do.
+**Phase to address:** API Hardening phase (Zod validation rollout).
 
 ---
 
-### Pitfall 5: WebSocket live-events service uses in-process EventEmitter — events are lost if the server is restarted mid-session, with no reconnect-triggered catch-up
+### Pitfall 6: CSRF Protection Applied to a Bearer-Token App That Does Not Need It
 
 **What goes wrong:**
-`live-events.ts` uses a Node.js `EventEmitter` (`emitter.emit(companyId, event)`) with an incrementing in-memory `nextEventId`. When `LiveUpdatesProvider.tsx` reconnects after a disconnect (e.g. server restart during Easypanel deploy, brief network drop), it creates a new WebSocket connection from scratch with no concept of "last received event ID." All events emitted during the disconnect window are lost and the UI is never notified. The user sees no error — the connection silently recovers but is now behind.
+CSRF attacks require the browser to automatically include credentials (cookies) in cross-origin requests. When authentication is via `Authorization: Bearer <token>` in a custom header, browsers do NOT automatically include that header in cross-origin requests — CSRF does not apply. Adding CSRF tokens to a bearer-token API is pure overhead: it breaks mobile clients that cannot receive CSRF tokens, it breaks the existing AI agent clients that use `Authorization: Bearer` headers, and it adds complexity for zero security benefit.
 
 **Why it happens:**
-The current WS architecture is fire-and-forget. There is no server-side event buffer, no client-side "last event ID" parameter, and no reconnect-triggered refetch of all invalidatable queries. `LiveUpdatesProvider.tsx` reconnects but does not re-validate the cache state after reconnection.
+CSRF protection appears on security checklists. Developers apply it without checking whether the authentication mechanism is cookie-based or header-based. The v1.3 feature list includes "CSRF protection" — this needs to be scoped to "confirm CSRF is not needed" rather than "implement CSRF."
 
 **How to avoid:**
-On reconnect (`onopen` handler), immediately invalidate all active queries for the current company to force a fresh fetch. This is the cheapest and most reliable recovery:
-
-```ts
-nextSocket.onopen = () => {
-  if (reconnectAttempt > 0) {
-    // Reconnect: we may have missed events; invalidate all company queries
-    queryClient.invalidateQueries({ queryKey: ['issues', liveCompanyId] });
-    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(liveCompanyId) });
-    // ... other high-priority keys
-    gateRef.current.suppressUntil = Date.now() + RECONNECT_SUPPRESS_MS;
-  }
-  reconnectAttempt = 0;
-};
-```
-
-This is already where `RECONNECT_SUPPRESS_MS` is applied for toast suppression — the invalidation logic belongs in the same block.
+- Do NOT add CSRF middleware to the Express app. The auth mechanism is `Authorization: Bearer` (confirmed in `middleware/auth.ts` and the bearer plugin config in `auth/better-auth.ts`). This is immune to CSRF by design.
+- The BetterAuth form endpoints (`/sign-in/email`, etc.) DO use cookies internally, but BetterAuth handles its own CSRF protection natively — do not double-apply.
+- The only scenario where CSRF would matter is if the app transitions to cookie-only auth without the bearer plugin. That is not happening in v1.3.
+- Document this decision explicitly so future developers do not re-add CSRF middleware.
 
 **Warning signs:**
-- User leaves tab for 30 seconds (server restarted), comes back — status on list is stale, no toast notification
-- WS Network tab shows a gap in frames then resumes — but no fresh GET requests follow the reconnect
-- Reproducible by killing the backend process and restarting while the frontend is open
+- AI agents start receiving 403 Forbidden on previously working endpoints after a "security update."
+- Mobile clients (iOS Safari, Android Chrome) that use bearer tokens break silently.
 
-**Phase to address:**
-Phase 4 (WebSocket optimization) — pair reconnect invalidation with the WS latency work. Also relevant to Phase 2 (caching) — aggressive caching makes the missed-event problem worse because stale data stays in cache longer.
+**Phase to address:** API Hardening phase — address by explicitly NOT implementing it and documenting why.
 
 ---
 
-### Pitfall 6: Increasing staleTime globally breaks features that rely on background refetch for correctness (e.g. "My Tasks" badge count)
+### Pitfall 7: CSP Breaks shadcn/ui Components and Vite HMR
 
 **What goes wrong:**
-The "My Tasks" page currently shows an empty list despite the sidebar badge count being correct. The badge uses `queryKeys.sidebarBadges(companyId)` and the list uses `queryKeys.issues.listAssignedToMe(companyId)`. If `staleTime` is increased globally to, say, 5 minutes, and the badge is fetched on one polling cycle but the list is from a stale cache, the badge and the list will be inconsistent for 5 minutes. More critically, if the existing bug (list renders empty) is caused by a timing issue in initial data hydration, increasing staleTime will make the bug harder to reproduce and harder to debug because it suppresses background refetches.
+shadcn/ui components (confirmed in GitHub issue #4461: Toast, NavMenu, and others) inject inline styles at runtime. A CSP `style-src 'self'` without `'unsafe-inline'` blocks these styles, causing visual breakage — components render but look wrong or do not animate. Separately, Vite HMR requires `script-src 'unsafe-eval'` (for hot module evaluation) and `connect-src ws://localhost:*` (for the HMR websocket). Adding a strict CSP in development without these breaks the dev workflow entirely.
 
 **Why it happens:**
-Global `staleTime` tuning is a blunt instrument. Different queries have different freshness requirements. Some queries (health check, session) must always be fresh. Others (issues list) can tolerate minutes of staleness. Applying a single `staleTime` to everything without auditing each query category causes collateral damage.
+CSP is typically written for the production API response in Helmet, but the React SPA frontend is served from Vercel (CDN), not Express. The CSP in `security-headers.ts` applies to the Express backend only, not to the Vite frontend's HTML. Developers assume one CSP covers everything and set it without testing the actual frontend behavior.
 
 **How to avoid:**
-Do NOT change the global `staleTime` in `main.tsx`. Instead, set `staleTime` per-query at the `useQuery` call site based on the data's sensitivity:
-
-- `staleTime: Infinity` — static reference data (instance settings, agent list on stable orgs)
-- `staleTime: 5 * 60_000` — semi-stable data (project list, issue detail after user viewed it)
-- `staleTime: 30_000` (keep current default) — live data (issue lists, sidebar badges)
-- `staleTime: 0` (override to always-fresh) — session, health check
-
-Fix the "My Tasks" empty list bug separately before tuning any staleTime values — it must be working correctly before you can tell if a staleTime change breaks it.
+- There are TWO separate CSP surfaces: (1) the Express backend's API responses (currently configured in `security-headers.ts` with `defaultSrc: ['none']` — correct for an API server), and (2) the frontend SPA served by Vercel/CDN. These need separate CSP configurations.
+- For the frontend CSP (Vercel `_headers` file or HTTP meta tag): allow `'unsafe-inline'` for `style-src` to accommodate shadcn/ui. This is an acknowledged upstream limitation — nonce support in shadcn/ui is open issue #2891.
+- For development CSP (Vite dev server): configure `vite.config.ts` with `server.headers` that adds `'unsafe-eval'` for `script-src` and `ws://localhost:*` for `connect-src`. Never ship the dev CSP to production.
+- Use `Content-Security-Policy-Report-Only` first for 1-2 weeks in production to discover violations before blocking. Do not flip to enforcement mode blind.
+- Do not configure `report-uri` without a working collection endpoint. Stale `report-uri` values generate failed network requests on every CSP violation and produce noise in logs.
 
 **Warning signs:**
-- Sidebar badge shows "3 tasks" but My Tasks page shows empty list after increasing staleTime
-- Navigating away and back refreshes the list (confirms the issue is staleTime suppressing the mount refetch)
-- Issue status changes made on a detail page are not reflected in the list for minutes
+- shadcn/ui Toast notifications appear but are unstyled or invisible.
+- Vite dev server HMR stops working after adding headers in `vite.config.ts`.
+- Browser console shows `Refused to apply inline style` errors in production.
 
-**Phase to address:**
-Phase 2 (Aggressive caching) — audit every `useQuery` call before assigning staleTime; the My Tasks bug must be resolved in Phase 1 or the caching phase cannot be safely verified.
+**Phase to address:** Frontend / XSS Hardening phase.
 
 ---
 
-### Pitfall 7: Optimistic rollback leaves UI in inconsistent state when the rollback logic mirrors fields the server never returns
+### Pitfall 8: Sanitizing Content at Save Time — Wrong Approach for Rich Text
 
 **What goes wrong:**
-`applyOptimisticIssueCommentUpdate` (in `optimistic-issue-comments.ts`) only patches `status` and `assigneeAgentId`/`assigneeUserId` on the local issue copy. If the PATCH `/issues/:id` endpoint returns more derived fields (e.g. `updatedAt`, `updatedByUserId`, field computed from triggers) that the optimistic copy does not set, the rollback snapshot (captured in `onMutate`) will contain the pre-mutation values of those fields. After rollback, `setQueryData(context.previousData)` restores the correct snapshot, but any subsequent fetch will return the server-authoritative version — which may include partial writes from the failed mutation depending on when the server errored.
-
-The more subtle failure: if `onError` calls `setQueryData(context.previousData)` but the component reading that data has already re-rendered with a different server-authoritative fetch (from WS invalidation), the rollback silently no-ops without user feedback.
+Sanitizing HTML/markdown at write time (before storing in the database) appears safe but creates two serious problems: (1) the sanitized version is stored permanently, so the original user intent is lost and cannot be re-processed with improved sanitization rules later; (2) if content then passes through another parser or template engine before rendering, the already-sanitized HTML may be mutated, re-parsed, or double-encoded in ways that reintroduce XSS vectors (mutation XSS, a documented DOMPurify bypass class). The correct model is: store raw input, sanitize at render time.
 
 **Why it happens:**
-Optimistic updates require the client to anticipate exactly what the server would have done. Any field the server computes (timestamps, computed columns, derived aggregates) is not in the client model. The rollback correctly restores the pre-mutation state, but developers sometimes skip the rollback entirely or write it incorrectly because the happy path never exercises it.
+"Clean the data on the way in" feels intuitive. Developers conflate input validation (checking format/constraints — do this on save) with output sanitization (making content safe for rendering — do this at render).
 
 **How to avoid:**
-Always implement the full three-callback pattern: `onMutate` (snapshot + optimistic write), `onError` (rollback from snapshot), `onSettled` (invalidate regardless). Never skip `onError`. Confirm rollback works by testing the error path (mock `issuesApi.update` to reject):
-
-```ts
-onMutate: async (variables) => {
-  await queryClient.cancelQueries({ queryKey: queryKeys.issues.detail(issueId) });
-  const snapshot = queryClient.getQueryData(queryKeys.issues.detail(issueId));
-  queryClient.setQueryData(queryKeys.issues.detail(issueId), (old) => ({
-    ...old,
-    status: variables.status, // only the fields being changed
-  }));
-  return { snapshot };
-},
-onError: (_err, _variables, context) => {
-  if (context?.snapshot) {
-    queryClient.setQueryData(queryKeys.issues.detail(issueId), context.snapshot);
-  }
-},
-onSettled: () => {
-  queryClient.invalidateQueries({ queryKey: queryKeys.issues.detail(issueId) });
-},
-```
-
-Show a toast on `onError` — silent rollback is a UX failure.
+- Store user-authored content (issue descriptions, comments, task names) as-is in the database. No HTML sanitization on save.
+- Run DOMPurify (or equivalent) exactly once, in the React component that calls `dangerouslySetInnerHTML`. Never call DOMPurify twice on the same content (double-sanitization can break valid content).
+- For markdown fields: prefer a render pipeline that never calls `dangerouslySetInnerHTML` at all — use `react-markdown` with `rehype-sanitize`, which converts markdown to React elements directly without raw HTML injection.
+- Audit every component that renders user content and confirm it goes through a single, consistent sanitization point at render.
+- Input validation (not sanitization) is still valid on save: reject strings over a max length, reject binary data. This is Zod's job, not DOMPurify's.
 
 **Warning signs:**
-- Issue status reverts correctly on network error, but no error message is shown to the user
-- After rollback, the status flickers between old and new before settling
-- Error tests pass but the rollback snapshot is stale (captured before a concurrent mutation)
+- Content stored in the database already has HTML entities like `&lt;` when inspected directly in psql.
+- Reopening an edited issue shows double-encoded characters (e.g., `&amp;lt;`).
+- Changing the sanitization library causes all stored content to look different retroactively.
 
-**Phase to address:**
-Phase 1 (Optimistic UI mutations) — write error tests alongside the happy-path implementation.
+**Phase to address:** Frontend / XSS Hardening phase (content sanitization).
+
+---
+
+### Pitfall 9: Audit Log Writes on the Request Critical Path Slow Down Every API Call
+
+**What goes wrong:**
+Inserting an audit log row synchronously (awaited) inside every sensitive request handler adds a database round-trip to every sensitive action's response time. For operations like issue assignment, status change, and invite creation that users perform frequently, this is immediately noticeable. Supabase is a remote database; each round-trip adds 10-50ms of latency on top of the existing query overhead. React Query's optimistic updates hide this on the UI, but P95 latency degrades.
+
+**Why it happens:**
+`await db.insert(auditLogs).values(...)` is the simplest implementation. Developers add it inline without thinking about the critical path.
+
+**How to avoid:**
+- Fire audit log inserts asynchronously (non-awaited `Promise`). Use a `void` pattern: `void db.insert(auditLogs).values(...).catch(err => logger.error({ err }, "Audit log insert failed"))`. This keeps the response fast and audit logging is best-effort.
+- If strict audit completeness is required: use a local queue (simple in-memory async queue or `setImmediate`) that buffers writes and flushes them in batches.
+- Create a composite index on `audit_logs(company_id, created_at DESC)` at table creation time. An unindexed audit log table causes full table scans on the owner dashboard query as the log grows.
+- Do NOT log every HTTP request to the audit log. Log only semantically significant actions: login success/failure, session revocation, invite sent/accepted, role change, assignment. General request logging stays in the existing HTTP logger (pino).
+- Avoid logging request bodies in the audit table — they may contain sensitive data. Log action type, actor ID, target resource ID, and timestamp only.
+
+**Warning signs:**
+- Issue assignment API latency increases by 30-80ms after audit log integration.
+- Audit log query in the owner dashboard takes >1s as the table grows past 10k rows.
+- Log lines show `audit_log` insert failures that are swallowed silently.
+
+**Phase to address:** Audit Logs phase.
+
+---
+
+### Pitfall 10: Log Injection via User-Controlled Fields in Audit Entries
+
+**What goes wrong:**
+If user-supplied content (issue titles, user names, email addresses) is logged directly without sanitization, an attacker can inject newlines (`\n`, `\r\n`) and control characters to forge log entries. Example: a user named `Alice\n2026-04-05 CRITICAL: admin login from 1.2.3.4` pollutes structured logs and can mislead security incident analysis.
+
+**Why it happens:**
+Developers trust that database content is safe to log because it "already went through validation." But newlines and control characters pass most Zod string validators unless explicitly rejected.
+
+**How to avoid:**
+- Use structured logging (pino, already in use) rather than string interpolation. Pino serializes objects as JSON fields, which means newlines in field values are escaped to `\n` in the JSON output rather than interpreted as new log lines. This is the primary defense.
+- Add a Zod refinement to user-input string fields: `.refine(s => !/[\r\n\x00]/.test(s), "Control characters not allowed")` for names, titles, and descriptions.
+- When including user content in log messages (the string template, not the object), explicitly strip newlines: `actorName.replace(/[\r\n]+/g, ' ')`.
+- In the audit log table itself, the content stored is structured (action type, IDs) rather than freeform — this limits injection surface.
+
+**Warning signs:**
+- Audit log entries appear to contain multi-line records from a single action.
+- Log aggregation dashboard shows extra "events" that don't correspond to real actions.
+
+**Phase to address:** Audit Logs phase.
+
+---
+
+### Pitfall 11: Security Theater — Features That Look Secure But Address Zero Real Threats
+
+**What goes wrong:**
+The v1.3 feature list may tempt implementors toward: (a) CSRF protection on bearer-token endpoints (immune by design — covered above), (b) `X-XSS-Protection: 1; mode=block` (deprecated, browsers ignore it), (c) rate-limiting the WebSocket message stream (rate limiting the upgrade only, not the message rate, is almost useless), (d) sanitizing data inside Drizzle query results before returning them in API responses (XSS happens at render in the browser, not at the API layer).
+
+**Why it happens:**
+Security checklists and tools like Helmet include these headers/features as defaults. Developers apply them wholesale without filtering for applicability to their threat model.
+
+**How to avoid — this specific app's real vs. non-threats:**
+- **Real threats**: XSS via user-authored content rendered in React; account takeover via credential stuffing; leaked session after device loss; privilege escalation via missing auth checks on endpoints.
+- **Non-threats for this stack**: CSRF (bearer token immune); clickjacking (the backend CSP already sets `frameguard: { action: 'deny' }` in `security-headers.ts` — already handled); server-side template injection (no templates); SQL injection (Drizzle ORM uses parameterized queries); directory traversal (no file serving in auth routes).
+- Keep the headers Helmet already provides. Do not add complexity chasing threats that do not exist for this stack.
+- Specifically: do not add `report-uri` with a non-existent endpoint "for completeness" — it generates failed network requests on every CSP violation.
+
+**Warning signs:**
+- A phase is spent implementing CSRF middleware while session revocation remains unimplemented.
+- Adding `report-uri` pointing to a URL that returns 404.
+- Implementing a CAPTCHA on login before implementing rate limiting.
+
+**Phase to address:** Every phase — filter each security feature against the actual threat model before implementing.
 
 ---
 
@@ -262,12 +264,12 @@ Phase 1 (Optimistic UI mutations) — write error tests alongside the happy-path
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Increase global `staleTime` in `main.tsx` | One-line change, instant perceived performance | Masks bugs in data consistency; breaks features relying on background refetch for correctness | Never — use per-query staleTime instead |
-| Skip `isMutating` guard and rely on WS invalidation for consistency after concurrent mutations | Simpler mutation code | Visible flash / revert on live deployment with high latency | Never for status/assignment mutations that users repeat rapidly |
-| Add reconnect invalidation only for issues, not other entity types | Faster to implement | Dashboard, sidebar badges, org view remain stale after reconnect | Acceptable for v1.2 if only issues are tested; must be broadened before multi-user testing |
-| Fix mobile auth by prompting user to disable Safari tracking | Zero dev work | Poor UX; users do not understand what "tracking prevention" means | Never in production |
-| Use `localStorage` fallback for session state on mobile | Unblocks mobile login | Session token exposed to XSS; bypasses HTTPS-only cookie protections | Never — use proper cookie configuration or reverse proxy |
-| Only implement optimistic updates for status, not assignment | Reduces scope | Assignment UI still feels slow; creates inconsistent UX within the same feature area | Acceptable for first iteration if assignment is covered in a follow-up task within the same milestone |
+| Validate only `req.body`, not `req.params` or `req.query` | Faster Zod rollout | Path traversal via malformed IDs; pagination params bypass validation | Never — validate all input surfaces |
+| `'unsafe-inline'` in `script-src` for CSP | Fixes all inline script issues immediately | Completely defeats script CSP; XSS becomes trivially injectable | Never in script-src; acceptable only in style-src for the shadcn/ui constraint |
+| Audit log in-process (synchronous await) | Zero infrastructure overhead | Every sensitive action adds a DB round-trip to response time | MVP only — replace with async/void pattern before load testing |
+| Global rate limit for BetterAuth auth routes | Single config line | Throttles `/get-session` (called every page load) alongside login endpoints | Never — always use per-route `customRules` |
+| Cookie cache left at default TTL | Better session performance | Revoked sessions remain active for the full TTL after revocation | Never for a production app with a session revocation UI |
+| Sanitize on save instead of render | "Cleaner" DB content | Mutation XSS risk if content passes through another parser; stored content cannot be re-sanitized with improved rules | Never |
 
 ---
 
@@ -275,14 +277,16 @@ Phase 1 (Optimistic UI mutations) — write error tests alongside the happy-path
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| TanStack Query + `invalidateActivityQueries` (WS) | `invalidateQueries` fires during in-flight mutation, overwrites optimistic value | Gate WS-triggered invalidation with `queryClient.isMutating()` check |
-| TanStack Query + multiple list query keys | Invalidating only the detail after a mutation; lists stay stale | Enumerate all list variants in `onSettled` invalidation |
-| Better Auth + iOS Safari | Setting `SameSite=None` without matching eTLD+1 | Both frontend and backend must share the same root domain; use custom domain, not platform default subdomain |
-| Better Auth + iOS Safari | Testing on iOS Simulator | Simulator does not enforce ITP; always verify on a real device |
-| Better Auth + iOS Safari | Setting `crossSubDomainCookies` without `domain` pointing to root | Cookie domain must be `.example.com` (leading dot) to cover all subdomains |
-| Express WS + Easypanel | Assuming the connection is direct; may have an nginx proxy in front | Verify `proxy_read_timeout` on the nginx config (Easypanel default may be 60s) — long-lived WS connections get silently killed |
-| WS in-process EventEmitter + server restart | Reconnect silently succeeds but misses events from restart window | Trigger `invalidateQueries` for all company keys on reconnect (when `reconnectAttempt > 0`) |
-| Redis cache + optimistic writes | Caching API responses that are now stale due to optimistic mutations | Redis cache is server-side; it is invalidated on server writes. Client-side TQ cache is separate. Do not confuse the two layers |
+| BetterAuth `revokeSession` | Calling it and trusting immediate invalidation without disabling cookie cache | Pass `disableCookieCache: true` to `getSession` inside any post-revocation check; use short `cookieCache.maxAge` (60s) |
+| BetterAuth `bearer()` plugin + WS `?token=` | Assuming WS connections re-validate after session revocation | Auth check is one-time at upgrade; add periodic session re-check or revocation-push mechanism |
+| BetterAuth rate limit + Redis | Using in-memory storage (default) in production | Pass the existing Redis client as `secondaryStorage` to BetterAuth config; same client the app already uses for `express-rate-limit` |
+| Zod + Express query params | Using `z.number()` for numeric query params | Always `z.coerce.number()` for `req.query` and `req.params` — they are always strings in Express |
+| Zod + existing routes | Adding `.strict()` to schemas for existing endpoints | Use default strip behavior; only add `.strict()` to newly created endpoints with no existing clients |
+| Helmet CSP + Vercel frontend | Setting `content-security-policy` in Helmet expecting it to apply to the React app | Helmet CSP applies to Express API responses only; React app CSP must be set in Vercel `_headers` file separately |
+| shadcn/ui + `style-src 'self'` | Strict style-src breaks Toast, NavMenu, and animated components | Allow `'unsafe-inline'` for `style-src` in the frontend CSP; this is an upstream limitation (issue #2891) |
+| DOMPurify + react-markdown | Running DOMPurify on markdown source before passing to `react-markdown` | Use `rehype-sanitize` plugin in the `react-markdown` pipeline instead; never double-process |
+| Audit log + Supabase | Synchronous await on every audit insert | Fire-and-forget with `.catch()` error logging; batch inserts if volume is high |
+| `report-uri` CSP directive | Setting a `report-uri` pointing to a non-existent endpoint | Only add `report-uri` after deploying a CSP violation collection endpoint; start with `Content-Security-Policy-Report-Only` mode |
 
 ---
 
@@ -290,11 +294,11 @@ Phase 1 (Optimistic UI mutations) — write error tests alongside the happy-path
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| `onSettled` invalidates all issues list queries unconditionally | Every mutation causes full list refetch; visible loading spinners after every click | Use `setQueryData` to update the list item in-place instead of invalidating the whole list | As soon as lists contain > 20 items and network latency > 50ms |
-| WS event triggers broad `invalidateActivityQueries` on every activity | N simultaneous agents all writing = N × K query invalidations per WS event | The existing code already batches by type; do not add more keys to the invalidation fan-out | When multiple agents are active on the same company (>3 simultaneous agents) |
-| `refetchOnWindowFocus: true` (current default) + long staleTime = tab refocus floods network | User switches tabs; every stale query fires simultaneously | Set `refetchOnWindowFocus: false` for queries that are WS-driven (they are refreshed by events, not focus) | Any staleTime > 60s with `refetchOnWindowFocus: true` |
-| WS reconnect exponential backoff up to 15s (current max) | After deploy restart, UI is unresponsive to live events for up to 15s | Current max is acceptable; do not increase it. Consider a post-reconnect targeted invalidation to compensate | Always (by design) — mitigated by the reconnect invalidation pattern |
-| Redis rate limiter adding latency to every API request | Every mutation feels slower than expected despite client-side optimism | Rate limiter should be checked: ensure it uses local memory counter for non-Redis fallback path, not a blocking Redis call | On Easypanel VPS without persistent Redis connection (Redis disconnects silently) |
+| Audit log without index on `(company_id, created_at)` | Owner dashboard query takes >1s | Add composite index at migration time | ~10k rows, or ~1-2 weeks of active use |
+| BetterAuth global rate limit hitting `/get-session` | Users see 429 errors during normal navigation; React Query retries amplify the problem | `customRules` to loosen `/get-session` limit | Any multi-tab session or fast page navigation |
+| Synchronous audit log insert in request handler | Issue assignment P95 latency increases 30-80ms | Fire-and-forget with error catch | Immediate — every request to a hardened endpoint |
+| Cookie cache `maxAge` set too low for performance but too high for security | Either too many DB hits (low) or too long a revocation window (high) | 60 seconds is the practical balance | N/A — tradeoff, not a threshold |
+| Zod parse on large bodies without size limit | Memory spike if attacker sends enormous JSON body | Keep existing `express.json({ limit: '10mb' })` or tighten it; Zod has no size limit of its own | Adversarial input; not natural usage |
 
 ---
 
@@ -302,10 +306,13 @@ Phase 1 (Optimistic UI mutations) — write error tests alongside the happy-path
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Using `SameSite=None; Secure` without verifying HTTPS on both ends | Browser silently drops cookie if backend is HTTP | Always confirm backend URL starts with `https://` in production before enabling `SameSite=None` |
-| Optimistic writes reflecting data the user should not be able to set | User can manipulate client state beyond their permissions | Optimistic logic should mirror server authorization rules — only apply optimistic updates for fields the current user can legitimately change |
-| Passing session token as WS query param (`?token=...`) in cleartext in logs | Token visible in nginx/Easypanel access logs | Current WS auth already handles browser sessions via cookie; do not add query param tokens for human users |
-| Cross-Site WebSocket Hijacking (CSWSH) via `SameSite=None` cookies | Malicious site can open WS connection authenticated as the logged-in user | Current `live-events-ws.ts` validates session via `resolveSessionFromHeaders` on upgrade; ensure `Origin` header is validated against `allowedHostnames` (already handled via `boardMutationGuard` equivalent for WS) |
+| CSRF middleware on a bearer-token API | Breaks AI agent clients and mobile clients with zero security gain | Do not add CSRF middleware; document why |
+| Blocking based on IP alone for brute force | Legitimate users on shared IPs (corporate networks) get locked out | Always add per-account (per-email) rate limiting alongside IP limiting |
+| `console.log` of session tokens or bearer tokens for debugging | Token appears in server logs, log storage, Easypanel dashboard | Never log token values; log only token hash or first 6 chars for tracing |
+| WS `?token=` appearing in access logs | Full signed token in log files — anyone with log access can impersonate users | Redact `token` query param in the pino HTTP logger config |
+| Adding CSP `script-src 'unsafe-eval'` in production | Allows arbitrary eval() — negates script CSP entirely | Only in Vite dev config, never in production |
+| Returning `err.stack` in API error responses | Exposes internal file paths and stack frames to clients | The existing `errorHandler` correctly returns only `{ error: "Internal server error" }` for 500s — do not change this behavior |
+| Sanitizing data retrieved from DB before returning in API responses | Unnecessary overhead and potential double-encoding when the React component also sanitizes | XSS happens at render (browser), not at API response; API returns raw data, React component sanitizes before `innerHTML` |
 
 ---
 
@@ -313,24 +320,25 @@ Phase 1 (Optimistic UI mutations) — write error tests alongside the happy-path
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Silent optimistic rollback (no toast on error) | User believes mutation succeeded; discovers stale data later | Always show an error toast in `onError` with an actionable message ("Status change failed — try again") |
-| Optimistic update for assignment shows the new assignee name before the assignee list is in cache | Assignee name shows as UUID or "Unknown" until cache loads | Pre-fetch assignee data (agents + members) before enabling assignment mutations; or resolve name from local cache synchronously |
-| WS reconnect suppresses toasts for 2s (`RECONNECT_SUPPRESS_MS`) but does not show a "reconnecting" indicator | User does not know they missed real-time updates | Add a subtle "Reconnecting..." banner or indicator during reconnect attempts (when `reconnectAttempt > 0`) |
-| Status dropdown closes immediately on click (optimistic) but server rejects the change | User sees the old status restored with no explanation | Keep dropdown open until mutation settles, or show an inline error state on the status badge |
-| Increasing staleTime makes "first load after inactivity" feel fast but "return to list after mutation" feel wrong | User changes something, goes back, sees wrong state | Use per-query staleTime; never suppress background refetch for queries that show mutable data the user just changed |
+| Hard lockout after 5 failed login attempts | Legitimate user who misremembered password is permanently locked out; requires admin reset | Temporary lockout (15-30 min) with clear message: "Too many attempts. Try again in 30 minutes." |
+| No identifying info on active session list | Owner cannot identify which session to revoke (all show "Session") | Show user-agent, approximate location (from IP or just "logged in from Chrome on macOS"), and last active timestamp |
+| CSP enforcement deployed without Report-Only phase first | Users see blank components (shadcn/ui Toast fails silently) without any visible error | Run `Content-Security-Policy-Report-Only` for 1-2 weeks and monitor reports before switching to enforcement |
+| Audit log shows raw action codes | Owner cannot understand what `ISSUE_ASSIGNEE_CHANGED` means in context | Include human-readable descriptions and target resource titles in audit log display, not just IDs and codes |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Optimistic status mutation:** Happy path works — verify error path: disconnect network, change status, reconnect — confirm rollback fires and error toast shows.
-- [ ] **Optimistic assignment mutation:** Status change also reflected in list view (not just detail view) without page reload.
-- [ ] **Concurrent mutations:** Rapidly click a status button three times — verify UI settles on the last clicked value, does not flash intermediate states.
-- [ ] **My Tasks empty list bug:** The bug must be resolved and verified before aggressive caching is applied — confirm "My Tasks" renders items without a hard refresh.
-- [ ] **Mobile login (iOS Safari):** Test on a real iPhone (not Simulator) with "Prevent cross-site tracking" enabled (Safari default) — confirm login persists across tab switches.
-- [ ] **WS reconnect invalidation:** Kill the backend process, wait for reconnect (`reconnectAttempt > 0` fires), verify a GET fires for issues list immediately after reconnect.
-- [ ] **staleTime per-query audit:** Confirm `staleTime: Infinity` is not applied to any query that shows mutable business data (issues, assignments, statuses).
-- [ ] **Redis connection loss:** Stop Redis, perform a mutation — confirm the server falls back gracefully and the mutation still resolves (Redis is optional by design).
+- [ ] **Session revocation:** Verify that revoking a session via the UI causes a 401 on the next API request from that session — not just a DB record deletion with the cookie cache still serving.
+- [ ] **WS session revocation:** Verify that a revoked session's WebSocket connection is terminated (or at minimum, stops receiving events) within the heartbeat interval (~22s).
+- [ ] **Zod on query params:** Verify that every numeric query param (`?limit=`, `?page=`, `?offset=`) uses `z.coerce.number()`, not `z.number()`. Test by passing `?limit=10` (string) manually.
+- [ ] **CSP on the frontend:** Verify the CSP header is present on the React app's HTML document (Vercel response headers), not just on Express API responses. These are different surfaces.
+- [ ] **shadcn/ui under CSP:** After CSP is deployed on Vercel, open the browser console and confirm zero `Refused to apply inline style` errors across the full app (navigate to Issues, trigger a Toast notification, open the NavMenu).
+- [ ] **Audit log async:** Verify that an audit log insert failure (e.g., simulate DB error) does not cause the parent request to fail — the API response should succeed even if the audit write fails.
+- [ ] **Audit log index:** Confirm `EXPLAIN ANALYZE` on the owner dashboard audit query uses an index scan, not a sequential scan, on the `audit_logs` table.
+- [ ] **Brute force per-account:** Verify that 10 failed login attempts from 10 different IPs against the same email address triggers the account-level rate limit — not only the IP-level one.
+- [ ] **No stack traces in 500 responses:** Verify that a deliberate server error returns `{ error: "Internal server error" }` with no stack trace or internal details in the JSON body.
+- [ ] **WS token not in access logs:** Verify that pino HTTP logger does not log the `?token=` query string value in WebSocket upgrade log lines.
 
 ---
 
@@ -338,13 +346,12 @@ Phase 1 (Optimistic UI mutations) — write error tests alongside the happy-path
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Optimistic update races WS invalidation | LOW | Add `isMutating` guard to `invalidateActivityQueries`; deploy server-side is not needed, frontend-only change |
-| Stale list after mutation (wrong staleTime) | LOW | Revert per-query staleTime change; add explicit list invalidation to `onSettled`; frontend redeploy only |
-| Concurrent mutation flicker | LOW | Add `mutationKey` + `isMutating === 1` guard; frontend-only change |
-| iOS Safari login broken (wrong domain config) | MEDIUM | Set up custom domain on both Vercel and Easypanel; update `BETTER_AUTH_TRUSTED_ORIGINS` and `crossSubDomainCookies`; may require DNS propagation wait |
-| WS events missed after reconnect | LOW | Add `queryClient.invalidateQueries` block to `onopen` handler when `reconnectAttempt > 0`; frontend-only change |
-| Silent rollback (no error toast) | LOW | Add `onError` toast to each mutation; frontend-only change |
-| Global staleTime increase breaks "My Tasks" | LOW | Revert `main.tsx` staleTime change; audit and fix My Tasks bug independently |
+| Zod breaks existing clients after strict validation rollout | MEDIUM | Roll back schema to strip mode; audit request logs for unexpected fields; add those fields as `.optional()`; redeploy |
+| CSP enforcement breaks the app in production | LOW (if using Report-Only first) | Switch back to `Content-Security-Policy-Report-Only`; review violation reports; fix allowlist; re-promote to enforcement |
+| Audit log table without index causes slow queries | MEDIUM | `CREATE INDEX CONCURRENTLY` — PostgreSQL supports this without table lock; no downtime required |
+| Brute-force lockout locks out legitimate users | LOW | Flush the Redis rate limit key for that IP/email; optionally whitelist the office IP CIDR in the rate limit config |
+| Session revocation not working due to cookie cache | LOW-MEDIUM | Set `cookieCache.maxAge` to 30-60 seconds in BetterAuth config; redeploy; existing sessions expire within the new TTL |
+| WS `?token=` appears in access logs | LOW | Add a custom pino serializer or middleware that strips `token` from WS upgrade URLs before logging |
 
 ---
 
@@ -352,34 +359,41 @@ Phase 1 (Optimistic UI mutations) — write error tests alongside the happy-path
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| WS invalidation races optimistic update (Pitfall 1) | Phase 1: Optimistic UI | Change status, observe Network tab — no GET for issue detail fires before the PATCH resolves |
-| Stale list after mutation (Pitfall 2) | Phase 2: Aggressive caching | Change status on detail, navigate to list — list shows new status immediately |
-| Concurrent mutation flicker (Pitfall 3) | Phase 1: Optimistic UI | Double-click status — UI settles on last-clicked value, no intermediate flash |
-| iOS Safari session loss (Pitfall 4) | Phase 3: Mobile auth fix | Real iPhone with default Safari privacy settings — login persists after background/foreground |
-| WS reconnect missed events (Pitfall 5) | Phase 4: WS optimization | Kill backend, wait for reconnect, verify invalidation GET fires for issues list |
-| Global staleTime breaks features (Pitfall 6) | Phase 2: Aggressive caching | Audit before applying; "My Tasks" renders items correctly after staleTime change |
-| Optimistic rollback incomplete (Pitfall 7) | Phase 1: Optimistic UI | Simulate network error during mutation; confirm rollback fires, error toast shown |
+| Cookie cache bypasses session revocation | Auth Hardening — session management | Integration test: revoke session, poll `/get-session`, expect 401 within 60s |
+| WS session not revoked on session revocation | Auth Hardening — session management | Integration test: revoke session, verify WS connection closes within heartbeat interval |
+| Global BetterAuth rate limit throttles `/get-session` | Auth Hardening — brute-force protection | Load test: 50 concurrent `/get-session` requests should all succeed |
+| IP-only lockout causes false positives | Auth Hardening — brute-force protection | Test: 10 failed logins from 10 different IPs against same email triggers account-level block |
+| Zod strict mode breaks AI agent clients | API Hardening — Zod validation | Run existing integration test suite against Zod-hardened endpoints before merging |
+| Zod numeric coercion missing for query params | API Hardening — Zod validation | Unit test: `schema.parse({ limit: "10" })` succeeds, does not throw |
+| CSRF middleware breaks mobile/agent clients | API Hardening | Do not implement; document the decision in a code comment |
+| CSP breaks shadcn/ui components | Frontend / XSS Hardening — CSP | Browser test: open full app under new CSP, confirm zero console CSP errors |
+| Vite HMR breaks under dev CSP | Frontend / XSS Hardening — CSP | Dev workflow: confirm HMR reloads still work with dev-specific CSP config |
+| Sanitize on save creates mutation XSS risk | Frontend / XSS Hardening — sanitization | Code review: confirm no DOMPurify calls in backend; confirm React components sanitize at render only |
+| Audit log on critical path slows responses | Audit Logs phase | Benchmark: issue assignment endpoint latency should not increase >5ms vs baseline |
+| Audit log table without index | Audit Logs phase | `EXPLAIN ANALYZE` on owner dashboard query shows index scan |
+| Log injection via user content | Audit Logs phase | Unit test: log entry containing `\n` is serialized as escaped JSON, not split across log lines |
+| Security theater (CSRF, deprecated headers) | Every phase | Threat model review before each phase: "What specific attack does this prevent for THIS app?" |
 
 ---
 
 ## Sources
 
-- Code-verified: `ui/src/context/LiveUpdatesProvider.tsx` — `invalidateActivityQueries` fires unconditionally on WS event, no `isMutating` guard (lines 480–564)
-- Code-verified: `ui/src/lib/optimistic-issue-comments.ts` — existing optimistic comment pattern; status/assignment rollback in `applyOptimisticIssueCommentUpdate`
-- Code-verified: `ui/src/main.tsx` line 33 — global `staleTime: 30_000` with no per-query overrides
-- Code-verified: `ui/src/lib/queryKeys.ts` — separate keys for `list`, `listAssignedToMe`, `detail` with no shared invalidation group
-- Code-verified: `server/src/realtime/live-events.ts` — in-process `EventEmitter` with no event buffer or last-ID tracking
-- Code-verified: `server/src/realtime/live-events-ws.ts` lines 780–790 — reconnect resets `reconnectAttempt` but does not invalidate queries
-- Code-verified: `server/src/auth/better-auth.ts` lines 99–108 — `sameSite: "none"` and `secure: true` already set for HTTPS; no `crossSubDomainCookies` yet
-- [Concurrent Optimistic Updates in React Query](https://tkdodo.eu/blog/concurrent-optimistic-updates-in-react-query) — HIGH confidence, TkDodo (TanStack maintainer), documents the exact `isMutating` guard pattern
-- [TanStack Query Optimistic Updates — official docs](https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates) — HIGH confidence, official
-- [TanStack Query race condition discussion #7932](https://github.com/TanStack/query/discussions/7932) — MEDIUM confidence, community + maintainer response
-- [Better Auth Cookies — official docs](https://better-auth.com/docs/concepts/cookies) — HIGH confidence, documents `crossSubDomainCookies` and `defaultCookieAttributes`
-- [Better Auth Safari cookies discussion #2826](https://github.com/better-auth/better-auth/discussions/2826) — MEDIUM confidence, community — root cause: public suffix domain on Render
-- [Better Auth cross-domain issue #4038](https://github.com/better-auth/better-auth/issues/4038) — MEDIUM confidence, community issue
-- [Safari ITP and SameSite=None — Apple Developer Forums](https://developer.apple.com/forums/thread/728137) — HIGH confidence, Apple forum, confirmed ITP enforcement behavior
-- [Cross-Site WebSocket Hijacking 2025](https://blog.includesecurity.com/2025/04/cross-site-websocket-hijacking-exploitation-in-2025/) — MEDIUM confidence, security research
+- BetterAuth session management docs: https://better-auth.com/docs/concepts/session-management
+- BetterAuth cookie cache bypass issue (fixed in PR #4530): https://github.com/better-auth/better-auth/issues/4512
+- BetterAuth rate limit global scope issue (fixed in PR #4502): https://github.com/better-auth/better-auth/issues/4497
+- BetterAuth rate limit docs: https://better-auth.com/docs/concepts/rate-limit
+- BetterAuth bearer plugin docs: https://better-auth.com/docs/plugins/bearer
+- OWASP brute force prevention: https://owasp.org/www-community/controls/Blocking_Brute_Force_Attacks
+- OWASP CSRF prevention cheat sheet (bearer token exemption): https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html
+- Vite HMR + CSP compatibility issue: https://github.com/vitejs/vite/issues/11862
+- shadcn/ui CSP inline style incompatibility: https://github.com/shadcn-ui/ui/issues/4461
+- shadcn/ui nonce support request (open as of research date): https://github.com/shadcn-ui/ui/issues/2891
+- DOMPurify mutation XSS (sanitize-once, at-render discipline): https://mizu.re/post/exploring-the-dompurify-library-bypasses-and-fixes
+- Log injection prevention (Node.js/Snyk): https://snyk.io/blog/prevent-log-injection-vulnerability-javascript-node-js/
+- Zod coerce documentation: https://zod.dev
+- Codebase files verified: `server/src/middleware/auth.ts`, `server/src/auth/better-auth.ts`, `server/src/realtime/live-events-ws.ts`, `server/src/middleware/validate.ts`, `server/src/middleware/security-headers.ts`, `server/src/middleware/rate-limit.ts`, `server/src/middleware/error-handler.ts`
 
 ---
-*Pitfalls research for: Paperclip v1.2 — optimistic UI, aggressive caching, WS optimization, mobile cross-origin auth*
+
+*Pitfalls research for: Security hardening — Express 5 + BetterAuth + React 19 SaaS (Paperclip v1.3)*
 *Researched: 2026-04-05*

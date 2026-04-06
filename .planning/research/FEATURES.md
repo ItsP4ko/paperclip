@@ -1,27 +1,27 @@
 # Feature Research
 
-**Domain:** Performance & Mobile Auth — Optimistic UI, Aggressive Caching, WebSocket Optimization, Cross-Origin Mobile Auth Fix
+**Domain:** Security Hardening — Auth, API, Frontend/XSS, Audit Logs for a React SPA + Express API task management app
 **Researched:** 2026-04-05
-**Confidence:** HIGH (TanStack Query patterns, WS reconnection), HIGH (better-auth bearer plugin), MEDIUM (iOS Safari cross-origin specifics)
+**Confidence:** HIGH (OWASP, better-auth official docs, CSP specs), MEDIUM (UX patterns from industry reference), HIGH (Zod ecosystem)
 
 ---
 
 ## Context: What This Milestone Is
 
-v1.1 shipped a fully deployed SaaS stack. v1.2 targets perceived performance and mobile compatibility:
+v1.3 adds security hardening to an already-shipped, production SaaS. No new user-facing workflows. Four axes:
 
-- **Optimistic UI** — status changes and assignment mutations reflect immediately in the UI; server processes in background; rollback on failure
-- **Aggressive client caching** — list and detail data cached with meaningful staleTime so navigation re-visits feel instant (no loading spinner)
-- **WebSocket optimization** — reduce real-time latency on the live deployment; add heartbeat/ping-pong to detect dead connections faster; narrow invalidation scope to avoid full-refetch floods
-- **Mobile auth fix** — iOS Safari and Android Chrome users can log in and maintain session across requests on the cross-origin deployed stack
+1. **Auth hardening** — active session list + revoke, brute-force protection
+2. **API hardening** — Zod validation middleware, safe error format, CSRF protection
+3. **Frontend/XSS** — CSP headers, content sanitization
+4. **Audit logs** — owner-only panel logging sensitive events
 
-**What already exists:**
-- TanStack Query v5 is already the data layer throughout the app
-- `queryKeys` factory is well-structured and covers all entity types
-- `LiveUpdatesProvider` handles WebSocket connect/reconnect with exponential backoff
-- `optimistic-issue-comments.ts` has a partial optimistic comment pattern (not mutations via TanStack Query `useMutation`)
-- Current WS reconnect: exponential backoff (1s to 15s cap), no application-level heartbeat, no ping-pong
-- Current invalidation: `invalidateActivityQueries` and `invalidateHeartbeatQueries` broadcast-invalidate many query keys on every WS event — this triggers many simultaneous refetches
+**Existing foundation:**
+- BetterAuth with bearer plugin (sessions, mobile auth, revoke APIs already exist)
+- Helmet.js + express-rate-limit + Redis already installed (v1.1)
+- React 19 + Vite + Tailwind v4 + shadcn/ui (frontend)
+- Express 5 + Drizzle ORM + Supabase PostgreSQL (backend)
+- Vercel CDN (frontend), Easypanel VPS (backend)
+- Role model: `owner` / `member` — owner-only features already gate on `membershipRole`
 
 ---
 
@@ -29,118 +29,361 @@ v1.1 shipped a fully deployed SaaS stack. v1.2 targets perceived performance and
 
 ### Table Stakes (Users Expect These)
 
-Features users assume exist in any modern web task app. Missing these = product feels broken or outdated.
+Features that any production SaaS must have. Missing these = security posture gap that blocks enterprise adoption or creates liability.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Status change reflects before server response | Every modern task tool (Linear, Notion, GitHub) does this; waiting 300-800ms for a status badge to flip feels broken | MEDIUM | `useMutation` + `onMutate` snapshot + cache update + `onError` rollback + `onSettled` invalidation. Targets: `queryKeys.issues.detail(id)` and `queryKeys.issues.list(companyId)`. Already have the query key structure. |
-| Assignment change reflects before server response | Same expectation — assigning a task to yourself should feel instant | MEDIUM | Same TanStack Query optimistic mutation pattern. The `applyOptimisticIssueCommentUpdate` function in `optimistic-issue-comments.ts` already handles reassignment on the issue object — reuse that logic inside a `useMutation` `onMutate`. |
-| Revisiting an issue list within 2 minutes shows cached data instantly | Users navigate back and forth between lists and detail pages constantly; a spinner on every navigation kills flow | LOW | Set `staleTime: 2 * 60 * 1000` (2 minutes) globally or on issue list queries. Default staleTime is 0 — every navigation triggers a refetch. With 2-minute staleTime, cache hit returns instantly; background refetch still happens when stale. |
-| My Tasks page renders correctly (no empty state despite having tasks) | This is a known v1.1 bug. Users expect their "My Tasks" view to show their tasks | LOW | Query key is `queryKeys.issues.listAssignedToMe(companyId)`. Likely cause: query fires before session resolves (no `enabled` guard), or stale cache with wrong user context. Fix: add `enabled: !!userId` guard and ensure correct query key includes userId. |
-| WebSocket connection recovers from dead connections within 30 seconds | Real-time updates are a core UX promise. If the WS silently dies, users see stale data indefinitely | MEDIUM | Current code has reconnect on `onclose` but no heartbeat to detect dead connections that don't close. Add application-level ping/pong: client sends `{"type":"ping"}` every 25 seconds, server must respond `{"type":"pong"}`, client reconnects if no pong in 5 seconds. |
-| Mobile users can log in and stay logged in | The app is deployed. Users will try it on phones. iOS Safari blocking cookies breaks auth entirely | HIGH | Current stack: BetterAuth + SameSite cookies. iOS Safari blocks cross-site cookies. Solutions in priority order: (1) custom domain so frontend/backend are same-root domain, (2) enable better-auth bearer plugin as fallback for environments where cookies fail, (3) SameSite=None; Secure with `partitioned: false` in BetterAuth config. |
+| Active session list (device + browser + IP + last seen) | Google, GitHub, Notion all show this. Users expect to see where they're logged in and revoke suspicious sessions. | LOW | BetterAuth already exposes `GET /api/auth/list-sessions` returning `ipAddress`, `userAgent`, `createdAt`, `token`. UI table: one row per session, current session marked, "Revoke" button per row. |
+| Revoke individual session | Must pair with session list. "See but not remove" is a broken UX — users expect both. | LOW | BetterAuth: `authClient.revokeSession({ fetchOptions: { ... } })` passing session token. Server-side: `POST /api/auth/revoke-session`. The API exists — this is a UI + endpoint wiring task. |
+| Brute-force login protection (rate limit on auth endpoints) | Industry standard. OWASP explicitly requires limiting login attempts. Any deployed SaaS without this is trivially attackable. | LOW | express-rate-limit is already installed. Add a strict limiter (5 attempts / 15 min) specifically on `/api/auth/sign-in` and `/api/auth/sign-up`. Narrower than the global rate limit in v1.1. |
+| Zod validation on all request inputs | Type safety at the network boundary prevents malformed data reaching business logic. Users never see the benefit, but absence creates subtle bugs and security holes. | MEDIUM | Custom `validateRequest(schema)` middleware wrapping `schema.safeParse()`. Returns `400` with structured `{ error: "Validation failed", details: z.ZodError.issues }`. Use `z.coerce` for query params (Express delivers all as strings). |
+| Safe error responses (no stack traces in production) | Production APIs must not leak internal file paths, DB schema, or stack frames. Any security scanner flags this. | LOW | Express 5 error handler already exists — add `process.env.NODE_ENV === 'production'` guard. Return `{ error: "Internal server error" }` only; log full error server-side. Helmet already strips some headers. |
+| Content Security Policy (CSP) | Browser-level XSS mitigation. Expected on any app rendering user content. CDN-hosted frontends (Vercel) can set this via `vercel.json` headers config. | MEDIUM | See CSP section below. Key directives: `default-src 'self'`, `connect-src` for API + WS domains, `script-src 'self'`, `style-src 'self' 'unsafe-inline'` (Tailwind requires this). Deploy in report-only first, then enforce. |
+| User-generated content sanitization (XSS prevention) | Task descriptions and comments can contain user-typed text. If rendered as HTML (rich text or markdown), unsanitized output is a stored XSS vector. | LOW–MEDIUM | DOMPurify on the React client before any `dangerouslySetInnerHTML`. If content is plain text rendered with React's default JSX (no `dangerouslySetInnerHTML`), React already escapes it — sanitization is only needed where HTML is intentionally rendered. Audit all render sites first. |
+| Audit log of sensitive events (owner-visible) | Enterprise SaaS buyers require audit trails. Even at MVP scale, owners need "who did what" visibility for accountability. | MEDIUM | New DB table: `audit_logs`. Events: login, failed_login, logout, session_revoked, invite_sent, invite_accepted, task_assigned, task_unassigned, role_changed, member_removed. Schema: `id`, `event_type`, `actor_user_id`, `target_user_id`, `target_resource_id`, `resource_type`, `metadata` (JSONB), `ip_address`, `created_at`. |
+| Audit log UI (owner-only panel) | The log is useless without a browsable interface. Owners need date range, event type, and actor filters. | MEDIUM | Table view: timestamp, event type (badge), actor (name + avatar), target (resource link), IP. Filters: date range picker, event type multi-select, actor user select. Pagination: cursor-based, 50 rows/page. Read-only — no delete/edit. |
 
 ### Differentiators (Competitive Advantage)
 
-Features that elevate the app beyond "it works" — not expected, but meaningfully better UX.
+Features that go beyond the minimum security bar and meaningfully improve trust or usability.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Optimistic status change with visual rollback toast | If a status change fails (network error, permission error), the badge snaps back AND a toast explains why — users understand what happened rather than seeing silent inconsistency | MEDIUM | `onError` handler shows a `pushToast` error toast + restores previous cache snapshot. The toast infrastructure already exists (`useToast`, `pushToast`). |
-| Narrow WS invalidation (targeted setQueryData) | Instead of invalidating 8+ query keys on every activity event, apply the exact change to the affected query's cached data without a network round-trip | HIGH | When a WS `activity.logged` event arrives with `action: "issue.updated"` and a full issue payload in `details`, call `queryClient.setQueryData(queryKeys.issues.detail(id), updatedIssue)` instead of `invalidateQueries`. Reduces post-WS network traffic by ~80% for issue updates. Requires server to include the updated entity in the WS payload. |
-| Hover-prefetch on issue list rows | Hovering an issue row for 200ms prefetches the issue detail — when the user clicks, the detail page is already in cache | MEDIUM | `queryClient.prefetchQuery(queryKeys.issues.detail(issueRef))` on `onMouseEnter` with a 200ms debounce. No server changes needed. Pattern is proven and standard with TanStack Query. |
-| Persistent gcTime for detail pages | Navigating away from an issue detail and back within 10 minutes shows cached data instantly (no skeleton) | LOW | Set `gcTime: 10 * 60 * 1000` on issue detail queries. Default gcTime is 5 minutes. gcTime > staleTime means data stays in memory even after going stale — stale-while-revalidate pattern. |
+| "Revoke all other sessions" one-click | GitHub has this. High-value for compromised account recovery — one click instead of revoking N sessions individually. | LOW | BetterAuth already has `revokeOtherSessions()`. Add a "Sign out all other devices" button in the session list UI. Zero backend work. |
+| Current session highlighted in session list | Users need to know which session is "this browser" so they don't accidentally revoke themselves. | LOW | Compare `session.token` from the active session against each listed session token. Mark with "Current" badge. Client-only logic. |
+| Progressive lockout (delay, not hard lockout) | Hard account lockout creates a denial-of-service vector (attacker locks out a real user). Progressive delays (1s, 2s, 4s, 8s...) frustrate bots without punishing real users. | MEDIUM | Track failed attempts per account (Redis key: `login:fails:{email}`, TTL 15 min). Instead of refusing the request, add an artificial delay before responding. Express has no built-in delay middleware — implement with `setTimeout` + `Promise`. |
+| Audit log export (CSV) | Enterprise buyers want to export logs for compliance or SIEM ingestion. Low implementation cost, high perceived value. | LOW | Add `GET /api/audit-logs/export?format=csv` returning a streaming CSV. No new UI — just a "Download CSV" button in the audit panel header. |
+| CSP violation reporting endpoint | Report-only mode sends violations to a URL. A lightweight Express endpoint can collect them — turns CSP rollout from blind to observable. | LOW | `POST /api/csp-report` logs violations to server console (or audit log). Set `report-uri /api/csp-report` in the CSP header. Remove after enforcement is stable. |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Optimistic updates on every mutation everywhere | "Make everything instant" — sounds comprehensive | Creates a maintenance burden and subtle bugs. Not every mutation is safe to optimistically apply: creating a subtask generates a server-assigned identifier and sort order; creating a comment involves AI processing flags; file uploads have size-dependent paths. Applying optimistic updates to complex server-computed outcomes causes flicker when the server response differs from the optimistic guess. | Limit optimistic updates to simple field mutations with predictable outcomes: status changes (enum flip), assignment changes (FK swap). Defer to standard mutation + invalidate for creates, deletes, and anything with server-computed fields. |
-| Replacing invalidateQueries with setQueryData for all WS events | "Eliminate all refetches" — sounds faster | Requires the WS payload to carry the full entity shape every time. If the server sends a partial update or the payload shape diverges from the client's cached type, the cache gets corrupted silently. This is harder to debug than a refetch. | Use `setQueryData` only when the WS payload explicitly includes a full entity snapshot (explicitly designed for it). Use `invalidateQueries` with narrow scope for all other events — it's safe and correct by default. |
-| Service Worker caching for API responses | "Cache API calls at the SW level for offline support" | Paperclip issues and agent state change constantly — caching API responses at the SW level can serve dangerously stale data. TanStack Query already provides the right caching model with freshness controls. Adding a SW cache layer creates two competing caching layers with unclear precedence. | Let TanStack Query be the caching layer. Service Workers are appropriate for static assets (already handled by Vercel CDN), not dynamic API data. |
-| JWT bearer tokens everywhere (replacing session cookies) | "Avoid all cookie complexity by switching to JWTs" | BetterAuth's session model is already implemented throughout the codebase. Replacing it requires rewriting auth middleware, session lookup, and every `getSession()` call. JWTs also have their own problems: token invalidation requires a blacklist (another Redis dependency), and localStorage is XSS-vulnerable. | The mobile auth problem is specifically about cross-origin iOS Safari cookie behavior, not a fundamental flaw in session cookies. Fix the deployment topology (custom domain = same-root domain) or enable better-auth bearer plugin as a targeted override for mobile contexts — don't replace the auth system. |
-| Server-Sent Events (SSE) replacing WebSockets | "SSE is simpler and handles proxies better" | The existing `LiveUpdatesProvider` is a mature WebSocket client with reconnection logic, toast suppression, and query invalidation integration. Rewriting it to SSE provides no user-visible improvement for the latency issue, which is likely proxy buffering or missing ping/pong, not a WebSocket vs SSE architectural problem. | Fix the WebSocket latency by diagnosing the actual cause: add heartbeat, check Nginx proxy buffering config on Easypanel (`proxy_buffering off`, `proxy_read_timeout 3600s`), add `Connection: Upgrade` headers if missing. |
+| Hard account lockout after N failures | "Lock the account permanently until admin unlocks" sounds secure | Creates a DoS vector: attacker sends N+1 failed logins to lock out any user they know exists. Also creates support burden (unlock requests). OWASP explicitly discourages hard lockout as a primary control. | Progressive delay (see differentiators above) + IP-level rate limit (already exists via express-rate-limit). Notify the user via email on repeated failures (future — email not in scope for v1.3). |
+| CSRF tokens on all endpoints | "Add CSRF protection everywhere to be safe" | Paperclip uses BetterAuth bearer plugin — API calls carry an `Authorization: Bearer <token>` header that JavaScript sets manually. Browsers cannot auto-attach custom headers in cross-site requests. Classic CSRF does not apply to bearer-authenticated endpoints. Adding CSRF tokens to bearer-authenticated routes adds complexity with zero security benefit. | CSRF protection is only needed on cookie-authenticated state-changing endpoints. Verify which endpoints rely on cookies vs. bearer. If cookie-only flows exist (e.g., the web session for browser users), apply double-submit cookie pattern only there. |
+| Storing audit logs in application DB with DELETE capability | "Let owners delete log entries for GDPR" | Audit logs must be immutable — the entire point is a tamper-proof record. Allowing DELETE turns the audit log into a liability rather than an asset. Also, keeping logs in Supabase PostgreSQL indefinitely will grow the DB significantly. | Write-only audit log table (no UPDATE, no DELETE at app level). Implement DB-level row security to prevent deletes. For GDPR: anonymize (set `actor_user_id = null`) rather than delete. Retention policy: archive or drop rows older than 12 months via a cron job. |
+| Row-Level Security (RLS) in Supabase | "Secure the database at the row level" | RLS is explicitly deferred in PROJECT.md (`Out of Scope`). Single-tenant testing does not require RLS. Adding RLS now requires rewriting every Drizzle query to pass the user context down to the DB layer — a large, risky refactor. | Application-level authorization is already implemented (`assertAssignableUser`, `tasks:assign` permissions). This is sufficient for v1.3. RLS belongs in a future v2.x security hardening milestone. |
+| Rich text editor with HTML storage | "Let users write formatted task descriptions with bold, links, bullets" | If you store raw HTML from a rich text editor, every render site must sanitize. If sanitization is missed anywhere, it's a stored XSS. Managing an allowlist of safe HTML tags is an ongoing maintenance burden. | For v1.3, Paperclip stores plain text. DOMPurify is a safety net for any HTML that slips through — not a license to accept arbitrary HTML. If rich text is added in a future milestone, evaluate server-side sanitization (DOMPurify on Node.js via jsdom) so the DB never stores unsanitized HTML. |
+| Fingerprint-based session binding (canvas/audio fingerprint) | "Bind sessions to the device fingerprint to prevent session hijacking" | Canvas and audio fingerprinting is unreliable across browser versions, breaks in privacy-focused browsers, and is ethically questionable. Session hijacking is better prevented by short session TTLs, secure cookie flags, and TLS — all already configured. | Use `SameSite=Strict` cookies + short expiry + HTTPS (already in BetterAuth config). IP-change detection is a reasonable middle ground: flag sessions where IP changes significantly (different country) and require re-auth — but this is v2.x scope. |
+
+---
+
+## Feature Details by Category
+
+### 1. Active Session Management
+
+**How it works in practice (reference: GitHub "Sessions" settings page):**
+- Table showing each active session: browser/device name parsed from User-Agent, IP address, location (optional, via IP geolocation), "Last active" timestamp
+- Current session highlighted with a "This device" label
+- Each session has a "Revoke" button; current session's Revoke button is disabled or opens a "Sign out" flow instead
+- "Sign out all other devices" button at the top
+
+**BetterAuth capabilities (HIGH confidence — verified against official docs):**
+- `GET /api/auth/list-sessions` — returns array of sessions with `token`, `ipAddress`, `userAgent`, `createdAt`, `expiresAt`
+- `POST /api/auth/revoke-session` — revokes by token
+- `POST /api/auth/revoke-other-sessions` — revokes all except current
+- **Gap:** BetterAuth does not track `lastSeenAt` separately from `createdAt`. "Last seen" must be inferred from `createdAt` or derived from a separate middleware that updates a `lastSeen` Redis key on each authenticated request
+
+**User-Agent parsing:** Use the `ua-parser-js` library (npm) to extract browser name + OS from the raw User-Agent string. Do not display raw UA strings to users.
+
+---
+
+### 2. Brute-Force Login Protection
+
+**Strategy (OWASP-aligned, HIGH confidence):**
+
+Two independent layers:
+1. **IP-level rate limit** — already exists via express-rate-limit (v1.1). Tighten the auth-specific limit to 5 requests/15 min.
+2. **Account-level tracking** — Redis key `login:fails:{email}`. Increment on each failed login. Add a per-attempt delay:
+   - Attempt 1–3: no delay
+   - Attempt 4: 1 second delay
+   - Attempt 5: 2 seconds
+   - Attempt 6+: 4 seconds (cap at 10s)
+   - Reset counter on successful login
+
+**Why not hard lockout:** Creates DoS vector. OWASP explicitly prefers delays or CAPTCHA over permanent lockout.
+
+**Unlock mechanism:** None needed for delay-based approach. The counter expires via Redis TTL (15 min). If hard lockout were used, a time-based auto-unlock (30 min) is better than requiring owner action.
+
+**What endpoint to protect:** Only `/api/auth/sign-in`. Sign-up can keep the global rate limit (prevents account enumeration at scale but doesn't need per-account logic).
+
+---
+
+### 3. Zod Validation Middleware
+
+**Standard pattern (HIGH confidence — 40M+ weekly npm downloads, Zod v3.24):**
+
+```
+validateRequest({ body: schema, params: schema, query: schema })
+  → schema.safeParse(req.body/params/query)
+  → if !success: res.status(400).json({ error: "Validation failed", details: issues })
+  → if success: req.validatedBody = parsed; next()
+```
+
+**Error response format (consistent with existing Paperclip API error shape):**
+```json
+{
+  "error": "Validation failed",
+  "details": [
+    { "path": ["email"], "message": "Invalid email" }
+  ]
+}
+```
+
+**Query param coercion:** Use `z.coerce.number()`, `z.coerce.boolean()` for params that Express delivers as strings.
+
+**Where to apply:** Every state-changing endpoint: POST/PUT/PATCH/DELETE routes. Also any GET routes with non-trivial query params (filters, pagination). Skip GET routes with no params.
+
+**Do not add:** Global validation for all routes including internal health checks or WebSocket upgrade — scope to user-facing API routes only.
+
+---
+
+### 4. CSRF Protection
+
+**When it applies to Paperclip (HIGH confidence — OWASP + multiple verified sources):**
+
+CSRF exploits the browser's automatic cookie attachment. It does not apply to requests that use a custom `Authorization: Bearer <token>` header — because browsers cannot auto-attach custom headers in cross-site requests.
+
+**Paperclip's situation:**
+- Bearer plugin (v1.2): Mobile and WS flows use `Authorization: Bearer <token>` — no CSRF risk
+- Browser cookie sessions: Desktop web users may use cookie-based sessions — CSRF risk exists for cookie-authenticated endpoints
+
+**Decision:** Audit which endpoints are cookie-authenticated vs. bearer-authenticated. Apply CSRF protection only to cookie-authenticated state-changing routes. Use the `csrf-csrf` npm package (double-submit cookie pattern) for stateless protection compatible with the existing Redis setup.
+
+**What NOT to protect:** Bearer-authenticated endpoints, read-only GET endpoints, the WebSocket upgrade.
+
+**Practical scope for v1.3:** If most state-changing routes accept both cookie and bearer, add CSRF protection as a middleware that skips the check when `Authorization: Bearer` header is present. This is the lowest-friction approach.
+
+---
+
+### 5. Content Security Policy (CSP)
+
+**Key directives for Paperclip's stack (MEDIUM confidence — CSP spec + Cloudflare/Vercel docs):**
+
+| Directive | Value | Reason |
+|-----------|-------|--------|
+| `default-src` | `'self'` | Base allowlist — everything defaults to same-origin only |
+| `script-src` | `'self'` | No inline scripts; Vite bundles everything into files |
+| `style-src` | `'self' 'unsafe-inline'` | Tailwind v4 generates inline styles; cannot remove `unsafe-inline` without nonce-based approach |
+| `connect-src` | `'self' https://[api-domain] wss://[api-domain]` | Allow fetch to API + WebSocket upgrades |
+| `img-src` | `'self' data: blob:` | Allow base64 data URIs for avatar previews, blob: for file previews |
+| `frame-ancestors` | `'none'` | Prevents clickjacking (equivalent to X-Frame-Options: DENY) |
+| `object-src` | `'none'` | Blocks Flash/plugins — legacy but still required |
+| `base-uri` | `'self'` | Prevents base tag injection |
+| `form-action` | `'self'` | Restricts form submissions to same origin |
+
+**Deployment approach:**
+- **Current (Vercel):** Set in `vercel.json` under `headers` config. Already has a `vercel.json` for SPA routing — add security headers there.
+- **Future (Cloudflare Pages):** Set in `_headers` file in the static output directory. Format is compatible — no code changes needed, just a different file.
+- **Never use `<meta http-equiv="Content-Security-Policy">`** — meta-based CSP does not support all directives and is processed too late for some resources.
+
+**Rollout order:**
+1. Deploy `Content-Security-Policy-Report-Only` with `/api/csp-report` endpoint
+2. Monitor violations for 48–72 hours
+3. Fix violations (likely: specific font domains, asset URLs, any forgotten inline scripts)
+4. Switch to enforcing `Content-Security-Policy`
+
+**Tailwind v4 caveat:** Tailwind v4 injects some styles at runtime (CSS custom properties), which may trigger `unsafe-inline` style violations. Verify with report-only before enforcing.
+
+---
+
+### 6. User-Generated Content Sanitization
+
+**Scope audit (what Paperclip currently renders — requires code audit to confirm):**
+
+| Content Type | Storage Format | Render Method | XSS Risk |
+|--------------|---------------|---------------|-----------|
+| Task title | Plain text | React JSX text node | None — React escapes |
+| Task description | Plain text (assumed) | React JSX text node | None — React escapes |
+| Comments | Plain text (assumed) | React JSX text node | None — React escapes |
+| Subtask names | Plain text | React JSX text node | None — React escapes |
+| File attachment names | Plain text | React JSX text node | None — React escapes |
+
+**If current render is all JSX text nodes:** DOMPurify is not needed now. The risk is future — if a markdown renderer or rich text viewer is ever added, `dangerouslySetInnerHTML` will be used and DOMPurify becomes mandatory.
+
+**If any render uses `dangerouslySetInnerHTML`:** Apply DOMPurify immediately:
+```
+import DOMPurify from 'dompurify';
+const clean = DOMPurify.sanitize(userContent);
+<div dangerouslySetInnerHTML={{ __html: clean }} />
+```
+
+**Server-side note:** DOMPurify is DOM-dependent. For server-side sanitization (SSR or sanitize-before-store pattern), use `dompurify` with `jsdom` as the DOM implementation. For Paperclip (no SSR), client-side only is fine.
+
+**Recommendation for v1.3:** Audit all render sites. If no `dangerouslySetInnerHTML` found, install DOMPurify as a dependency and add it to the one or two places most likely to be upgraded to HTML rendering (task description, comment body) as a defensive measure. Do not add it to every text render — that's over-engineering.
+
+---
+
+### 7. Audit Log Schema
+
+**Event taxonomy (HIGH confidence — industry standard, OWASP, enterprise SaaS patterns):**
+
+| Event Type | Trigger | Actor | Target | Metadata |
+|------------|---------|-------|--------|----------|
+| `auth.login` | Successful sign-in | user | — | `ip`, `user_agent` |
+| `auth.login_failed` | Failed sign-in attempt | — (unknown user) | `email` (attempted) | `ip`, `fail_count` |
+| `auth.logout` | Explicit sign-out | user | — | `session_token` |
+| `auth.session_revoked` | User revokes a session | user | `session_id` | `revoked_ip`, `revoked_ua` |
+| `auth.all_sessions_revoked` | User revokes all other sessions | user | — | `count` |
+| `invite.sent` | Owner invites a member | owner | `email` | `role` |
+| `invite.accepted` | Invited user joins | user | — | `invite_id` |
+| `invite.revoked` | Owner cancels an invite | owner | `invite_id` | `email` |
+| `member.removed` | Owner removes a member | owner | `user_id` | `email`, `role` |
+| `role.changed` | Role change | owner | `user_id` | `old_role`, `new_role` |
+| `task.assigned` | Task assigned to a user | actor | `issue_id` | `assignee_user_id` |
+| `task.unassigned` | Task unassigned | actor | `issue_id` | `previous_assignee_user_id` |
+
+**DB schema:**
+```sql
+CREATE TABLE audit_logs (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id    UUID NOT NULL REFERENCES companies(id),
+  event_type    TEXT NOT NULL,
+  actor_user_id UUID REFERENCES users(id),  -- NULL for unauthenticated events (failed login)
+  target_user_id UUID REFERENCES users(id), -- NULL when target is not a user
+  target_resource_id TEXT,                  -- issue ID, invite ID, session ID, etc.
+  resource_type TEXT,                       -- 'issue', 'invite', 'session', 'member'
+  metadata      JSONB DEFAULT '{}',         -- flexible; event-specific fields
+  ip_address    INET,
+  user_agent    TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX audit_logs_company_id_created_at ON audit_logs(company_id, created_at DESC);
+CREATE INDEX audit_logs_actor_user_id ON audit_logs(actor_user_id);
+CREATE INDEX audit_logs_event_type ON audit_logs(event_type);
+```
+
+**Retention:** Keep 12 months of data in the active table. Beyond that, archive or drop via a scheduled cron job. Do not expose a delete API to application users — logs are write-only from the app layer.
+
+**Immutability:** No UPDATE or DELETE routes at the application layer. Enforce at DB level with a trigger or Supabase row security rule (no RLS required — just prevent DELETE on this table).
+
+---
+
+### 8. Audit Log UI
+
+**Expected UX (reference: GitHub audit log, Vercel team activity, HighLevel audit logs):**
+
+**Page layout:**
+- Owner-only route (gate with `membershipRole === 'owner'` check on both server and client)
+- Full-width table: Timestamp | Event type (colored badge) | Actor | Target/Resource | IP address
+- Clicking a row expands a detail drawer (right side panel) showing full metadata
+- Sticky filter bar at top: date range picker + event type multi-select + actor dropdown
+
+**Filters:**
+| Filter | Type | Options |
+|--------|------|---------|
+| Date range | Date picker | Last 7 days / Last 30 days / Last 90 days / Custom range |
+| Event type | Multi-select | Grouped: Auth events, Member events, Task events |
+| Actor | Dropdown | All members of the company |
+
+**Pagination:** Cursor-based (use `created_at` + `id` as cursor). 50 rows per page. Do not use offset pagination — audit logs grow large and offset becomes slow.
+
+**Export:** "Download CSV" button in header. Returns all rows matching current filters (no pagination limit on export). Stream the response.
+
+**What NOT to build:**
+- No real-time update of the audit table (users viewing audit logs are not watching a live feed — server polling or WebSocket invalidation for this table is over-engineering)
+- No search-by-text (fuzzy search on JSONB metadata is expensive without a dedicated search index; filter by event type + actor + date range is sufficient for v1.3)
+- No audit log for the audit log itself (recursive, adds noise)
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Optimistic status change]
-    └──requires──> [useMutation with onMutate/onError/onSettled wired to existing queryKeys]
-    └──requires──> [existing queryKeys.issues.detail and queryKeys.issues.list structure]
-    └──enhances──> [My Tasks page fix] (optimistic update on My Tasks query key too)
+[Active session list]
+    └──requires──> [BetterAuth list-sessions API — already exists]
+    └──requires──> [ua-parser-js for User-Agent display]
+    └──enhances──> [audit log: session_revoked event]
 
-[Optimistic assignment change]
-    └──requires──> [same useMutation pattern as status change]
-    └──reuses──> [applyOptimisticIssueCommentUpdate logic already in optimistic-issue-comments.ts]
+[Revoke session]
+    └──requires──> [active session list] (user must see sessions to revoke them)
+    └──requires──> [BetterAuth revoke-session API — already exists]
+    └──triggers──> [audit_log event: auth.session_revoked]
 
-[Aggressive caching (staleTime)]
-    └──requires──> [nothing new — QueryClient configuration only]
-    └──enhances──> [hover-prefetch] (prefetch populates cache that staleTime keeps fresh)
+[Brute-force protection]
+    └──requires──> [Redis — already installed]
+    └──enhances──> [audit log: auth.login_failed events become more meaningful with fail_count]
 
-[My Tasks page fix]
-    └──requires──> [session.user.id available before query fires (enabled guard)]
-    └──depends-on──> [auth.session query resolving correctly]
+[Zod validation middleware]
+    └──requires──> [Zod — already a dependency in the project]
+    └──blocks──> [nothing — additive to existing routes]
+    └──enables──> [safe error responses become consistent]
 
-[WebSocket heartbeat]
-    └──requires──> [server-side handler for {"type":"ping"} → responds {"type":"pong"}]
-    └──requires──> [client-side timer in LiveUpdatesProvider to send ping and await pong]
-    └──depends-on──> [existing WebSocket infrastructure in LiveUpdatesProvider]
+[CSRF protection]
+    └──requires──> [audit of which routes are cookie-authenticated vs. bearer]
+    └──requires──> [csrf-csrf npm package]
+    └──must-not-break──> [bearer token flows already in production]
 
-[Narrow WS invalidation (setQueryData)]
-    └──requires──> [server sends full entity payload in WS event details field]
-    └──depends-on──> [WebSocket heartbeat working correctly (dead connection detection)]
+[CSP headers]
+    └──requires──> [knowledge of all external domains API calls go to]
+    └──requires──> [connect-src includes WebSocket domain (wss://)]
+    └──requires──> [report-only phase before enforcement]
+    └──enhances──> [DOMPurify: defense-in-depth, CSP is the second layer]
+    └──Vercel: vercel.json headers config]
+    └──Cloudflare Pages: _headers file]
 
-[Mobile auth fix — custom domain approach]
-    └──requires──> [DNS CNAME for api.paperclip.ai → Easypanel backend]
-    └──requires──> [BetterAuth BETTER_AUTH_URL updated to custom domain]
-    └──requires──> [CORS updated to allow new frontend domain]
-    └──highest-impact──> [resolves iOS Safari cookie blocking at the root]
+[Content sanitization (DOMPurify)]
+    └──requires──> [code audit of all dangerouslySetInnerHTML uses]
+    └──independent──> [all other security features]
 
-[Mobile auth fix — bearer plugin fallback]
-    └──requires──> [better-auth bearer plugin enabled server-side]
-    └──requires──> [client detects cookie failure and falls back to Authorization header]
-    └──complexity──> [more client-side auth plumbing; doesn't fix the cookie issue for non-bearer flows]
+[Audit log DB table]
+    └──requires──> [Drizzle migration for audit_logs table]
+    └──requires──> [company_id from existing companies table]
+    └──blocks──> [audit log UI — UI cannot exist without data]
+
+[Audit log writes (instrumentation)]
+    └──requires──> [audit_logs table exists]
+    └──requires──> [auth middleware passes request context (IP, UA) to route handlers]
+    └──scattered-across──> [auth routes, invite routes, task assignment routes, member management routes]
+
+[Audit log UI]
+    └──requires──> [audit_logs table + data]
+    └──requires──> [owner-only route guard — pattern already exists in the codebase]
+    └──requires──> [shadcn/ui Table, DatePicker, Select components — check which are already installed]
+    └──optional──> [CSV export endpoint]
 ```
 
 ### Dependency Notes
 
-- **Optimistic mutations require correct query key targeting:** The `queryKeys` structure already exists and is well-scoped. Optimistic updates must snapshot and update both `issues.detail(id)` and `issues.list(companyId)` (and `issues.listAssignedToMe`) since both surfaces show status/assignee.
-- **My Tasks fix is independent of optimistic UI:** It's a query `enabled` guard / key correctness bug, not a caching strategy issue. It should be fixed in the same phase but requires no shared code.
-- **Heartbeat before narrow invalidation:** Dead connection detection is required before optimizing invalidation granularity. If the socket silently dies and we've removed broad invalidation, users see stale data with no recovery path.
-- **Mobile auth — custom domain is lowest-friction for users.** Bearer plugin approach works but requires client-side complexity. If the Easypanel deployment can get a custom domain, that removes the cross-origin problem for all browsers without code changes.
+- **Audit log instrumentation spans multiple route files.** This is not one file change — every event source (auth, invites, assignments, members) needs a call to `writeAuditLog(event)`. Plan for this cross-cutting nature in implementation.
+- **CSRF audit must precede CSRF implementation.** Do not add CSRF tokens to all routes blindly. The bearer vs. cookie split in Paperclip means some routes need it, some don't. Wrong application breaks mobile auth.
+- **CSP report-only must precede enforcement.** Enforcing a wrong CSP breaks the app for all users. The report-only phase is non-negotiable.
+- **Zod validation is independent and low-risk.** It can be added incrementally — start with auth routes, then expand to all POST/PUT routes. No dependencies on other v1.3 features.
 
 ---
 
 ## MVP Definition
 
-### v1.2 Launch With (minimum for "feels fast" goal)
+### v1.3 Launch With (security hardening complete)
 
-These are the features required to meet the v1.2 goal of making every interaction feel instant and fixing mobile auth.
+These are the features required to call v1.3 "security hardened":
 
-- [ ] **Optimistic status change** — status badge flips immediately on click, rolls back with toast on error
-- [ ] **Optimistic assignment change** — assignee field updates immediately, rolls back on error
-- [ ] **staleTime: 2 minutes on issue lists** — navigation between list pages feels instant on revisit
-- [ ] **My Tasks page renders correctly** — the known empty-state bug fixed (session-aware query guard)
-- [ ] **WebSocket heartbeat (ping/pong, 25s interval)** — dead connections detected and reconnected within 30 seconds
-- [ ] **Mobile login fix** — iOS Safari and Android Chrome users can log in and stay logged in
+- [ ] **Brute-force protection on `/api/auth/sign-in`** — IP rate limit tightened + per-account delay counter in Redis
+- [ ] **Zod validation middleware on all POST/PUT/PATCH routes** — consistent 400 errors, no malformed data reaches business logic
+- [ ] **Safe error responses in production** — no stack traces, no internal paths in 5xx responses
+- [ ] **CSP headers in report-only** — deployed to Vercel, collecting violations, ready to enforce
+- [ ] **Active session list UI** — user can see their sessions (device, IP, created date)
+- [ ] **Revoke individual session** — user can remove a specific session
+- [ ] **Audit log table (DB migration)** — write-only table with correct schema
+- [ ] **Audit log instrumentation** — events written for: login, failed login, logout, invite sent/accepted, task assigned, role changed
+- [ ] **Audit log UI (owner-only)** — filterable table with date range + event type + actor filters, cursor pagination
 
-### Add After Core Features Verified (v1.2 polish)
+### Add After Core Verified (v1.3 polish)
 
-Add once the above are working and stable. These enhance the experience but don't fix broken flows.
+- [ ] **CSP enforcement** — switch from report-only to enforcing after 48-72h of clean reports
+- [ ] **"Revoke all other sessions" button** — one-click for compromised account recovery (zero backend work — BetterAuth API exists)
+- [ ] **DOMPurify on all `dangerouslySetInnerHTML` sites** — depends on code audit finding any such sites
+- [ ] **Audit log CSV export** — "Download CSV" button, streams filtered results
+- [ ] **Progressive login delay** — per-account delay counter (more user-friendly than hard lockout)
+- [ ] **CSRF protection on cookie-authenticated routes** — depends on CSRF audit identifying affected routes
 
-- [ ] **Rollback error toast** — show a specific error message when optimistic rollback occurs (not just silent revert)
-- [ ] **gcTime: 10 minutes on issue detail** — navigating back to a detail page renders immediately
-- [ ] **Narrow WS invalidation for issue.updated events** — replace 8-key invalidation flood with targeted setQueryData when server payload includes full issue
-- [ ] **Hover-prefetch on issue rows** — 200ms hover delay prefetches the detail before click
+### Future Consideration (v2.x)
 
-### Future Consideration (v1.3+)
-
-- [ ] **Prefetch on route hover** — prefetch issue lists when user hovers nav items (router loader integration)
-- [ ] **Optimistic comment submission** — the `OptimisticIssueComment` infrastructure exists; wire it through useMutation properly
-- [ ] **Background sync on reconnect** — after WS reconnects, trigger a targeted state-sync for the visible entity rather than relying on the next event
-- [ ] **Progressive Web App (PWA) shell caching** — Vite PWA plugin for asset caching; independent of API caching
+- [ ] **IP geolocation in session list** — city/country parsed from IP (requires external API, adds latency)
+- [ ] **Suspicious login email alerts** — notify user when login from new IP/device (requires email, out of scope v1.x)
+- [ ] **Audit log retention cron** — auto-archive rows older than 12 months (operational, not a security feature per se)
+- [ ] **Row-Level Security (RLS)** — explicitly deferred per PROJECT.md
 
 ---
 
@@ -148,97 +391,46 @@ Add once the above are working and stable. These enhance the experience but don'
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Optimistic status change | HIGH — most frequent action in any task app | MEDIUM — useMutation + onMutate + rollback | P1 |
-| My Tasks page empty-state bug | HIGH — broken feature from v1.1, users can't trust the view | LOW — query enabled guard + key audit | P1 |
-| staleTime on issue lists | HIGH — eliminates spinner on most navigations | LOW — QueryClient config change | P1 |
-| Mobile login fix | HIGH — users on iOS/Android can't log in at all | MEDIUM–HIGH — depends on approach (domain vs bearer) | P1 |
-| WebSocket heartbeat | MEDIUM — addresses the known "WS is slow/laggy" complaint | MEDIUM — server + client ping/pong loop | P1 |
-| Optimistic assignment change | MEDIUM — less frequent than status; same code pattern | LOW (reuses status change pattern) | P2 |
-| Rollback error toast | MEDIUM — makes failures legible instead of silent | LOW — uses existing toast infrastructure | P2 |
-| gcTime on issue detail | MEDIUM — improves back-navigation speed | LOW — QueryClient config | P2 |
-| Narrow WS invalidation | MEDIUM — reduces post-WS refetch traffic | HIGH — requires server payload changes | P2 |
-| Hover-prefetch on issue rows | LOW — nice-to-have, not fixing anything broken | LOW | P3 |
+| Zod validation middleware | HIGH — prevents bugs + security holes | MEDIUM — all routes | P1 |
+| Safe error responses | HIGH — no internal leaks in production | LOW — error handler guard | P1 |
+| Brute-force protection (IP rate limit tightening) | HIGH — attacks are real | LOW — existing library | P1 |
+| CSP headers (report-only) | HIGH — XSS mitigation | LOW — vercel.json config | P1 |
+| Audit log DB + instrumentation | HIGH — compliance and accountability | MEDIUM — schema + cross-cutting writes | P1 |
+| Audit log UI | MEDIUM — owner visibility | MEDIUM — table + filters + pagination | P1 |
+| Active session list + revoke | MEDIUM — user control over sessions | LOW — BetterAuth APIs exist | P1 |
+| CSP enforcement | HIGH — actual protection | LOW (after report-only phase) | P2 |
+| "Revoke all other sessions" | MEDIUM — convenience for compromised accounts | LOW — API already exists | P2 |
+| DOMPurify on `dangerouslySetInnerHTML` sites | HIGH if sites exist, ZERO if they don't | LOW per site | P2 |
+| Progressive login delay (account-level) | MEDIUM — better UX than hard lockout | MEDIUM — Redis + delay logic | P2 |
+| CSRF protection | MEDIUM — applies only to cookie-auth routes | MEDIUM — requires audit first | P2 |
+| Audit log CSV export | LOW (enterprise feature, no users demanding it yet) | LOW | P3 |
+| IP geolocation in session list | LOW — nice-to-have visual | HIGH (external API dependency) | P3 |
 
 **Priority key:**
-- P1: Required for v1.2 goal — "instant interactions + mobile auth works"
-- P2: Should ship in v1.2 if implementation is clean; defer to v1.2.1 if it adds risk
-- P3: Defer to v1.3
-
----
-
-## Implementation Patterns (Verified)
-
-### Optimistic Status Change (TanStack Query v5 pattern)
-
-The canonical TanStack Query v5 optimistic mutation flow — verified against official docs:
-
-```
-onMutate:
-  1. cancelQueries({ queryKey: issues.detail(id) })
-  2. snapshot = getQueryData(issues.detail(id))
-  3. setQueryData(issues.detail(id), { ...snapshot, status: newStatus })
-  4. return { snapshot }
-
-onError:
-  1. setQueryData(issues.detail(id), context.snapshot)
-  2. pushToast({ title: "Status change failed", tone: "error" })
-
-onSettled:
-  1. invalidateQueries({ queryKey: issues.detail(id) })
-  2. invalidateQueries({ queryKey: issues.list(companyId) })
-  3. invalidateQueries({ queryKey: issues.listAssignedToMe(companyId) })
-```
-
-Use `onSettled` not `onSuccess` for invalidation — runs regardless of outcome, ensuring eventual consistency even when rollback fires.
-
-### WebSocket Heartbeat Pattern (25-second interval, verified against industry standards)
-
-Production-recommended interval for a system behind a load balancer:
-
-```
-Client:
-  - setInterval: every 25 seconds, send JSON.stringify({ type: "ping" })
-  - set a 5-second timeout waiting for pong
-  - if timeout fires without pong: closeSocket() → scheduleReconnect()
-  - on message: if type === "pong", clear the pong timeout
-
-Server (live-events.ts):
-  - on message: if type === "ping", ws.send(JSON.stringify({ type: "pong" }))
-```
-
-The existing `LiveUpdatesProvider` handles `onmessage` — add pong detection there. The existing `scheduleReconnect` function handles reconnection.
-
-### Mobile Auth — Approach Priority
-
-1. **Custom domain (recommended):** `api.paperclip.ai` → Easypanel backend. Same root domain as `app.paperclip.ai` → Vercel frontend. Cookies with `domain: .paperclip.ai` are first-party on both. No code changes to auth. Requires DNS config + BetterAuth BETTER_AUTH_URL + CORS update.
-
-2. **Bearer plugin fallback (if custom domain not available):** Enable `bearer()` plugin in BetterAuth server config. After sign-in, client reads token from response header and stores in `localStorage`. Outgoing requests include `Authorization: Bearer <token>`. better-auth docs explicitly warn this approach requires careful implementation to avoid security issues — limit to authenticated API calls only, never expose the token to untrusted code.
-
-3. **SameSite=None with `partitioned: false`:** Set `partitioned: false` in BetterAuth cookie config. Requires HTTPS on both origins (already true). Known to fail on some iOS versions due to ITP regardless of SameSite attribute. This is the least reliable option.
-
----
-
-## Known Gaps to Address in Implementation
-
-- **WS latency root cause unknown:** The "WebSocket is slow" complaint may be proxy buffering (Nginx on Easypanel missing `proxy_buffering off` and `proxy_read_timeout 3600s`) rather than application code. Before writing heartbeat code, verify Nginx config on Easypanel — this may be a 2-line infra fix.
-- **iOS Safari ITP behavior is moving:** Apple changes ITP behavior in iOS updates. The custom domain approach is the only approach that is stable across iOS versions because it eliminates cross-origin entirely.
-- **Narrow WS invalidation requires server payload audit:** The `activity.logged` WS event currently sends `details` with partial data (enough for toast messages). Adding full entity snapshots to `details` for `setQueryData` use requires auditing what `publishLiveEvent` sends in `server/src/services/live-events.ts` — this is a server change, not just client-side.
+- P1: Required for v1.3 security hardening goal
+- P2: Meaningful security improvement, add when P1 is stable
+- P3: Deferred — adds complexity without proportional near-term value
 
 ---
 
 ## Sources
 
-- [TanStack Query v5 Optimistic Updates — Official Docs](https://tanstack.com/query/v5/docs/framework/react/examples/optimistic-updates-cache) — onMutate/onError/onSettled pattern, use onSettled not onSuccess (HIGH confidence)
-- [TanStack Query staleTime vs gcTime — Official Docs](https://tanstack.com/query/latest/docs/framework/react/guides/caching) — staleTime 0 default, gcTime 5 minutes default, stale-while-revalidate behavior (HIGH confidence)
-- [TanStack Query Prefetching — Official Docs](https://tanstack.com/query/latest/docs/framework/react/guides/prefetching) — ensureQueryData, queryClient.prefetchQuery on hover (HIGH confidence)
-- [Better Auth Bearer Plugin — Official Docs](https://better-auth.com/docs/plugins/bearer) — bearer() plugin setup, explicit warning about mobile-only use (HIGH confidence)
-- [Better Auth Cross-Domain Cookie Issues — GitHub #4038](https://github.com/better-auth/better-auth/issues/4038) — partitioned: false fix, custom domain as correct solution, public suffix domains cause failures (MEDIUM confidence)
-- [WebSocket Heartbeat Patterns — Ably Best Practices](https://ably.com/topic/websocket-architecture-best-practices) — 25-second heartbeat for load-balanced environments, exponential backoff + jitter (HIGH confidence)
-- [Nginx WebSocket Proxy — nginx.org official](http://nginx.org/en/docs/http/websocket.html) — Upgrade header passthrough requirement, proxy_read_timeout for long-lived connections (HIGH confidence)
-- [iOS Safari Cross-Site Cookie Behavior — better-auth discussion #2826](https://github.com/better-auth/better-auth/discussions/2826) — Safari ITP blocks cross-site cookies regardless of SameSite=None in some configurations (MEDIUM confidence)
-- [React 19 useOptimistic hook — FreeCodeCamp](https://www.freecodecamp.org/news/how-to-use-the-optimistic-ui-pattern-with-the-useoptimistic-hook-in-react/) — React 19 native optimistic pattern; TanStack Query useMutation onMutate is preferred for apps already using TanStack Query (MEDIUM confidence)
+- [OWASP Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html) — session metadata, revocation, tracking requirements (HIGH confidence)
+- [OWASP Blocking Brute Force Attacks](https://owasp.org/www-community/controls/Blocking_Brute_Force_Attacks) — progressive delay preferred over hard lockout (HIGH confidence)
+- [OWASP CSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html) — when CSRF applies, double-submit cookie pattern (HIGH confidence)
+- [OWASP Content Security Policy Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html) — directives, nonce-based CSP (HIGH confidence)
+- [Better Auth Session Management Docs](https://better-auth.com/docs/concepts/session-management) — list-sessions, revoke-session, revokeOtherSessions APIs, session metadata fields (HIGH confidence)
+- [Better Auth Multi-Session Plugin](https://better-auth.com/docs/plugins/multi-session) — multi-session revoke patterns (HIGH confidence)
+- [csrf-csrf npm package](https://github.com/Psifi-Solutions/csrf-csrf) — double-submit cookie pattern for Express (MEDIUM confidence)
+- [Zod v3.24 validation middleware for Express](https://dev.to/1xapi/how-to-validate-api-requests-with-zod-in-nodejs-2026-guide-3ibm) — safeParse pattern, z.coerce for query params (HIGH confidence — 40M weekly downloads)
+- [DOMPurify GitHub](https://github.com/cure53/DOMPurify) — DOM-based sanitization, React integration (HIGH confidence)
+- [Cloudflare Pages _headers file docs](https://developers.cloudflare.com/pages/configuration/headers/) — _headers file format for CSP on Cloudflare Pages (HIGH confidence)
+- [Vercel security headers docs](https://vercel.com/docs/headers/security-headers) — vercel.json headers config (HIGH confidence)
+- [EnterpriseReady.io Audit Logging Guide](https://www.enterpriseready.io/features/audit-log/) — event taxonomy, immutability requirement, schema best practices (MEDIUM confidence)
+- [Audit Logging Design in SaaS Systems — Agnite Studio](https://agnitestudio.com/blog/audit-logging-saas/) — who/what/when/where schema, compliance considerations (MEDIUM confidence)
+- [CSRF Tokens in React: When You Actually Need Them](https://cybersierra.co/blog/csrf-tokens-react-need-them/) — bearer token SPA does not need CSRF, cookie-auth does (HIGH confidence — consistent with OWASP)
 
 ---
 
-*Feature research for: Paperclip v1.2 Performance & Mobile Auth*
+*Feature research for: Paperclip v1.3 Security Hardening*
 *Researched: 2026-04-05*
