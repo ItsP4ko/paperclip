@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { buildAgentMentionHref, buildProjectMentionHref } from "@paperclipai/shared";
 import { ThemeProvider } from "../context/ThemeContext";
@@ -45,5 +45,13 @@ describe("MarkdownBody", () => {
     expect(html).toContain('href="/projects/project-456"');
     expect(html).toContain('data-mention-kind="project"');
     expect(html).toContain("--paperclip-mention-project-color:#336699");
+  });
+
+  it("MarkdownBody source calls DOMPurify.sanitize with SVG profile", async () => {
+    const fs = await import("fs");
+    const source = fs.readFileSync("src/components/MarkdownBody.tsx", "utf8");
+    expect(source).toContain('import DOMPurify from "dompurify"');
+    expect(source).toContain("DOMPurify.sanitize(svg,");
+    expect(source).toContain("USE_PROFILES: { svg: true, svgFilters: true }");
   });
 });

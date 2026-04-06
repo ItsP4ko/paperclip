@@ -1,6 +1,7 @@
 import { isValidElement, useEffect, useId, useState, type ReactNode } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import DOMPurify from "dompurify";
 import { cn } from "../lib/utils";
 import { useTheme } from "../context/ThemeContext";
 import { mentionChipInlineStyle, parseMentionChipHref } from "../lib/mention-chips";
@@ -76,7 +77,7 @@ function MermaidDiagramBlock({ source, darkMode }: { source: string; darkMode: b
   return (
     <div className="paperclip-mermaid">
       {svg ? (
-        <div dangerouslySetInnerHTML={{ __html: svg }} />
+        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } }) }} />
       ) : (
         <>
           <p className={cn("paperclip-mermaid-status", error && "paperclip-mermaid-status-error")}>
