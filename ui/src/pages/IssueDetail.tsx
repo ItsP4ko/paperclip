@@ -31,7 +31,7 @@ import {
   type IssueCommentReassignment,
   type OptimisticIssueComment,
 } from "../lib/optimistic-issue-comments";
-import { applyOptimisticStatus, applyOptimisticAssignee, createOptimisticSubtaskStub } from "../lib/optimistic-issue-mutations";
+import { applyOptimisticStatus, applyOptimisticAssignee, applyOptimisticIssuePatch, createOptimisticSubtaskStub, mergeIssueInList } from "../lib/optimistic-issue-mutations";
 import { useProjectOrder } from "../hooks/useProjectOrder";
 import { relativeTime, cn, formatTokens, visibleRunCostUsd } from "../lib/utils";
 import { InlineEditor } from "../components/InlineEditor";
@@ -647,37 +647,48 @@ export function IssueDetail() {
     mutationFn: (data: Record<string, unknown>) => issuesApi.update(issueId!, data),
     onMutate: async (data) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.issues.detail(issueId!) });
+      if (selectedCompanyId) {
+        await queryClient.cancelQueries({ queryKey: ["issues", selectedCompanyId] });
+      }
       const previous = queryClient.getQueryData<Issue>(queryKeys.issues.detail(issueId!));
+      const previousLists = selectedCompanyId
+        ? queryClient.getQueriesData<Issue[]>({ queryKey: ["issues", selectedCompanyId] })
+        : [];
 
-      // Optimistic patch: assignee changes
-      if ("assigneeAgentId" in data || "assigneeUserId" in data) {
-        queryClient.setQueryData<Issue>(
-          queryKeys.issues.detail(issueId!),
-          (old) => applyOptimisticAssignee(old, {
-            assigneeAgentId: (data.assigneeAgentId as string | null) ?? old?.assigneeAgentId ?? null,
-            assigneeUserId: (data.assigneeUserId as string | null) ?? old?.assigneeUserId ?? null,
-          }),
+      // Generic optimistic merge of any whitelisted scalar fields (title,
+      // description, status, priority, assignee*, project, goal, parent).
+      queryClient.setQueryData<Issue>(
+        queryKeys.issues.detail(issueId!),
+        (old) => applyOptimisticIssuePatch(old, data),
+      );
+
+      // Mirror the patch into every cached list query for this company so
+      // navigating back to a list shows the new state immediately.
+      if (selectedCompanyId) {
+        queryClient.setQueriesData<Issue[]>(
+          { queryKey: ["issues", selectedCompanyId] },
+          (old) => mergeIssueInList(old, issueId!, data),
         );
       }
 
-      // Optimistic patch: status changes (from StatusIcon onChange)
-      if ("status" in data && typeof data.status === "string") {
-        queryClient.setQueryData<Issue>(
-          queryKeys.issues.detail(issueId!),
-          (old) => applyOptimisticStatus(old, data.status as Issue["status"]),
-        );
-      }
-
-      return { previous };
+      return { previous, previousLists };
     },
     onError: (_err, _data, context) => {
       if (context?.previous) {
         queryClient.setQueryData(queryKeys.issues.detail(issueId!), context.previous);
       }
+      if (context?.previousLists) {
+        for (const [queryKey, data] of context.previousLists) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
       pushToast({ title: "Update failed", body: "Could not save changes. Try again.", tone: "error" });
     },
     onSettled: () => {
       invalidateIssue();
+      if (selectedCompanyId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(selectedCompanyId) });
+      }
     },
   });
 
@@ -687,16 +698,33 @@ export function IssueDetail() {
     mutationFn: (status: string) => issuesApi.update(issueId!, { status }),
     onMutate: async (status) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.issues.detail(issueId!) });
+      if (selectedCompanyId) {
+        await queryClient.cancelQueries({ queryKey: ["issues", selectedCompanyId] });
+      }
       const previous = queryClient.getQueryData<Issue>(queryKeys.issues.detail(issueId!));
+      const previousLists = selectedCompanyId
+        ? queryClient.getQueriesData<Issue[]>({ queryKey: ["issues", selectedCompanyId] })
+        : [];
       queryClient.setQueryData<Issue>(
         queryKeys.issues.detail(issueId!),
         (old) => applyOptimisticStatus(old, status as Issue["status"]),
       );
-      return { previous };
+      if (selectedCompanyId) {
+        queryClient.setQueriesData<Issue[]>(
+          { queryKey: ["issues", selectedCompanyId] },
+          (old) => mergeIssueInList(old, issueId!, { status }),
+        );
+      }
+      return { previous, previousLists };
     },
     onError: (_err, _status, context) => {
       if (context?.previous) {
         queryClient.setQueryData(queryKeys.issues.detail(issueId!), context.previous);
+      }
+      if (context?.previousLists) {
+        for (const [queryKey, data] of context.previousLists) {
+          queryClient.setQueryData(queryKey, data);
+        }
       }
       pushToast({ title: "Status update failed", body: "Could not change status. Try again.", tone: "error" });
     },

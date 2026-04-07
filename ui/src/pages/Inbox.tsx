@@ -1138,24 +1138,62 @@ export function Inbox() {
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => approvalsApi.approve(id),
+    onMutate: async (id) => {
+      if (!selectedCompanyId) return {};
+      await queryClient.cancelQueries({ queryKey: ["approvals", selectedCompanyId] });
+      const previous = queryClient.getQueriesData<unknown>({ queryKey: ["approvals", selectedCompanyId] });
+      queryClient.setQueriesData<{ id: string }[] | undefined>(
+        { queryKey: ["approvals", selectedCompanyId] },
+        (old) => Array.isArray(old) ? old.filter((a) => a?.id !== id) : old,
+      );
+      return { previous };
+    },
     onSuccess: (_approval, id) => {
       setActionError(null);
-      queryClient.invalidateQueries({ queryKey: queryKeys.approvals.list(selectedCompanyId!) });
       navigate(`/approvals/${id}?resolved=approved`);
     },
-    onError: (err) => {
+    onError: (err, _id, context) => {
+      if (context && "previous" in context && context.previous) {
+        for (const [queryKey, data] of context.previous as Array<[readonly unknown[], unknown]>) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
       setActionError(err instanceof Error ? err.message : "Failed to approve");
+    },
+    onSettled: () => {
+      if (selectedCompanyId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.approvals.list(selectedCompanyId) });
+      }
     },
   });
 
   const rejectMutation = useMutation({
     mutationFn: (id: string) => approvalsApi.reject(id),
+    onMutate: async (id) => {
+      if (!selectedCompanyId) return {};
+      await queryClient.cancelQueries({ queryKey: ["approvals", selectedCompanyId] });
+      const previous = queryClient.getQueriesData<unknown>({ queryKey: ["approvals", selectedCompanyId] });
+      queryClient.setQueriesData<{ id: string }[] | undefined>(
+        { queryKey: ["approvals", selectedCompanyId] },
+        (old) => Array.isArray(old) ? old.filter((a) => a?.id !== id) : old,
+      );
+      return { previous };
+    },
     onSuccess: () => {
       setActionError(null);
-      queryClient.invalidateQueries({ queryKey: queryKeys.approvals.list(selectedCompanyId!) });
     },
-    onError: (err) => {
+    onError: (err, _id, context) => {
+      if (context && "previous" in context && context.previous) {
+        for (const [queryKey, data] of context.previous as Array<[readonly unknown[], unknown]>) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
       setActionError(err instanceof Error ? err.message : "Failed to reject");
+    },
+    onSettled: () => {
+      if (selectedCompanyId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.approvals.list(selectedCompanyId) });
+      }
     },
   });
 
@@ -1245,15 +1283,30 @@ export function Inbox() {
 
   const archiveIssueMutation = useMutation({
     mutationFn: (id: string) => issuesApi.archiveFromInbox(id),
-    onMutate: (id) => {
+    onMutate: async (id) => {
       setActionError(null);
       setArchivingIssueIds((prev) => new Set(prev).add(id));
+      if (!selectedCompanyId) return { previousIssues: [] as Array<[readonly unknown[], unknown]> };
+      // Optimistically remove the archived issue from every cached inbox
+      // list query so the row disappears the moment the user clicks.
+      await queryClient.cancelQueries({ queryKey: ["issues", selectedCompanyId] });
+      const previousIssues = queryClient.getQueriesData<unknown>({ queryKey: ["issues", selectedCompanyId] });
+      queryClient.setQueriesData<Array<{ id: string }> | undefined>(
+        { queryKey: ["issues", selectedCompanyId] },
+        (old) => Array.isArray(old) ? old.filter((issue) => issue?.id !== id) : old,
+      );
+      return { previousIssues };
     },
     onSuccess: () => {
       invalidateInboxIssueQueries();
     },
-    onError: (err, id) => {
+    onError: (err, id, context) => {
       setActionError(err instanceof Error ? err.message : "Failed to archive issue");
+      if (context?.previousIssues) {
+        for (const [queryKey, data] of context.previousIssues as Array<[readonly unknown[], unknown]>) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
       setArchivingIssueIds((prev) => {
         const next = new Set(prev);
         next.delete(id);

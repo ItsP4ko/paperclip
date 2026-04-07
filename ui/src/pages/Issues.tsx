@@ -8,6 +8,8 @@ import { heartbeatsApi } from "../api/heartbeats";
 import { useCompany } from "../context/CompanyContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { queryKeys } from "../lib/queryKeys";
+import { applyOptimisticIssuePatch, mergeIssueInList } from "../lib/optimistic-issue-mutations";
+import type { Issue } from "@paperclipai/shared";
 import { createIssueDetailLocationState } from "../lib/issueDetailBreadcrumb";
 import { EmptyState } from "../components/EmptyState";
 import { IssuesList } from "../components/IssuesList";
@@ -91,9 +93,43 @@ export function Issues() {
   const updateIssue = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       issuesApi.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(selectedCompanyId!) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.issues.listAssignedToMe(selectedCompanyId!) });
+    onMutate: async ({ id, data }) => {
+      if (!selectedCompanyId) return {};
+      // Cancel anything in flight that could overwrite our optimistic patch.
+      await queryClient.cancelQueries({ queryKey: ["issues", selectedCompanyId] });
+      await queryClient.cancelQueries({ queryKey: queryKeys.issues.detail(id) });
+
+      // Snapshot every list cache that matches this company so we can roll back.
+      const previousLists = queryClient.getQueriesData<Issue[]>({ queryKey: ["issues", selectedCompanyId] });
+      const previousDetail = queryClient.getQueryData<Issue>(queryKeys.issues.detail(id));
+
+      queryClient.setQueriesData<Issue[]>(
+        { queryKey: ["issues", selectedCompanyId] },
+        (old) => mergeIssueInList(old, id, data),
+      );
+      queryClient.setQueryData<Issue>(
+        queryKeys.issues.detail(id),
+        (old) => applyOptimisticIssuePatch(old, data),
+      );
+
+      return { previousLists, previousDetail };
+    },
+    onError: (_err, { id }, context) => {
+      if (context?.previousLists) {
+        for (const [queryKey, data] of context.previousLists) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+      if (context?.previousDetail) {
+        queryClient.setQueryData(queryKeys.issues.detail(id), context.previousDetail);
+      }
+    },
+    onSettled: (_data, _err, { id }) => {
+      if (selectedCompanyId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(selectedCompanyId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.issues.listAssignedToMe(selectedCompanyId) });
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.issues.detail(id) });
     },
   });
 
