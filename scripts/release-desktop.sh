@@ -19,7 +19,13 @@ console.log('Updated tauri.conf.json to v$VERSION');
 "
 
 # Build with signing key
-export TAURI_SIGNING_PRIVATE_KEY_PATH="${TAURI_SIGNING_PRIVATE_KEY_PATH:-$HOME/.tauri/relay-control.key}"
+KEY_PATH="${TAURI_SIGNING_PRIVATE_KEY_PATH:-$HOME/.tauri/relay-control.key}"
+if [ ! -f "$KEY_PATH" ]; then
+  echo "Error: signing key not found at $KEY_PATH"
+  exit 1
+fi
+export TAURI_SIGNING_PRIVATE_KEY="$(cat "$KEY_PATH")"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}"
 npx pnpm desktop:build
 
 # Locate artifacts (macOS ARM)
@@ -35,6 +41,10 @@ fi
 SIGNATURE=$(cat "$SIG")
 TARGZ_FILENAME=$(basename "$TARGZ")
 PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+
+# Create version-less DMG copy so /releases/latest/download/Relay.Control_aarch64.dmg works
+DMG_VERSIONLESS="$(dirname "$DMG")/Relay.Control_aarch64.dmg"
+cp "$DMG" "$DMG_VERSIONLESS"
 
 # Generate latest.json
 cat > /tmp/latest.json <<EOF
@@ -57,6 +67,7 @@ cat /tmp/latest.json
 # Create GitHub release and upload all artifacts
 gh release create "v$VERSION" \
   "$DMG" \
+  "$DMG_VERSIONLESS" \
   "$TARGZ" \
   "$SIG" \
   "/tmp/latest.json" \

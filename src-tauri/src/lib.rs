@@ -2,7 +2,7 @@ use std::fs::OpenOptions;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 
-use tauri::{Manager, State};
+use tauri::{Emitter, Manager, State};
 use tauri_plugin_updater::UpdaterExt;
 
 const API_BASE_URL: &str = "https://paperclip-paperclip-api.qiwa34.easypanel.host";

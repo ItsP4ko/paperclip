@@ -4,7 +4,7 @@ import type { PatchInstanceGeneralSettings } from "@paperclipai/shared";
 import { SlidersHorizontal, Terminal, Check, Copy, RefreshCw, KeyRound, CircleCheck, CircleX, CircleDashed, LogIn, Cpu } from "lucide-react";
 import { instanceSettingsApi } from "@/api/instanceSettings";
 import { Button } from "@/components/ui/button";
-import { API_BASE } from "@/lib/api-base";
+import { API_BASE, getBearerHeaders } from "@/lib/api-base";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { queryKeys } from "../lib/queryKeys";
 import { cn } from "../lib/utils";
@@ -274,7 +274,7 @@ export function InstanceGeneralSettings() {
       const res = await fetch(`${API_BASE}/cli-setup/generate`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getBearerHeaders() },
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => null);
