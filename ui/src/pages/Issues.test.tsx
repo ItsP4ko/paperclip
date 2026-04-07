@@ -154,9 +154,9 @@ describe("Issues", () => {
     const updateIssueMutation = capturedMutations[0] as any;
     expect(updateIssueMutation).toBeDefined();
 
-    // Invoke onSuccess which should invalidate listAssignedToMe
+    // Invoke onSettled which should invalidate listAssignedToMe
     invalidations.length = 0;
-    updateIssueMutation.onSuccess();
+    updateIssueMutation.onSettled(undefined, undefined, { id: "issue-1" });
 
     expect(invalidations).toContainEqual({
       queryKey: queryKeys.issues.listAssignedToMe("company-1"),

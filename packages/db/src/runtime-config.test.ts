@@ -87,6 +87,7 @@ describe("resolveDatabaseTarget", () => {
   it("falls back to embedded postgres settings from config", () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-db-runtime-"));
     const configPath = path.join(tempDir, "instance", "config.json");
+    delete process.env.DATABASE_URL;
     process.env.PAPERCLIP_CONFIG = configPath;
     writeJson(configPath, {
       database: {
