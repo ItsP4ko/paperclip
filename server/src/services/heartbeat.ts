@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
-import { and, asc, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, notInArray, sql } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import type { BillingType, ExecutionWorkspace, ExecutionWorkspaceConfig } from "@paperclipai/shared";
 import {
@@ -4053,14 +4053,34 @@ export function heartbeatService(db: Db) {
     resumeQueuedRuns,
 
     tickTimers: async (now = new Date()) => {
-      const allAgents = await db.select().from(agents);
+      // Only pull the columns and rows tickTimers actually uses. Previously
+      // this loaded every row and column from `agents` on every tick and
+      // filtered in JS, which became an unbounded full-table scan as the
+      // agent count grew. Filtering the non-eligible statuses at the DB layer
+      // lets Postgres use the existing (companyId, status) index on agents.
+      const eligibleAgents = await db
+        .select({
+          id: agents.id,
+          status: agents.status,
+          runtimeConfig: agents.runtimeConfig,
+          lastHeartbeatAt: agents.lastHeartbeatAt,
+          createdAt: agents.createdAt,
+        })
+        .from(agents)
+        .where(
+          notInArray(agents.status, ["paused", "terminated", "pending_approval"]),
+        );
+
       let checked = 0;
       let enqueued = 0;
       let skipped = 0;
 
-      for (const agent of allAgents) {
-        if (agent.status === "paused" || agent.status === "terminated" || agent.status === "pending_approval") continue;
-        const policy = parseHeartbeatPolicy(agent);
+      // Collect the agents that are due this tick so we can wake them up in
+      // parallel instead of sequentially awaiting each enqueue. `enqueueWakeup`
+      // does its own per-agent lock, so parallel calls are safe.
+      const dueAgentIds: string[] = [];
+      for (const agent of eligibleAgents) {
+        const policy = parseHeartbeatPolicy(agent as typeof agents.$inferSelect);
         if (!policy.enabled || policy.intervalSec <= 0) continue;
 
         checked += 1;
@@ -4068,18 +4088,29 @@ export function heartbeatService(db: Db) {
         const elapsedMs = now.getTime() - baseline;
         if (elapsedMs < policy.intervalSec * 1000) continue;
 
-        const run = await enqueueWakeup(agent.id, {
-          source: "timer",
-          triggerDetail: "system",
-          reason: "heartbeat_timer",
-          requestedByActorType: "system",
-          requestedByActorId: "heartbeat_scheduler",
-          contextSnapshot: {
-            source: "scheduler",
-            reason: "interval_elapsed",
-            now: now.toISOString(),
-          },
-        });
+        dueAgentIds.push(agent.id);
+      }
+
+      const wakeupResults = await Promise.all(
+        dueAgentIds.map((agentId) =>
+          enqueueWakeup(agentId, {
+            source: "timer",
+            triggerDetail: "system",
+            reason: "heartbeat_timer",
+            requestedByActorType: "system",
+            requestedByActorId: "heartbeat_scheduler",
+            contextSnapshot: {
+              source: "scheduler",
+              reason: "interval_elapsed",
+              now: now.toISOString(),
+            },
+          }).catch((err) => {
+            logger.warn({ err, agentId }, "heartbeat tick: enqueueWakeup failed");
+            return null;
+          }),
+        ),
+      );
+      for (const run of wakeupResults) {
         if (run) enqueued += 1;
         else skipped += 1;
       }
