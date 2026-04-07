@@ -8,31 +8,58 @@ export function dashboardService(db: Db) {
   const budgets = budgetService(db);
   return {
     summary: async (companyId: string) => {
-      const company = await db
-        .select()
-        .from(companies)
-        .where(eq(companies.id, companyId))
-        .then((rows) => rows[0] ?? null);
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      if (!company) throw notFound("Company not found");
+      // Fire every independent query in parallel. These only share `companyId`
+      // and don't depend on each other's results, so there is no reason to
+      // wait serially. `budgets.overview` is the slowest of the group and
+      // becomes the effective floor for the endpoint's latency.
+      const [
+        companyRow,
+        agentRows,
+        taskRows,
+        pendingApprovalsRow,
+        monthSpendRow,
+        budgetOverview,
+      ] = await Promise.all([
+        db
+          .select()
+          .from(companies)
+          .where(eq(companies.id, companyId))
+          .then((rows) => rows[0] ?? null),
+        db
+          .select({ status: agents.status, count: sql<number>`count(*)` })
+          .from(agents)
+          .where(eq(agents.companyId, companyId))
+          .groupBy(agents.status),
+        db
+          .select({ status: issues.status, count: sql<number>`count(*)` })
+          .from(issues)
+          .where(eq(issues.companyId, companyId))
+          .groupBy(issues.status),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(approvals)
+          .where(and(eq(approvals.companyId, companyId), eq(approvals.status, "pending")))
+          .then((rows) => Number(rows[0]?.count ?? 0)),
+        db
+          .select({
+            monthSpend: sql<number>`coalesce(sum(${costEvents.costCents}), 0)::int`,
+          })
+          .from(costEvents)
+          .where(
+            and(
+              eq(costEvents.companyId, companyId),
+              gte(costEvents.occurredAt, monthStart),
+            ),
+          )
+          .then((rows) => rows[0] ?? { monthSpend: 0 }),
+        budgets.overview(companyId),
+      ]);
 
-      const agentRows = await db
-        .select({ status: agents.status, count: sql<number>`count(*)` })
-        .from(agents)
-        .where(eq(agents.companyId, companyId))
-        .groupBy(agents.status);
-
-      const taskRows = await db
-        .select({ status: issues.status, count: sql<number>`count(*)` })
-        .from(issues)
-        .where(eq(issues.companyId, companyId))
-        .groupBy(issues.status);
-
-      const pendingApprovals = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(approvals)
-        .where(and(eq(approvals.companyId, companyId), eq(approvals.status, "pending")))
-        .then((rows) => Number(rows[0]?.count ?? 0));
+      if (!companyRow) throw notFound("Company not found");
+      const company = companyRow;
 
       const agentCounts: Record<string, number> = {
         active: 0,
@@ -61,26 +88,11 @@ export function dashboardService(db: Db) {
         if (row.status !== "done" && row.status !== "cancelled") taskCounts.open += count;
       }
 
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const [{ monthSpend }] = await db
-        .select({
-          monthSpend: sql<number>`coalesce(sum(${costEvents.costCents}), 0)::int`,
-        })
-        .from(costEvents)
-        .where(
-          and(
-            eq(costEvents.companyId, companyId),
-            gte(costEvents.occurredAt, monthStart),
-          ),
-        );
-
-      const monthSpendCents = Number(monthSpend);
+      const monthSpendCents = Number(monthSpendRow.monthSpend);
       const utilization =
         company.budgetMonthlyCents > 0
           ? (monthSpendCents / company.budgetMonthlyCents) * 100
           : 0;
-      const budgetOverview = await budgets.overview(companyId);
 
       return {
         companyId,
@@ -96,7 +108,7 @@ export function dashboardService(db: Db) {
           monthBudgetCents: company.budgetMonthlyCents,
           monthUtilizationPercent: Number(utilization.toFixed(2)),
         },
-        pendingApprovals,
+        pendingApprovals: pendingApprovalsRow,
         budgets: {
           activeIncidents: budgetOverview.activeIncidents.length,
           pendingApprovals: budgetOverview.pendingApprovalCount,
