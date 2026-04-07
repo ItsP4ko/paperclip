@@ -1,0 +1,66 @@
+name: Release Check
+
+# Validates that developer (or a release branch) is ready to merge into master.
+# Runs on PRs targeting master and on direct pushes to developer.
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - developer
+
+concurrency:
+  group: release-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+  release-dry-run:
+    name: Release dry-run
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [typecheck, build]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Canary release dry-run
+        run: |
+          git checkout -B master HEAD
+          git checkout -- pnpm-lock.yaml
+          ./scripts/release.sh canary --skip-verify --dry-run
