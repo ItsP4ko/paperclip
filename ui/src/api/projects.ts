@@ -46,4 +46,8 @@ export const projectsApi = {
   deleteMemberLocalFolder: (projectId: string, companyId?: string) =>
     api.delete<void>(projectPath(projectId, companyId, "/member-local-folder")),
   remove: (id: string, companyId?: string) => api.delete<Project>(projectPath(id, companyId)),
+  getClaudeMd: (id: string, companyId?: string) =>
+    api.get<{ content: string }>(projectPath(id, companyId, "/claude-md")),
+  updateClaudeMd: (id: string, content: string, companyId?: string) =>
+    api.put<{ content: string }>(projectPath(id, companyId, "/claude-md"), { content }),
 };
