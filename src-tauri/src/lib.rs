@@ -56,8 +56,11 @@ fn spawn_runner(handle: tauri::AppHandle) {
         let _ = std::fs::create_dir_all(&log_dir);
         let log_path = log_dir.join("runner.log");
 
-        let mut cmd = Command::new("npx");
-        cmd.args(["relaycontrol@latest", "runner", "start", "--api-base", API_BASE_URL]);
+        // Use a login shell so macOS GUI apps inherit the full PATH
+        // (Homebrew, nvm, etc. are not in the minimal PATH Tauri gets from the Dock).
+        let shell_cmd = format!("npx relaycontrol@latest runner start --api-base {API_BASE_URL}");
+        let mut cmd = Command::new("/bin/zsh");
+        cmd.arg("-l").arg("-c").arg(&shell_cmd);
 
         match OpenOptions::new().create(true).append(true).open(&log_path) {
             Ok(log_file) => match log_file.try_clone() {
