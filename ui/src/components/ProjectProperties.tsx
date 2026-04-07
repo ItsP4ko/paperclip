@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "@/lib/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Project } from "@paperclipai/shared";
@@ -219,6 +219,66 @@ function isTauriEnv(): boolean {
   return (
     typeof window !== "undefined" &&
     ("__TAURI__" in window || "__TAURI_INTERNALS__" in window)
+  );
+}
+
+function ClaudeMdSection({ projectId, companyId }: { projectId: string; companyId?: string }) {
+  const [content, setContent] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<ProjectFieldSaveState>("idle");
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["projects", projectId, "claude-md"],
+    queryFn: () => projectsApi.getClaudeMd(projectId, companyId),
+  });
+
+  useEffect(() => {
+    if (data !== undefined && content === null) {
+      setContent(data.content);
+    }
+  }, [data, content]);
+
+  const updateMutation = useMutation({
+    mutationFn: (value: string) => projectsApi.updateClaudeMd(projectId, value, companyId),
+    onMutate: () => setSaveState("saving"),
+    onSuccess: () => setSaveState("saved"),
+    onError: () => setSaveState("error"),
+  });
+
+  const handleChange = (value: string) => {
+    setContent(value);
+    setSaveState("idle");
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      updateMutation.mutate(value);
+    }, 1000);
+  };
+
+  return (
+    <>
+      <Separator className="my-4" />
+      <div className="py-1.5 space-y-2">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground">CLAUDE.md</span>
+          <SaveIndicator state={saveState} />
+        </div>
+        {isLoading ? (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Loading…
+          </div>
+        ) : (
+          <textarea
+            className="w-full rounded border border-border bg-transparent px-2 py-1.5 text-xs font-mono outline-none resize-y focus:border-ring"
+            rows={16}
+            value={content ?? ""}
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder="# Project instructions for Claude agents&#10;&#10;Write your CLAUDE.md here…"
+            spellCheck={false}
+          />
+        )}
+      </div>
+    </>
   );
 }
 
@@ -1141,6 +1201,8 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
         ) : null}
 
       </div>
+
+      <ClaudeMdSection projectId={project.id} companyId={selectedCompanyId ?? undefined} />
 
       {onArchive && (
         <>
