@@ -477,6 +477,14 @@ export function projectRoutes(db: Db) {
     res.status(204).send();
   });
 
+  async function resolveClaudeMdPath(projectId: string, userId: string | null): Promise<string> {
+    const memberFolder = userId ? await svc.getMemberLocalFolder(projectId, "user", userId) : null;
+    const localFolder = memberFolder?.cwd ?? null;
+    if (localFolder) return path.join(localFolder, "CLAUDE.md");
+    const existing = await svc.getById(projectId);
+    return path.join(existing!.codebase.effectiveLocalFolder, "CLAUDE.md");
+  }
+
   router.get("/projects/:id/claude-md", async (req, res) => {
     const id = req.params.id as string;
     const existing = await svc.getById(id);
@@ -485,7 +493,8 @@ export function projectRoutes(db: Db) {
       return;
     }
     assertCompanyAccess(req, existing.companyId);
-    const filePath = path.join(existing.codebase.effectiveLocalFolder, "CLAUDE.md");
+    const userId = req.actor.type === "board" ? (req.actor.userId ?? null) : null;
+    const filePath = await resolveClaudeMdPath(id, userId);
     try {
       const content = await fs.readFile(filePath, "utf-8");
       res.json({ content });
@@ -507,7 +516,8 @@ export function projectRoutes(db: Db) {
       res.status(422).json({ error: "content is required" });
       return;
     }
-    const filePath = path.join(existing.codebase.effectiveLocalFolder, "CLAUDE.md");
+    const userId = req.actor.type === "board" ? (req.actor.userId ?? null) : null;
+    const filePath = await resolveClaudeMdPath(id, userId);
     await fs.writeFile(filePath, content, "utf-8");
     res.json({ content });
   });
