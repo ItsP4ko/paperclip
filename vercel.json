@@ -1,0 +1,20 @@
+{
+  "buildCommand": "pnpm --filter @paperclipai/ui build",
+  "outputDirectory": "ui/dist",
+  "framework": "vite",
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy-Report-Only",
+          "value": "default-src 'self'; script-src 'self' 'sha256-2oMWziIOZ3clEgoBlgQGv6iO60JrWMqbpz+42WnDniA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://paperclip-paperclip-api.qiwa34.easypanel.host wss://paperclip-paperclip-api.qiwa34.easypanel.host; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+        }
+      ]
+    }
+  ]
+}

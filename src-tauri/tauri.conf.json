@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Relay Control",
+  "version": "0.2.5",
+  "identifier": "ai.relaycontrol.app",
+  "build": {
+    "frontendDist": "../ui/dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "pnpm desktop:ui-dev",
+    "beforeBuildCommand": "pnpm desktop:ui-build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Relay Control",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQwODJBRDAwMzNGQjg0MjkKUldRcGhQc3pBSzJDUU1Nazk2Ym9HQUhyMkF0L1UwSWlqd2FsNkZUc2luMisrdFdMWVNHU0xVNnoK",
+      "endpoints": [
+        "https://github.com/ItsP4ko/paperclip/releases/latest/download/latest.json"
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
