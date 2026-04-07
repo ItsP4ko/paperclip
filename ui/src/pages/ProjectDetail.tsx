@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Link, useParams, useNavigate, useLocation, Navigate } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { PROJECT_COLORS, isUuidLike, type BudgetPolicySummary, type ExecutionWorkspace } from "@paperclipai/shared";
+import { PROJECT_COLORS, isUuidLike, type BudgetPolicySummary, type ExecutionWorkspace, type Issue } from "@paperclipai/shared";
+import { applyOptimisticIssuePatch, mergeIssueInList } from "../lib/optimistic-issue-mutations";
 import { budgetsApi } from "../api/budgets";
 import { executionWorkspacesApi } from "../api/execution-workspaces";
 import { instanceSettingsApi } from "../api/instanceSettings";
@@ -190,9 +191,39 @@ function ProjectIssuesList({ projectId, companyId }: { projectId: string; compan
   const updateIssue = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       issuesApi.update(id, data),
-    onSuccess: () => {
+    onMutate: async ({ id, data }) => {
+      if (!companyId) return {};
+      await queryClient.cancelQueries({ queryKey: ["issues", companyId] });
+      await queryClient.cancelQueries({ queryKey: queryKeys.issues.detail(id) });
+
+      const previousLists = queryClient.getQueriesData<Issue[]>({ queryKey: ["issues", companyId] });
+      const previousDetail = queryClient.getQueryData<Issue>(queryKeys.issues.detail(id));
+
+      queryClient.setQueriesData<Issue[]>(
+        { queryKey: ["issues", companyId] },
+        (old) => mergeIssueInList(old, id, data),
+      );
+      queryClient.setQueryData<Issue>(
+        queryKeys.issues.detail(id),
+        (old) => applyOptimisticIssuePatch(old, data),
+      );
+
+      return { previousLists, previousDetail };
+    },
+    onError: (_err, { id }, context) => {
+      if (context?.previousLists) {
+        for (const [queryKey, data] of context.previousLists) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+      if (context?.previousDetail) {
+        queryClient.setQueryData(queryKeys.issues.detail(id), context.previousDetail);
+      }
+    },
+    onSettled: (_data, _err, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.issues.listByProject(companyId, projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(companyId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.issues.detail(id) });
     },
   });
 
