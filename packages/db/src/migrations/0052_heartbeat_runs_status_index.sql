@@ -18,4 +18,3 @@
 
 CREATE INDEX IF NOT EXISTS "heartbeat_runs_company_status_idx"
   ON "heartbeat_runs" ("company_id","status");
- ALTER
