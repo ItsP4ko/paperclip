@@ -49,7 +49,7 @@ describe("MarkdownBody", () => {
 
   it("MarkdownBody source calls DOMPurify.sanitize with SVG profile", async () => {
     const fs = await import("fs");
-    const source = fs.readFileSync("src/components/MarkdownBody.tsx", "utf8");
+    const source = fs.readFileSync("ui/src/components/MarkdownBody.tsx", "utf8");
     expect(source).toContain('import DOMPurify from "dompurify"');
     expect(source).toContain("DOMPurify.sanitize(svg,");
     expect(source).toContain("USE_PROFILES: { svg: true, svgFilters: true }");
