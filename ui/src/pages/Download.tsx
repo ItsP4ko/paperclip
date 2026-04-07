@@ -1,14 +1,9 @@
-import { Download, Monitor, Apple } from "lucide-react";
+import { Download, Monitor, Apple, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const REPO = "ItsP4ko/paperclip";
-const RELEASES_BASE = `https://github.com/${REPO}/releases/latest/download`;
-
-const ASSETS = {
-  mac_arm: `${RELEASES_BASE}/Relay.Control_aarch64.dmg`,
-  mac_intel: `${RELEASES_BASE}/Relay.Control_x64.dmg`,
-  windows: `${RELEASES_BASE}/Relay.Control_x64-setup.exe`,
-};
+const RELEASES_PAGE = `https://github.com/${REPO}/releases/latest`;
+const MAC_ARM_URL = `https://github.com/${REPO}/releases/latest/download/Relay.Control_aarch64.dmg`;
 
 function detectPlatform(): "mac_arm" | "mac_intel" | "windows" | "other" {
   if (typeof window === "undefined") return "other";
@@ -27,13 +22,7 @@ function detectPlatform(): "mac_arm" | "mac_intel" | "windows" | "other" {
 
 export function DownloadPage() {
   const platform = detectPlatform();
-
-  const primaryAsset =
-    platform === "windows"
-      ? { label: "Download for Windows", url: ASSETS.windows, icon: Monitor }
-      : platform === "mac_intel"
-        ? { label: "Download for Mac (Intel)", url: ASSETS.mac_intel, icon: Apple }
-        : { label: "Download for Mac (Apple Silicon)", url: ASSETS.mac_arm, icon: Apple };
+  const isMacArm = platform === "mac_arm";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
@@ -46,45 +35,42 @@ export function DownloadPage() {
         </div>
 
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-          <a href={primaryAsset.url} className="block">
-            <Button className="w-full gap-2" size="lg">
-              <Download className="h-4 w-4" />
-              {primaryAsset.label}
-            </Button>
-          </a>
+          {isMacArm ? (
+            <a href={MAC_ARM_URL} className="block">
+              <Button className="w-full gap-2" size="lg">
+                <Download className="h-4 w-4" />
+                Download for Mac (Apple Silicon)
+              </Button>
+            </a>
+          ) : (
+            <a href={RELEASES_PAGE} target="_blank" rel="noreferrer" className="block">
+              <Button className="w-full gap-2" size="lg">
+                <ExternalLink className="h-4 w-4" />
+                View latest release on GitHub
+              </Button>
+            </a>
+          )}
 
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Other platforms
+              Available builds
             </p>
             <div className="flex flex-col gap-1.5">
-              {platform !== "mac_arm" && (
-                <a
-                  href={ASSETS.mac_arm}
-                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
-                >
-                  <Apple className="h-4 w-4 shrink-0" />
-                  Mac (Apple Silicon)
-                </a>
-              )}
-              {platform !== "mac_intel" && (
-                <a
-                  href={ASSETS.mac_intel}
-                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
-                >
-                  <Apple className="h-4 w-4 shrink-0" />
-                  Mac (Intel)
-                </a>
-              )}
-              {platform !== "windows" && (
-                <a
-                  href={ASSETS.windows}
-                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
-                >
-                  <Monitor className="h-4 w-4 shrink-0" />
-                  Windows
-                </a>
-              )}
+              <a
+                href={MAC_ARM_URL}
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+              >
+                <Apple className="h-4 w-4 shrink-0" />
+                Mac (Apple Silicon)
+              </a>
+              <div className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground/50 cursor-not-allowed select-none">
+                <Apple className="h-4 w-4 shrink-0" />
+                Mac (Intel) — coming soon
+              </div>
+              <div className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground/50 cursor-not-allowed select-none">
+                <Monitor className="h-4 w-4 shrink-0" />
+                Windows — coming soon
+              </div>
             </div>
           </div>
         </div>

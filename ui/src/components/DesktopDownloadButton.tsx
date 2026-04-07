@@ -1,23 +1,15 @@
 import { Download } from "lucide-react";
 
 const RELEASES_BASE = "https://github.com/ItsP4ko/paperclip/releases/latest";
+const MAC_ARM_URL = `${RELEASES_BASE}/download/Relay.Control_aarch64.dmg`;
 
 function getDownloadUrl(): string {
-  const ua = navigator.userAgent;
-  const isWindows = /Win/i.test(ua);
   const isArm = /arm64|aarch64/i.test(
     (navigator as Navigator & { userAgentData?: { platform?: string } })
       .userAgentData?.platform ?? navigator.platform ?? ""
   );
-
-  if (isWindows) {
-    return `${RELEASES_BASE}/download/Relay.Control_x64-setup.exe`;
-  }
-  if (isArm) {
-    return `${RELEASES_BASE}/download/Relay.Control_aarch64.dmg`;
-  }
-  // Mac Intel fallback
-  return `${RELEASES_BASE}/download/Relay.Control_x64.dmg`;
+  // Only Mac ARM has a direct build; all others go to the releases page
+  return isArm ? MAC_ARM_URL : RELEASES_BASE;
 }
 
 export function DesktopDownloadButton() {
