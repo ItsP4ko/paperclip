@@ -6,6 +6,25 @@ on:
       - "master"
     tags:
       - "v*"
+    # Skip rebuilding the API image when a push only touches files that the
+    # backend image does not depend on. The frontend (`ui/**`) is shipped via
+    # Vercel, not the Docker image, so UI-only pushes do not need a rebuild.
+    paths-ignore:
+      - "ui/**"
+      - "src-tauri/**"
+      - "doc/**"
+      - "docs/**"
+      - "evals/**"
+      - "report/**"
+      - "releases/**"
+      - "skills/**"
+      - "tests/**"
+      - "vercel.json"
+      - "**/*.md"
+      - "LICENSE"
+      - ".gitignore"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
 
 permissions:
   contents: read
