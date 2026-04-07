@@ -79,6 +79,7 @@ const mockRoutineService = vi.hoisted(() => ({
 
 const mockAccessService = vi.hoisted(() => ({
   canUser: vi.fn(),
+  getMembership: vi.fn(),
 }));
 
 const mockLogActivity = vi.hoisted(() => vi.fn());
@@ -114,6 +115,7 @@ describe("routine routes", () => {
       status: "issue_created",
     });
     mockAccessService.canUser.mockResolvedValue(false);
+    mockAccessService.getMembership.mockResolvedValue({ membershipRole: "developer" });
     mockLogActivity.mockResolvedValue(undefined);
   });
 
