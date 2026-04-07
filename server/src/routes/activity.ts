@@ -29,6 +29,17 @@ export function activityRoutes(db: Db) {
     return issueSvc.getById(rawId);
   }
 
+  function parsePagination(req: { query: Record<string, unknown> }) {
+    const rawLimit = req.query.limit;
+    const rawOffset = req.query.offset;
+    const limit = typeof rawLimit === "string" ? Number.parseInt(rawLimit, 10) : undefined;
+    const offset = typeof rawOffset === "string" ? Number.parseInt(rawOffset, 10) : undefined;
+    return {
+      limit: Number.isFinite(limit) ? limit : undefined,
+      offset: Number.isFinite(offset) ? offset : undefined,
+    };
+  }
+
   router.get("/companies/:companyId/activity", async (req, res) => {
     const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
@@ -39,7 +50,11 @@ export function activityRoutes(db: Db) {
       entityType: req.query.entityType as string | undefined,
       entityId: req.query.entityId as string | undefined,
     };
-    const result = await svc.list(filters);
+    const result = await svc.list(filters, parsePagination(req));
+    // Live events arrive over WebSocket, so the UI rarely needs to re-poll
+    // this endpoint. A tiny private max-age absorbs accidental burst reloads
+    // (e.g. tab focus refetches) without exposing stale data to other users.
+    res.setHeader("Cache-Control", "private, max-age=5");
     res.json(result);
   });
 
@@ -62,7 +77,8 @@ export function activityRoutes(db: Db) {
       return;
     }
     assertCompanyAccess(req, issue.companyId);
-    const result = await svc.forIssue(issue.id);
+    const result = await svc.forIssue(issue.id, parsePagination(req));
+    res.setHeader("Cache-Control", "private, max-age=5");
     res.json(result);
   });
 
@@ -74,7 +90,8 @@ export function activityRoutes(db: Db) {
       return;
     }
     assertCompanyAccess(req, issue.companyId);
-    const result = await svc.runsForIssue(issue.companyId, issue.id);
+    const result = await svc.runsForIssue(issue.companyId, issue.id, parsePagination(req));
+    res.setHeader("Cache-Control", "private, max-age=5");
     res.json(result);
   });
 

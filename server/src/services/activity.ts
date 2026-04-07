@@ -9,10 +9,36 @@ export interface ActivityFilters {
   entityId?: string;
 }
 
+// Activity log and heartbeat run tables grow indefinitely, so every list
+// endpoint MUST cap the rows it returns. These defaults are large enough to
+// cover any pre-existing caller that did not pass an explicit `limit`, while
+// still bounding the worst case. Clients that want paginated UX can pass
+// `limit`+`offset`.
+const DEFAULT_ACTIVITY_LIMIT = 200;
+const MAX_ACTIVITY_LIMIT = 1000;
+
+export interface ActivityPagination {
+  limit?: number;
+  offset?: number;
+}
+
+function normalizePagination(pagination?: ActivityPagination) {
+  const rawLimit = pagination?.limit;
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(Math.max(1, Math.trunc(rawLimit as number)), MAX_ACTIVITY_LIMIT)
+    : DEFAULT_ACTIVITY_LIMIT;
+  const rawOffset = pagination?.offset;
+  const offset = Number.isFinite(rawOffset) && (rawOffset as number) > 0
+    ? Math.trunc(rawOffset as number)
+    : 0;
+  return { limit, offset };
+}
+
 export function activityService(db: Db) {
   const issueIdAsText = sql<string>`${issues.id}::text`;
   return {
-    list: (filters: ActivityFilters) => {
+    list: (filters: ActivityFilters, pagination?: ActivityPagination) => {
+      const { limit, offset } = normalizePagination(pagination);
       const conditions = [eq(activityLog.companyId, filters.companyId)];
 
       if (filters.agentId) {
@@ -45,11 +71,14 @@ export function activityService(db: Db) {
           ),
         )
         .orderBy(desc(activityLog.createdAt))
+        .limit(limit)
+        .offset(offset)
         .then((rows) => rows.map((r) => r.activityLog));
     },
 
-    forIssue: (issueId: string) =>
-      db
+    forIssue: (issueId: string, pagination?: ActivityPagination) => {
+      const { limit, offset } = normalizePagination(pagination);
+      return db
         .select()
         .from(activityLog)
         .where(
@@ -58,10 +87,14 @@ export function activityService(db: Db) {
             eq(activityLog.entityId, issueId),
           ),
         )
-        .orderBy(desc(activityLog.createdAt)),
+        .orderBy(desc(activityLog.createdAt))
+        .limit(limit)
+        .offset(offset);
+    },
 
-    runsForIssue: (companyId: string, issueId: string) =>
-      db
+    runsForIssue: (companyId: string, issueId: string, pagination?: ActivityPagination) => {
+      const { limit, offset } = normalizePagination(pagination);
+      return db
         .select({
           runId: heartbeatRuns.id,
           status: heartbeatRuns.status,
@@ -90,7 +123,10 @@ export function activityService(db: Db) {
             ),
           ),
         )
-        .orderBy(desc(heartbeatRuns.createdAt)),
+        .orderBy(desc(heartbeatRuns.createdAt))
+        .limit(limit)
+        .offset(offset);
+    },
 
     issuesForRun: async (runId: string) => {
       const run = await db

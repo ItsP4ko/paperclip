@@ -47,5 +47,14 @@ export const heartbeatRuns = pgTable(
       table.agentId,
       table.startedAt,
     ),
+    // `getActiveRunForAgent` and `listPendingLocalRuns` filter by status to
+    // locate in-flight runs on every heartbeat/scheduler tick. Without this
+    // composite index Postgres has to scan every row in `heartbeat_runs` —
+    // which only grows over time — so the tick cost degrades as the table
+    // ages. (companyId, status) gives a cheap point lookup per tenant.
+    companyStatusIdx: index("heartbeat_runs_company_status_idx").on(
+      table.companyId,
+      table.status,
+    ),
   }),
 );

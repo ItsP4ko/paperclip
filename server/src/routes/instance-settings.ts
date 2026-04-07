@@ -133,6 +133,17 @@ export function instanceSettingsRoutes(db: Db, redisClient?: RedisClientType) {
   const CACHE_KEY = "instance:settings:general";
   const TTL_SECONDS = 60;
 
+  // Process-local cache of the *parsed* general settings. The Redis cache
+  // still stores the JSON string, but every Redis hit used to JSON.parse the
+  // payload on every request. Caching the already-parsed object inside the
+  // process avoids both the Redis roundtrip and the parse cost for the very
+  // hot read path that the keyboard-shortcuts UI hammers on every page load.
+  let localCache: { value: unknown; expiresAt: number } | null = null;
+  const LOCAL_TTL_MS = 30 * 1000;
+  const invalidateLocalCache = () => {
+    localCache = null;
+  };
+
   router.get("/instance/settings/general", async (req, res) => {
     // General settings (e.g. keyboardShortcuts) are readable by any
     // authenticated board user.  Only PATCH requires instance-admin.
@@ -140,16 +151,25 @@ export function instanceSettingsRoutes(db: Db, redisClient?: RedisClientType) {
       throw forbidden("Board access required");
     }
 
+    const now = Date.now();
+    if (localCache && localCache.expiresAt > now) {
+      res.json(localCache.value);
+      return;
+    }
+
     if (redisClient?.isReady) {
       const cached = await redisClient.get(CACHE_KEY).catch(() => null);
       if (cached) {
         logger.debug("[redis] cache hit: instance settings");
-        res.json(JSON.parse(cached));
+        const parsed = JSON.parse(cached);
+        localCache = { value: parsed, expiresAt: now + LOCAL_TTL_MS };
+        res.json(parsed);
         return;
       }
     }
 
     const settings = await svc.getGeneral();
+    localCache = { value: settings, expiresAt: now + LOCAL_TTL_MS };
 
     if (redisClient?.isReady) {
       await redisClient.set(CACHE_KEY, JSON.stringify(settings), { EX: TTL_SECONDS }).catch(() => {
