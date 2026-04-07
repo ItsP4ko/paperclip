@@ -10,6 +10,22 @@ const API_BASE_URL: &str = "https://paperclip-paperclip-api.qiwa34.easypanel.hos
 pub struct RunnerState(pub Mutex<Option<Child>>);
 
 #[tauri::command]
+fn read_claude_md(path: String) -> Result<String, String> {
+    let full_path = std::path::Path::new(&path).join("CLAUDE.md");
+    match std::fs::read_to_string(&full_path) {
+        Ok(content) => Ok(content),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+fn write_claude_md(path: String, content: String) -> Result<(), String> {
+    let full_path = std::path::Path::new(&path).join("CLAUDE.md");
+    std::fs::write(&full_path, content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn get_runner_status(state: State<'_, RunnerState>) -> String {
     let mut guard = match state.0.lock() {
         Ok(g) => g,
@@ -105,7 +121,7 @@ pub fn run() {
             check_for_updates(handle);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_runner_status, install_update])
+        .invoke_handler(tauri::generate_handler![get_runner_status, install_update, read_claude_md, write_claude_md])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {

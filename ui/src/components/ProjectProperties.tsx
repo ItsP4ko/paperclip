@@ -222,37 +222,67 @@ function isTauriEnv(): boolean {
   );
 }
 
-function ClaudeMdSection({ projectId, companyId }: { projectId: string; companyId?: string }) {
+async function tauriReadClaudeMd(localFolder: string): Promise<string> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<string>("read_claude_md", { path: localFolder });
+}
+
+async function tauriWriteClaudeMd(localFolder: string, content: string): Promise<void> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke("write_claude_md", { path: localFolder, content });
+}
+
+function ClaudeMdSection({ projectId, companyId, localFolder }: { projectId: string; companyId?: string; localFolder: string | null }) {
   const [content, setContent] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<ProjectFieldSaveState>("idle");
+  const [isLoading, setIsLoading] = useState(true);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inTauri = isTauriEnv();
 
-  const { data, isLoading } = useQuery({
+  useEffect(() => {
+    if (!inTauri || !localFolder) {
+      setIsLoading(false);
+      return;
+    }
+    tauriReadClaudeMd(localFolder)
+      .then((text) => { setContent(text); setIsLoading(false); })
+      .catch(() => { setContent(""); setIsLoading(false); });
+  }, [inTauri, localFolder]);
+
+  // Web fallback: use server API
+  const { data } = useQuery({
     queryKey: ["projects", projectId, "claude-md"],
     queryFn: () => projectsApi.getClaudeMd(projectId, companyId),
+    enabled: !inTauri,
   });
 
   useEffect(() => {
-    if (data !== undefined && content === null) {
+    if (!inTauri && data !== undefined && content === null) {
       setContent(data.content);
+      setIsLoading(false);
     }
-  }, [data, content]);
-
-  const updateMutation = useMutation({
-    mutationFn: (value: string) => projectsApi.updateClaudeMd(projectId, value, companyId),
-    onMutate: () => setSaveState("saving"),
-    onSuccess: () => setSaveState("saved"),
-    onError: () => setSaveState("error"),
-  });
+  }, [inTauri, data, content]);
 
   const handleChange = (value: string) => {
     setContent(value);
     setSaveState("idle");
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      updateMutation.mutate(value);
+    saveTimer.current = setTimeout(async () => {
+      setSaveState("saving");
+      try {
+        if (inTauri && localFolder) {
+          await tauriWriteClaudeMd(localFolder, value);
+        } else {
+          await projectsApi.updateClaudeMd(projectId, value, companyId);
+        }
+        setSaveState("saved");
+      } catch {
+        setSaveState("error");
+      }
     }, 1000);
   };
+
+  if (inTauri && !localFolder) return null;
 
   return (
     <>
@@ -1202,7 +1232,7 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
 
       </div>
 
-      <ClaudeMdSection projectId={project.id} companyId={selectedCompanyId ?? undefined} />
+      <ClaudeMdSection projectId={project.id} companyId={selectedCompanyId ?? undefined} localFolder={codebase.localFolder ?? null} />
 
       {onArchive && (
         <>
