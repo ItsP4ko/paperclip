@@ -9,6 +9,28 @@ emitter.setMaxListeners(0);
 
 let nextEventId = 0;
 
+// Pre-serialized JSON per event. A single WebSocket fanout can have dozens or
+// hundreds of subscribers; previously every subscriber called
+// `JSON.stringify(event)` on the same object, so the same payload was
+// serialized N times per event. This WeakMap lets the first caller serialize
+// the event and every subsequent caller reuse the cached string. Entries
+// disappear as soon as the event object is garbage collected, so there is no
+// unbounded growth.
+const serializedCache = new WeakMap<LiveEvent, string>();
+
+/**
+ * Serialize a LiveEvent to JSON exactly once, regardless of how many
+ * subscribers call this helper. Prefer this over `JSON.stringify(event)` in
+ * any fan-out hot path (WebSocket broadcast, plugin host subscribers, ...).
+ */
+export function serializeLiveEvent(event: LiveEvent): string {
+  const cached = serializedCache.get(event);
+  if (cached !== undefined) return cached;
+  const serialized = JSON.stringify(event);
+  serializedCache.set(event, serialized);
+  return serialized;
+}
+
 function toLiveEvent(input: {
   companyId: string;
   type: LiveEventType;

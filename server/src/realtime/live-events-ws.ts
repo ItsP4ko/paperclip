@@ -7,7 +7,7 @@ import { agentApiKeys, companyMemberships, instanceUserRoles } from "@paperclipa
 import type { DeploymentMode } from "@paperclipai/shared";
 import type { BetterAuthSessionResult } from "../auth/better-auth.js";
 import { logger } from "../middleware/logger.js";
-import { subscribeCompanyLiveEvents } from "../services/live-events.js";
+import { serializeLiveEvent, subscribeCompanyLiveEvents } from "../services/live-events.js";
 
 interface WsSocket {
   readyState: number;
@@ -250,7 +250,9 @@ export function setupLiveEventsWebSocketServer(
 
     const unsubscribe = subscribeCompanyLiveEvents(context.companyId, (event) => {
       if (socket.readyState !== WebSocket.OPEN) return;
-      socket.send(JSON.stringify(event));
+      // serializeLiveEvent memoizes per-event so the first subscriber pays
+      // the JSON.stringify cost and the rest reuse the cached string.
+      socket.send(serializeLiveEvent(event));
     });
 
     cleanupByClient.set(socket, unsubscribe);
