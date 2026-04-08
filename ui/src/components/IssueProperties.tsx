@@ -25,6 +25,7 @@ import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { User, Hexagon, ArrowUpRight, Tag, Plus, Trash2 } from "lucide-react";
 import { AgentIcon } from "./AgentIconPicker";
+import { isTauriEnv } from "../lib/platform";
 
 function defaultProjectWorkspaceIdForProject(project: {
   workspaces?: Array<{ id: string; isPrimary: boolean }>;
@@ -124,6 +125,7 @@ function PropertyPicker({
 export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProps) {
   const { selectedCompanyId } = useCompany();
   const { isMember } = useMemberRole(selectedCompanyId);
+  const isTauri = isTauriEnv();
   const queryClient = useQueryClient();
   const companyId = issue.companyId ?? selectedCompanyId;
   const [assigneeOpen, setAssigneeOpen] = useState(false);
@@ -457,10 +459,10 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
             }
           </>
         )}
-        {!isMember && sortedAgents.length > 0 && (
+        {!isMember && isTauri && sortedAgents.length > 0 && (
           <div className="px-2 py-1 text-xs font-semibold text-muted-foreground mt-1">AI Agents</div>
         )}
-        {!isMember && sortedAgents
+        {!isMember && isTauri && sortedAgents
           .filter((a) => {
             if (!assigneeSearch.trim()) return true;
             const q = assigneeSearch.toLowerCase();
