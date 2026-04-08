@@ -19,12 +19,89 @@ import { ActivityRow } from "../components/ActivityRow";
 import { Identity } from "../components/Identity";
 import { timeAgo } from "../lib/timeAgo";
 import { cn, formatCents } from "../lib/utils";
-import { Bot, CircleDot, DollarSign, ShieldCheck, LayoutDashboard, PauseCircle } from "lucide-react";
+import { Bot, CircleDot, DollarSign, ShieldCheck, LayoutDashboard, PauseCircle, Smartphone } from "lucide-react";
 import { ActiveAgentsPanel } from "../components/ActiveAgentsPanel";
 import { ChartCard, RunActivityChart, PriorityChart, IssueStatusChart, SuccessRateChart } from "../components/ActivityCharts";
 import { PageSkeleton } from "../components/PageSkeleton";
 import type { Agent, Issue } from "@paperclipai/shared";
 import { PluginSlotOutlet } from "@/plugins/slots";
+
+// --- Remote Control mini widget (Tauri only) ---
+
+type RCInfo = { active: boolean; url: string | null; tailscale: { running: boolean }; server_port: number };
+
+function isTauriEnv() {
+  return typeof window !== "undefined" && ("__TAURI__" in window || "__TAURI_INTERNALS__" in window);
+}
+
+function RemoteControlWidget() {
+  const [rcInfo, setRcInfo] = useState<RCInfo | null>(null);
+  const [busy, setBusy] = useState(false);
+  const inTauri = isTauriEnv();
+
+  useEffect(() => {
+    if (!inTauri) return;
+    import("@tauri-apps/api/core").then(({ invoke }) => {
+      invoke<RCInfo>("get_remote_control_status").then(setRcInfo).catch(() => {});
+    });
+  }, [inTauri]);
+
+  if (!inTauri) return null;
+
+  const isActive = rcInfo?.active ?? false;
+  const tsRunning = rcInfo?.tailscale.running ?? false;
+
+  async function handleToggle() {
+    setBusy(true);
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      if (isActive) {
+        await invoke("deactivate_remote_control");
+        setRcInfo((prev) => prev ? { ...prev, active: false, url: null } : null);
+      } else {
+        const info = await invoke<RCInfo>("activate_remote_control");
+        setRcInfo(info);
+      }
+    } catch {
+      // user can go to Remote Control page for error details
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex justify-end">
+      <button
+        onClick={handleToggle}
+        disabled={busy || !tsRunning}
+        title={
+          !tsRunning
+            ? "Tailscale not running — cannot activate Remote Control"
+            : isActive
+            ? "Deactivate Remote Control"
+            : "Activate Remote Control"
+        }
+        className={cn(
+          "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
+          isActive
+            ? "bg-green-500/15 text-green-600 dark:text-green-400 hover:bg-green-500/25"
+            : "bg-muted text-muted-foreground hover:bg-muted/80",
+        )}
+      >
+        <Smartphone className="h-3 w-3" />
+        <span>Remote Control</span>
+        <div
+          className={cn(
+            "h-1.5 w-1.5 rounded-full",
+            isActive ? "bg-green-500 animate-pulse" : "bg-muted-foreground/40",
+          )}
+        />
+      </button>
+    </div>
+  );
+}
+
+// ---
 
 function getRecentIssues(issues: Issue[]): Issue[] {
   return [...issues]
@@ -187,6 +264,7 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      <RemoteControlWidget />
       {error && <p className="text-sm text-destructive">{error.message}</p>}
 
       {hasNoAgents && (
