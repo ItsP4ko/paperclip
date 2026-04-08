@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 interface NewIssueDefaults {
   status?: string;
@@ -98,29 +98,51 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     setOnboardingOptions({});
   }, []);
 
+  const value = useMemo<DialogContextValue>(
+    () => ({
+      newIssueOpen,
+      newIssueDefaults,
+      openNewIssue,
+      closeNewIssue,
+      newProjectOpen,
+      openNewProject,
+      closeNewProject,
+      newGoalOpen,
+      newGoalDefaults,
+      openNewGoal,
+      closeNewGoal,
+      newAgentOpen,
+      openNewAgent,
+      closeNewAgent,
+      onboardingOpen,
+      onboardingOptions,
+      openOnboarding,
+      closeOnboarding,
+    }),
+    [
+      newIssueOpen,
+      newIssueDefaults,
+      openNewIssue,
+      closeNewIssue,
+      newProjectOpen,
+      openNewProject,
+      closeNewProject,
+      newGoalOpen,
+      newGoalDefaults,
+      openNewGoal,
+      closeNewGoal,
+      newAgentOpen,
+      openNewAgent,
+      closeNewAgent,
+      onboardingOpen,
+      onboardingOptions,
+      openOnboarding,
+      closeOnboarding,
+    ],
+  );
+
   return (
-    <DialogContext.Provider
-      value={{
-        newIssueOpen,
-        newIssueDefaults,
-        openNewIssue,
-        closeNewIssue,
-        newProjectOpen,
-        openNewProject,
-        closeNewProject,
-        newGoalOpen,
-        newGoalDefaults,
-        openNewGoal,
-        closeNewGoal,
-        newAgentOpen,
-        openNewAgent,
-        closeNewAgent,
-        onboardingOpen,
-        onboardingOptions,
-        openOnboarding,
-        closeOnboarding,
-      }}
-    >
+    <DialogContext.Provider value={value}>
       {children}
     </DialogContext.Provider>
   );

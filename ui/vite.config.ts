@@ -20,4 +20,36 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // React core - changes rarely
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'react-vendor'
+          }
+          // TanStack - changes rarely
+          if (id.includes('@tanstack/')) {
+            return 'tanstack'
+          }
+          // Heavy editors - only on specific pages
+          if (id.includes('@mdxeditor/')) {
+            return 'mdx-editor'
+          }
+          // Charts - only on analytics/dashboard
+          if (id.includes('recharts') || id.includes('mermaid')) {
+            return 'charts'
+          }
+          // Radix UI components
+          if (id.includes('@radix-ui/') || id.includes('node_modules/radix-ui/')) {
+            return 'radix'
+          }
+          // rest of node_modules
+          if (id.includes('node_modules/')) {
+            return 'vendor'
+          }
+        },
+      },
+    },
+  },
 });

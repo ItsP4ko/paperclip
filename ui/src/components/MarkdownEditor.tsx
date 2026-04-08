@@ -667,3 +667,5 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
     </div>
   );
 });
+
+export default MarkdownEditor;
