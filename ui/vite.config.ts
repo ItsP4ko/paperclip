@@ -24,10 +24,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // React core - changes rarely
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
-            return 'react-vendor'
-          }
           // TanStack - changes rarely
           if (id.includes('@tanstack/')) {
             return 'tanstack'
@@ -40,9 +36,14 @@ export default defineConfig({
           if (id.includes('recharts') || id.includes('mermaid')) {
             return 'charts'
           }
-          // Radix UI components
-          if (id.includes('@radix-ui/') || id.includes('node_modules/radix-ui/')) {
-            return 'radix'
+          // React + Radix together to avoid forwardRef undefined on load order
+          if (
+            id.includes('node_modules/react/') ||
+            id.includes('node_modules/react-dom/') ||
+            id.includes('@radix-ui/') ||
+            id.includes('node_modules/radix-ui/')
+          ) {
+            return 'react-radix'
           }
           // rest of node_modules
           if (id.includes('node_modules/')) {
