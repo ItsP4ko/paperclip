@@ -1843,7 +1843,7 @@ export function IssueDetail() {
               </div>
             )}
 
-            {subtaskInputOpen ? (
+            {(issue.ancestors?.length ?? 0) < 2 && (subtaskInputOpen ? (
               <div className="flex items-center gap-2">
                 <Input
                   value={subtaskTitle}
@@ -1875,7 +1875,7 @@ export function IssueDetail() {
                 <Plus className="h-3.5 w-3.5" />
                 <span className="ml-1">Add sub-issue</span>
               </Button>
-            )}
+            ))}
             {subtaskError && (
               <p className="text-xs text-destructive">{subtaskError}</p>
             )}
