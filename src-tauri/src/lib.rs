@@ -8,6 +8,24 @@ use tauri_plugin_updater::UpdaterExt;
 const API_BASE_URL: &str = "https://paperclip-paperclip-api.qiwa34.easypanel.host";
 
 pub struct RunnerState(pub Mutex<Option<Child>>);
+pub struct EmbeddedServerState(pub Mutex<Option<Child>>);
+
+#[derive(serde::Serialize)]
+pub struct TailscaleStatus {
+    installed: bool,
+    running: bool,
+    ip: Option<String>,
+    hostname: Option<String>,
+    dns_name: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct RemoteControlInfo {
+    active: bool,
+    url: Option<String>,
+    tailscale: TailscaleStatus,
+    server_port: u16,
+}
 
 #[tauri::command]
 fn read_claude_md(path: String) -> Result<String, String> {
@@ -39,6 +57,232 @@ fn get_runner_status(state: State<'_, RunnerState>) -> String {
         },
         None => "not_started".to_string(),
     }
+}
+
+#[tauri::command]
+fn get_tailscale_status() -> TailscaleStatus {
+    // Try to run `tailscale status --json` to detect Tailscale state
+    let output = Command::new("tailscale")
+        .args(["status", "--json"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output();
+
+    match output {
+        Ok(out) if out.status.success() => {
+            let json_str = String::from_utf8_lossy(&out.stdout);
+            // Parse the JSON to extract Self node info
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                let self_node = &parsed["Self"];
+                let tailscale_ips = self_node["TailscaleIPs"]
+                    .as_array()
+                    .and_then(|ips| ips.first())
+                    .and_then(|ip| ip.as_str())
+                    .map(String::from);
+                let hostname = self_node["HostName"]
+                    .as_str()
+                    .map(String::from);
+                let dns_name = self_node["DNSName"]
+                    .as_str()
+                    .map(|s| s.trim_end_matches('.').to_string());
+
+                TailscaleStatus {
+                    installed: true,
+                    running: true,
+                    ip: tailscale_ips,
+                    hostname,
+                    dns_name,
+                }
+            } else {
+                TailscaleStatus {
+                    installed: true,
+                    running: true,
+                    ip: None,
+                    hostname: None,
+                    dns_name: None,
+                }
+            }
+        }
+        Ok(_) => {
+            // Command ran but failed (Tailscale installed but not running)
+            TailscaleStatus {
+                installed: true,
+                running: false,
+                ip: None,
+                hostname: None,
+                dns_name: None,
+            }
+        }
+        Err(_) => {
+            // Command not found (Tailscale not installed)
+            TailscaleStatus {
+                installed: false,
+                running: false,
+                ip: None,
+                hostname: None,
+                dns_name: None,
+            }
+        }
+    }
+}
+
+#[tauri::command]
+fn get_remote_control_status(
+    server_state: State<'_, EmbeddedServerState>,
+) -> RemoteControlInfo {
+    let tailscale = get_tailscale_status();
+    let server_port: u16 = 3100;
+
+    let active = {
+        let mut guard = match server_state.0.lock() {
+            Ok(g) => g,
+            Err(_) => {
+                return RemoteControlInfo {
+                    active: false,
+                    url: None,
+                    tailscale,
+                    server_port,
+                };
+            }
+        };
+        match &mut *guard {
+            Some(child) => matches!(child.try_wait(), Ok(None)),
+            None => false,
+        }
+    };
+
+    let url = if active {
+        tailscale
+            .dns_name
+            .as_ref()
+            .or(tailscale.ip.as_ref())
+            .map(|host| format!("http://{}:{}", host, server_port))
+    } else {
+        None
+    };
+
+    RemoteControlInfo {
+        active,
+        url,
+        tailscale,
+        server_port,
+    }
+}
+
+#[tauri::command]
+fn activate_remote_control(
+    handle: tauri::AppHandle,
+    server_state: State<'_, EmbeddedServerState>,
+) -> Result<RemoteControlInfo, String> {
+    let tailscale = get_tailscale_status();
+    if !tailscale.running {
+        return Err("Tailscale is not running. Please start Tailscale first.".to_string());
+    }
+
+    let server_port: u16 = 3100;
+
+    // Check if already running
+    {
+        let mut guard = server_state.0.lock().map_err(|e| e.to_string())?;
+        if let Some(child) = guard.as_mut() {
+            if matches!(child.try_wait(), Ok(None)) {
+                let url = tailscale
+                    .dns_name
+                    .as_ref()
+                    .or(tailscale.ip.as_ref())
+                    .map(|host| format!("http://{}:{}", host, server_port));
+                return Ok(RemoteControlInfo {
+                    active: true,
+                    url,
+                    tailscale,
+                    server_port,
+                });
+            }
+        }
+    }
+
+    // Build the allowed hostnames from Tailscale info
+    let mut allowed_hostnames = Vec::new();
+    if let Some(ref dns) = tailscale.dns_name {
+        allowed_hostnames.push(dns.clone());
+    }
+    if let Some(ref ip) = tailscale.ip {
+        allowed_hostnames.push(ip.clone());
+    }
+    let hostnames_csv = allowed_hostnames.join(",");
+
+    let log_dir = handle
+        .path()
+        .app_log_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
+    let _ = std::fs::create_dir_all(&log_dir);
+    let log_path = log_dir.join("remote-control-server.log");
+
+    // Start the embedded backend in authenticated/private mode
+    let shell_cmd = format!(
+        "PAPERCLIP_DEPLOYMENT_MODE=authenticated \
+         PAPERCLIP_DEPLOYMENT_EXPOSURE=private \
+         PAPERCLIP_ALLOWED_HOSTNAMES={hostnames} \
+         PAPERCLIP_AUTH_BASE_URL_MODE=auto \
+         HOST=0.0.0.0 \
+         PORT={port} \
+         npx relaycontrol@latest run",
+        hostnames = hostnames_csv,
+        port = server_port,
+    );
+
+    let mut cmd = Command::new("/bin/zsh");
+    cmd.arg("-l").arg("-c").arg(&shell_cmd);
+
+    match OpenOptions::new().create(true).append(true).open(&log_path) {
+        Ok(log_file) => match log_file.try_clone() {
+            Ok(log_clone) => {
+                cmd.stdout(Stdio::from(log_file));
+                cmd.stderr(Stdio::from(log_clone));
+            }
+            Err(_) => {
+                cmd.stdout(Stdio::null());
+                cmd.stderr(Stdio::null());
+            }
+        },
+        Err(_) => {
+            cmd.stdout(Stdio::null());
+            cmd.stderr(Stdio::null());
+        }
+    }
+
+    match cmd.spawn() {
+        Ok(child) => {
+            let mut guard = server_state.0.lock().map_err(|e| e.to_string())?;
+            *guard = Some(child);
+
+            let url = tailscale
+                .dns_name
+                .as_ref()
+                .or(tailscale.ip.as_ref())
+                .map(|host| format!("http://{}:{}", host, server_port));
+
+            Ok(RemoteControlInfo {
+                active: true,
+                url,
+                tailscale,
+                server_port,
+            })
+        }
+        Err(e) => Err(format!("Failed to start embedded server: {}", e)),
+    }
+}
+
+#[tauri::command]
+fn deactivate_remote_control(
+    server_state: State<'_, EmbeddedServerState>,
+) -> Result<(), String> {
+    let mut guard = server_state.0.lock().map_err(|e| e.to_string())?;
+    if let Some(mut child) = guard.take() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    Ok(())
 }
 
 /// Check for update and, if found, notify the frontend via the
@@ -115,23 +359,42 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .manage(RunnerState(Mutex::new(None)))
+        .manage(EmbeddedServerState(Mutex::new(None)))
         .setup(|app| {
             let handle = app.handle().clone();
             spawn_runner(handle.clone());
             check_for_updates(handle);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_runner_status, install_update, read_claude_md, write_claude_md])
+        .invoke_handler(tauri::generate_handler![
+            get_runner_status,
+            install_update,
+            read_claude_md,
+            write_claude_md,
+            get_tailscale_status,
+            get_remote_control_status,
+            activate_remote_control,
+            deactivate_remote_control
+        ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {
             if let tauri::RunEvent::Exit = event {
-                let state = app_handle.state::<RunnerState>();
-                let child = {
-                    let mut guard = state.0.lock().unwrap_or_else(|e| e.into_inner());
+                // Kill runner
+                let runner_state = app_handle.state::<RunnerState>();
+                let runner_child = {
+                    let mut guard = runner_state.0.lock().unwrap_or_else(|e| e.into_inner());
                     guard.take()
                 };
-                if let Some(mut child) = child { let _ = child.kill(); }
+                if let Some(mut child) = runner_child { let _ = child.kill(); }
+
+                // Kill embedded server if running
+                let server_state = app_handle.state::<EmbeddedServerState>();
+                let server_child = {
+                    let mut guard = server_state.0.lock().unwrap_or_else(|e| e.into_inner());
+                    guard.take()
+                };
+                if let Some(mut child) = server_child { let _ = child.kill(); }
             }
         });
 }

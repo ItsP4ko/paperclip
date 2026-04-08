@@ -19,6 +19,7 @@ import {
   GitBranch,
   Users,
   LogOut,
+  Smartphone,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@/lib/router";
@@ -154,6 +155,7 @@ export function Sidebar() {
           <SidebarNavItem to="/knowledge" label="Knowledge Base" icon={BookOpen} />
           {!isMember && <SidebarNavItem to="/cost-recommendations" label="Cost Optimizer" icon={Zap} />}
           <SidebarNavItem to="/company/settings" label="Settings" icon={Settings} />
+          <SidebarNavItem to="/remote-control" label="Remote Control" icon={Smartphone} />
         </SidebarSection>
 
         <PluginSlotOutlet

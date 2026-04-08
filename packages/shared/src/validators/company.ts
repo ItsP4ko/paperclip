@@ -24,6 +24,7 @@ export const updateCompanySchema = createCompanySchema
     feedbackDataSharingConsentByUserId: z.string().min(1).nullable().optional(),
     feedbackDataSharingTermsVersion: feedbackDataSharingTermsVersionSchema,
     brandColor: brandColorSchema,
+    remoteControlEnabled: z.boolean().optional(),
     logoAssetId: logoAssetIdSchema,
   });
 

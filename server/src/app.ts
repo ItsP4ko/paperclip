@@ -39,6 +39,7 @@ import { pipelineRoutes } from "./routes/pipelines.js";
 import { runnerRoutes } from "./routes/runner.js";
 import { pluginRoutes } from "./routes/plugins.js";
 import { pluginUiStaticRoutes } from "./routes/plugin-ui-static.js";
+import { remoteControlRoutes } from "./routes/remote-control.js";
 import { applyUiBranding } from "./ui-branding.js";
 import { logger } from "./middleware/logger.js";
 import { DEFAULT_LOCAL_PLUGIN_DIR, pluginLoader } from "./services/plugin-loader.js";
@@ -215,6 +216,7 @@ export async function createApp(
   api.use(costRecommendationRoutes(db));
   api.use(pipelineRoutes(db));
   api.use(runnerRoutes(db));
+  api.use(remoteControlRoutes(db));
   const hostServicesDisposers = new Map<string, () => void>();
   const workerManager = createPluginWorkerManager();
   const pluginRegistry = pluginRegistryService(db);

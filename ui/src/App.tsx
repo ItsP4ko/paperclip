@@ -32,6 +32,7 @@ import { PipelineDetail } from "./pages/PipelineDetail";
 import { PipelineRunDetail } from "./pages/PipelineRunDetail";
 import { Inbox } from "./pages/Inbox";
 import { CompanySettings } from "./pages/CompanySettings";
+import { RemoteControl } from "./pages/RemoteControl";
 import { MyIssues } from "./pages/MyIssues";
 import { CompanySkills } from "./pages/CompanySkills";
 import { CompanyExport } from "./pages/CompanyExport";
@@ -135,6 +136,7 @@ function boardRoutes() {
       <Route path="onboarding" element={<OnboardingRoutePage />} />
       <Route path="companies" element={<Companies />} />
       <Route path="company/settings" element={<CompanySettings />} />
+      <Route path="remote-control" element={<RemoteControl />} />
       <Route path="company/export/*" element={<CompanyExport />} />
       <Route path="company/import" element={<CompanyImport />} />
       <Route path="skills/*" element={<CompanySkills />} />
@@ -367,6 +369,7 @@ export function App() {
           <Route path="my-tasks" element={<UnprefixedBoardRedirect />} />
           <Route path="execution-workspaces/:workspaceId" element={<UnprefixedBoardRedirect />} />
           <Route path="knowledge" element={<UnprefixedBoardRedirect />} />
+          <Route path="remote-control" element={<UnprefixedBoardRedirect />} />
           <Route path="cost-recommendations" element={<UnprefixedBoardRedirect />} />
           <Route path="pipelines" element={<UnprefixedBoardRedirect />} />
           <Route path="pipelines/:pipelineId" element={<UnprefixedBoardRedirect />} />
