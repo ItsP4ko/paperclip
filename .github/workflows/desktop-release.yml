@@ -11,6 +11,12 @@ on:
   push:
     tags:
       - 'v[0-9]*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (e.g. v0.6.0)'
+        required: true
+        type: string
 
 jobs:
   build-macos:
@@ -50,7 +56,8 @@ jobs:
         id: artifacts
         shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          REF_TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${REF_TAG#v}"
           BUNDLE_DIR="src-tauri/target/release/bundle"
 
           DMG=$(find "$BUNDLE_DIR/dmg" -name "*aarch64.dmg" | head -1)
@@ -93,7 +100,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
           REPO="${GITHUB_REPOSITORY}"
 
           # Create the release if it doesn't exist yet (e.g. tag pushed before
