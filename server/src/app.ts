@@ -209,7 +209,7 @@ export async function createApp(
   api.use(agentRoutes(db));
   api.use(assetRoutes(db, opts.storageService));
   api.use(projectRoutes(db));
-  api.use(issueRoutes(db, opts.storageService));
+  api.use(issueRoutes(db, opts.storageService, opts.redisClient));
   api.use(routineRoutes(db));
   api.use(executionWorkspaceRoutes(db));
   api.use(goalRoutes(db));
@@ -217,8 +217,8 @@ export async function createApp(
   api.use(secretRoutes(db));
   api.use(costRoutes(db));
   api.use(activityRoutes(db));
-  api.use(dashboardRoutes(db));
-  api.use(sidebarBadgeRoutes(db));
+  api.use(dashboardRoutes(db, opts.redisClient));
+  api.use(sidebarBadgeRoutes(db, opts.redisClient));
   api.use(instanceSettingsRoutes(db, opts.redisClient));
   api.use(analyticsRoutes(db));
   api.use(auditRoutes(db));
