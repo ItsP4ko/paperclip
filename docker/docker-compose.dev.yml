@@ -3,6 +3,7 @@
 #   BETTER_AUTH_SECRET=devsecret docker compose -f docker/docker-compose.dev.yml up
 #   Then run: pnpm desktop:dev-local
 
+
 services:
   db:
     image: postgres:17-alpine
