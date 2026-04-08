@@ -11,6 +11,21 @@ import type { StorageService } from "../storage/types.js";
 const GEMINI_MODEL = "gemini-2.5-flash-lite";
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
 
+const AUDIO_MIME_TYPES = new Set([
+  "audio/mpeg",   // .mp3
+  "audio/wav",    // .wav
+  "audio/mp4",    // .m4a
+  "audio/x-m4a",  // .m4a (Safari)
+  "audio/ogg",    // .ogg
+  "audio/webm",   // .webm
+  "audio/flac",   // .flac
+  "audio/aiff",   // .aiff
+]);
+
+function isAudio(mimetype: string): boolean {
+  return AUDIO_MIME_TYPES.has(mimetype);
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_BYTES, files: 1 },
@@ -34,6 +49,23 @@ Para cada tarea devuelve un objeto JSON con:
 Responde ÚNICAMENTE con un array JSON válido, sin texto adicional ni bloques de código.
 Ejemplo de formato esperado:
 [{"title":"...","description":"...","priority":"medium"}]
+`;
+
+const AUDIO_ANALYSIS_PROMPT = `
+Vas a recibir un archivo de audio. Realizá las siguientes dos tareas:
+
+1. TRANSCRIBIR: Transcribí el audio completo, palabra por palabra, en el campo "transcription".
+
+2. EXTRAER TAREAS: A partir de la transcripción, identificá entre 3 y 15 tareas de desarrollo concretas.
+   Para cada tarea devolvé:
+   - title: string (máximo 120 caracteres, en español)
+   - description: string (descripción detallada en markdown, en español)
+   - priority: "low" | "medium" | "high" | "critical"
+   - sourceQuote: string (fragmento EXACTO de la transcripción que originó esta tarea, máximo 200 caracteres)
+
+Respondé ÚNICAMENTE con un objeto JSON válido con esta forma exacta:
+{"transcription":"...","tasks":[{"title":"...","description":"...","priority":"medium","sourceQuote":"..."}]}
+Sin texto adicional ni bloques de código markdown.
 `;
 
 const USER_STORIES_PROMPT = (
@@ -60,6 +92,15 @@ async function extractJsonArray(text: string): Promise<unknown[]> {
   const parsed = JSON.parse(cleaned);
   if (!Array.isArray(parsed)) throw new Error("Expected JSON array");
   return parsed;
+}
+
+function extractJsonObject(text: string): Record<string, unknown> {
+  const cleaned = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();
+  const parsed = JSON.parse(cleaned);
+  if (typeof parsed !== "object" || Array.isArray(parsed) || parsed === null) {
+    throw new Error("Expected JSON object");
+  }
+  return parsed as Record<string, unknown>;
 }
 
 async function extractTextFromBuffer(buffer: Buffer, contentType: string): Promise<string> {
@@ -111,6 +152,40 @@ export function geminiAnalysisRoutes(db: Db, storage: StorageService) {
     let parts: any[];
 
     try {
+      if (isAudio(mimetype)) {
+        parts = [
+          AUDIO_ANALYSIS_PROMPT,
+          { inlineData: { mimeType: mimetype, data: buffer.toString("base64") } },
+        ];
+
+        const response = await model.generateContent(parts);
+        const text = response.response.text();
+        const raw = extractJsonObject(text);
+
+        const transcription = String(raw.transcription ?? "");
+        const rawTasks = Array.isArray(raw.tasks) ? raw.tasks : [];
+
+        const tasks = rawTasks.slice(0, 15).map((t: unknown) => {
+          const task = t as Record<string, unknown>;
+          const baseDescription = String(task.description ?? "");
+          const sourceQuote = String(task.sourceQuote ?? "").slice(0, 200).trim();
+          const description = sourceQuote
+            ? `${baseDescription}\n\n---\n**Contexto de origen (audio)**\n> ${sourceQuote}`
+            : baseDescription;
+
+          return {
+            title: String(task.title ?? "").slice(0, 120),
+            description,
+            priority: (["low", "medium", "high", "critical"] as const).includes(task.priority as never)
+              ? task.priority as "low" | "medium" | "high" | "critical"
+              : "medium" as const,
+          };
+        });
+
+        res.json({ tasks, transcription });
+        return;
+      }
+
       if (mimetype === "application/pdf") {
         parts = [
           TASK_EXTRACTION_PROMPT,

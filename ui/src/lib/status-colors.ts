@@ -40,39 +40,30 @@ export const issueStatusTextDefault = "text-muted-foreground";
 // ---------------------------------------------------------------------------
 
 export const statusBadge: Record<string, string> = {
-  // Agent statuses
-  active: "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
-  running: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300",
-  paused: "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300",
-  idle: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300",
+  active: "bg-green-100 text-green-700 dark:border dark:border-primary dark:text-primary dark:bg-transparent dark:shadow-[var(--glow-green)]",
+  running: "bg-cyan-100 text-cyan-700 dark:border dark:border-accent dark:text-accent dark:bg-transparent dark:shadow-[var(--glow-cyan)]",
+  paused: "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300",
+  idle: "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300",
   archived: "bg-muted text-muted-foreground",
-
-  // Goal statuses
   planned: "bg-muted text-muted-foreground",
-  achieved: "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
-  completed: "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
-
-  // Run statuses
-  failed: "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
-  timed_out: "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300",
-  succeeded: "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
-  error: "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
-  terminated: "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
-  pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300",
-
-  // Approval statuses
-  pending_approval: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300",
-  revision_requested: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300",
-  approved: "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
-  rejected: "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
-
-  // Issue statuses — consistent hues with issueStatusIcon above
+  achieved: "bg-green-100 text-green-700 dark:border dark:border-primary dark:text-primary dark:bg-transparent dark:shadow-[var(--glow-green)]",
+  completed: "bg-green-100 text-green-700 dark:border dark:border-primary dark:text-primary dark:bg-transparent dark:shadow-[var(--glow-green)]",
+  failed: "bg-red-100 text-red-700 dark:border dark:border-destructive dark:text-destructive dark:bg-transparent",
+  timed_out: "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300",
+  succeeded: "bg-green-100 text-green-700 dark:border dark:border-primary dark:text-primary dark:bg-transparent dark:shadow-[var(--glow-green)]",
+  error: "bg-red-100 text-red-700 dark:border dark:border-destructive dark:text-destructive dark:bg-transparent",
+  terminated: "bg-red-100 text-red-700 dark:border dark:border-destructive dark:text-destructive dark:bg-transparent",
+  pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300",
+  pending_approval: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+  revision_requested: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+  approved: "bg-green-100 text-green-700 dark:border dark:border-primary dark:text-primary dark:bg-transparent dark:shadow-[var(--glow-green)]",
+  rejected: "bg-red-100 text-red-700 dark:border dark:border-destructive dark:text-destructive dark:bg-transparent",
   backlog: "bg-muted text-muted-foreground",
-  todo: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
-  in_progress: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300",
-  in_review: "bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300",
-  blocked: "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
-  done: "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
+  todo: "bg-blue-100 text-blue-700 dark:border dark:border-accent dark:text-accent dark:bg-transparent dark:shadow-[var(--glow-cyan)]",
+  in_progress: "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300",
+  in_review: "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300",
+  blocked: "bg-red-100 text-red-700 dark:border dark:border-destructive dark:text-destructive dark:bg-transparent",
+  done: "bg-green-100 text-green-700 dark:border dark:border-primary dark:text-primary dark:bg-transparent dark:shadow-[var(--glow-green)]",
   cancelled: "bg-muted text-muted-foreground",
 };
 
@@ -83,12 +74,12 @@ export const statusBadgeDefault = "bg-muted text-muted-foreground";
 // ---------------------------------------------------------------------------
 
 export const agentStatusDot: Record<string, string> = {
-  running: "bg-cyan-400 animate-pulse",
-  active: "bg-green-400",
+  running: "bg-accent animate-pulse",
+  active: "bg-primary",
   paused: "bg-yellow-400",
   idle: "bg-yellow-400",
   pending_approval: "bg-amber-400",
-  error: "bg-red-400",
+  error: "bg-destructive",
   archived: "bg-neutral-400",
 };
 

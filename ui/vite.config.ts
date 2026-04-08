@@ -19,6 +19,9 @@ export default defineConfig({
         ws: true,
       },
     },
+    warmup: {
+      clientFiles: ["./src/main.tsx"],
+    },
   },
   build: {
     rollupOptions: {},

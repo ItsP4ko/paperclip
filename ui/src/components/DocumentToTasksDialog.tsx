@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Upload, FileText } from "lucide-react";
+import { Loader2, Upload, FileText, Mic, Download } from "lucide-react";
 
 type Priority = "low" | "medium" | "high" | "critical";
 
@@ -18,7 +18,7 @@ interface GeneratedTask {
   selected: boolean;
 }
 
-const ACCEPTED_TYPES = ".pdf,.docx,.txt,.md";
+const ACCEPTED_TYPES = ".pdf,.docx,.txt,.md,.mp3,.wav,.m4a,.ogg,.webm";
 const MAX_SIZE_BYTES = 20 * 1024 * 1024;
 
 export function DocumentToTasksDialog({
@@ -36,6 +36,8 @@ export function DocumentToTasksDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [isAudioFile, setIsAudioFile] = useState(false);
+  const [transcription, setTranscription] = useState<string | null>(null);
   const [tasks, setTasks] = useState<GeneratedTask[]>([]);
   const [step, setStep] = useState<"upload" | "preview">("upload");
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +46,7 @@ export function DocumentToTasksDialog({
     mutationFn: (file: File) => issuesApi.analyzeDocument(companyId, file),
     onSuccess: (data) => {
       setTasks(data.tasks.map((t) => ({ ...t, selected: true })));
+      setTranscription(data.transcription ?? null);
       setStep("preview");
     },
     onError: (e) => setError((e as Error).message),
@@ -75,6 +78,19 @@ export function DocumentToTasksDialog({
     setTasks([]);
     setFileName(null);
     setError(null);
+    setTranscription(null);
+    setIsAudioFile(false);
+  }
+
+  function downloadTranscription() {
+    if (!transcription) return;
+    const blob = new Blob([transcription], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transcripcion-${fileName?.replace(/\.[^.]+$/, "") ?? "audio"}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   const handleFile = useCallback((file: File) => {
@@ -84,6 +100,7 @@ export function DocumentToTasksDialog({
       return;
     }
     setFileName(file.name);
+    setIsAudioFile(file.type.startsWith("audio/"));
     analyze.mutate(file);
   }, [analyze]);
 
@@ -124,10 +141,13 @@ export function DocumentToTasksDialog({
                 </>
               ) : (
                 <>
-                  <Upload className="h-8 w-8 text-muted-foreground" />
+                  {isAudioFile
+                    ? <Mic className="h-8 w-8 text-muted-foreground" />
+                    : <Upload className="h-8 w-8 text-muted-foreground" />
+                  }
                   <div className="text-center">
                     <p className="text-sm font-medium">Arrastrá un archivo o hacé click para seleccionar</p>
-                    <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, TXT, MD — máximo 20 MB</p>
+                    <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, TXT, MD, MP3, WAV, M4A — máximo 20 MB</p>
                   </div>
                 </>
               )}
@@ -150,10 +170,18 @@ export function DocumentToTasksDialog({
         {step === "preview" && (
           <>
             <div className="flex items-center justify-between px-1">
-              <p className="text-sm text-muted-foreground">
-                <FileText className="inline h-3.5 w-3.5 mr-1" />
-                {fileName} — {tasks.length} tareas generadas
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  <FileText className="inline h-3.5 w-3.5 mr-1" />
+                  {fileName} — {tasks.length} tareas generadas
+                </p>
+                {transcription && (
+                  <Button variant="ghost" size="sm" onClick={downloadTranscription} className="h-6 px-2 text-xs">
+                    <Download className="h-3 w-3 mr-1" />
+                    Descargar transcripción
+                  </Button>
+                )}
+              </div>
               <Button variant="ghost" size="sm" onClick={() => toggleAll(!allSelected)}>
                 {allSelected ? "Deseleccionar todo" : "Seleccionar todo"}
               </Button>
