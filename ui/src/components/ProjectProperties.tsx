@@ -18,6 +18,7 @@ import { AlertCircle, Archive, ArchiveRestore, Check, ExternalLink, Github, Load
 import { ChoosePathButton } from "./PathInstructionsModal";
 import { DraftInput } from "./agent-config-primitives";
 import { InlineEditor } from "./InlineEditor";
+import { useMemberRole } from "../hooks/useMemberRole";
 
 const PROJECT_STATUSES = [
   { value: "backlog", label: "Backlog" },
@@ -238,6 +239,7 @@ function ClaudeMdSection({ projectId, companyId, localFolder }: { projectId: str
   const [isLoading, setIsLoading] = useState(true);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inTauri = isTauriEnv();
+  const { isOwner } = useMemberRole(companyId ?? null);
 
   useEffect(() => {
     if (!inTauri || !localFolder) {
@@ -298,14 +300,23 @@ function ClaudeMdSection({ projectId, companyId, localFolder }: { projectId: str
             Loading…
           </div>
         ) : (
-          <textarea
-            className="w-full rounded border border-border bg-transparent px-2 py-1.5 text-xs font-mono outline-none resize-y focus:border-ring"
-            rows={16}
-            value={content ?? ""}
-            onChange={(e) => handleChange(e.target.value)}
-            placeholder="# Project instructions for Claude agents&#10;&#10;Write your CLAUDE.md here…"
-            spellCheck={false}
-          />
+          <>
+            <textarea
+              className="w-full rounded border border-border bg-transparent px-2 py-1.5 text-xs font-mono outline-none resize-y focus:border-ring disabled:opacity-60 disabled:cursor-not-allowed"
+              rows={16}
+              value={content ?? ""}
+              onChange={(e) => isOwner ? handleChange(e.target.value) : undefined}
+              readOnly={!isOwner}
+              disabled={!isOwner}
+              placeholder="# Project instructions for Claude agents&#10;&#10;Write your CLAUDE.md here…"
+              spellCheck={false}
+            />
+            {!isOwner && (
+              <p className="text-xs text-muted-foreground">
+                Only owners can edit CLAUDE.md. Contact your company owner to make changes.
+              </p>
+            )}
+          </>
         )}
       </div>
     </>

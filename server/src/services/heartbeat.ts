@@ -4155,9 +4155,15 @@ export function heartbeatService(db: Db) {
           agentAdapterType: agents.adapterType,
           agentAdapterConfig: agents.adapterConfig,
           agentRuntimeConfig: agents.runtimeConfig,
+          agentMd: agents.agentMd,
+          projectClaudeMd: projects.claudeMd,
         })
         .from(heartbeatRuns)
         .innerJoin(agents, eq(heartbeatRuns.agentId, agents.id))
+        .leftJoin(
+          projects,
+          sql`${heartbeatRuns.contextSnapshot}->>'projectId' = ${projects.id}::text`,
+        )
         .where(
           and(
             eq(heartbeatRuns.status, "pending_local"),
