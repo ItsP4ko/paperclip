@@ -39,7 +39,8 @@ if [ -z "$SIG" ]; then
 fi
 
 SIGNATURE=$(cat "$SIG")
-TARGZ_FILENAME=$(basename "$TARGZ")
+# GitHub replaces spaces with dots in asset names — normalize to match
+TARGZ_FILENAME=$(basename "$TARGZ" | tr ' ' '.')
 PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
 
 # Create version-less DMG copy so /releases/latest/download/Relay.Control_aarch64.dmg works
