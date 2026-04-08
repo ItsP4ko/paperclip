@@ -98,6 +98,8 @@ import {
   arraysEqual,
   isReadOnlyUnmanagedSkillEntry,
 } from "../lib/agent-skills-state";
+import { Separator } from "@/components/ui/separator";
+import { useMemberRole } from "../hooks/useMemberRole";
 
 const runStatusIcons: Record<string, { icon: typeof CheckCircle2; color: string }> = {
   succeeded: { icon: CheckCircle2, color: "text-green-600 dark:text-green-400" },
@@ -1617,6 +1619,69 @@ function ConfigurationTab({
   );
 }
 
+/* ---- Agent MD Section ---- */
+
+function AgentMdSection({ agent, companyId }: { agent: Agent; companyId?: string }) {
+  const queryClient = useQueryClient();
+  const { isOwner } = useMemberRole(companyId ?? null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: queryKeys.agents.agentMd(agent.id),
+    queryFn: () => agentsApi.getAgentMd(agent.id, companyId),
+  });
+
+  const [localContent, setLocalContent] = useState<string | null>(null);
+  const content = localContent ?? data?.content ?? "";
+
+  const handleChange = (value: string) => {
+    if (!isOwner) return;
+    setLocalContent(value);
+    setSaveState("idle");
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      setSaveState("saving");
+      try {
+        await agentsApi.updateAgentMd(agent.id, value, companyId);
+        queryClient.invalidateQueries({ queryKey: queryKeys.agents.agentMd(agent.id) });
+        setSaveState("saved");
+      } catch {
+        setSaveState("error");
+      }
+    }, 1000);
+  };
+
+  return (
+    <div className="space-y-2 pb-4">
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-medium">Cloud Agent Instructions (AGENTS.md)</span>
+        {saveState === "saving" && <span className="text-xs text-muted-foreground">Saving…</span>}
+        {saveState === "saved" && <span className="text-xs text-green-500">Saved</span>}
+        {saveState === "error" && <span className="text-xs text-destructive">Error saving</span>}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Stored in the shared DB. Injected by the local runner instead of the on-disk AGENTS.md.{" "}
+        {!isOwner && "Read-only — contact an owner to edit."}
+      </p>
+      {isLoading ? (
+        <div className="text-xs text-muted-foreground">Loading…</div>
+      ) : (
+        <textarea
+          className="w-full rounded border border-border bg-transparent px-2 py-1.5 text-xs font-mono outline-none resize-y focus:border-ring disabled:opacity-60 disabled:cursor-not-allowed"
+          rows={14}
+          value={content}
+          onChange={(e) => handleChange(e.target.value)}
+          readOnly={!isOwner}
+          disabled={!isOwner}
+          placeholder="# Agent instructions&#10;&#10;You are a software engineer agent..."
+          spellCheck={false}
+        />
+      )}
+    </div>
+  );
+}
+
 /* ---- Prompts Tab ---- */
 
 function PromptsTab({
@@ -1942,6 +2007,8 @@ function PromptsTab({
 
   return (
     <div className="space-y-6">
+      <AgentMdSection agent={agent} companyId={companyId} />
+      <Separator className="my-4" />
       {(bundle?.warnings ?? []).length > 0 && (
         <div className="space-y-2">
           {(bundle?.warnings ?? []).map((warning) => (
