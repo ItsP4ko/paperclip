@@ -44,6 +44,8 @@ interface RunnerJob {
   contextSnapshot: Record<string, unknown> | null;
   status: string;
   createdAt: string;
+  agentMd?: string | null;
+  projectClaudeMd?: string | null;
 }
 
 interface ClaimResponse {
@@ -126,6 +128,34 @@ async function executeJob(
     adapterConfig.cwd = workspacePath;
   }
 
+  // ── DB-stored instructions injection ──────────────────────────────────────
+  // These override local filesystem files so the runner always uses the
+  // company-controlled instructions from the shared DB.
+
+  const effectiveCwd = String(adapterConfig.cwd || workspacePath);
+  let tmpInstructionsDir: string | null = null;
+
+  // 1. Agent instructions (agentMd) → temp file → override instructionsFilePath
+  if (typeof job.agentMd === "string" && job.agentMd.trim().length > 0) {
+    tmpInstructionsDir = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-agent-md-"));
+    const tmpPath = path.join(tmpInstructionsDir, "AGENTS.md");
+    await fs.writeFile(tmpPath, job.agentMd, "utf-8");
+    adapterConfig.instructionsFilePath = tmpPath;
+    if (verbose) {
+      console.log(pc.dim(`[runner] DB agentMd injected via ${tmpPath}`));
+    }
+  }
+
+  // 2. Project CLAUDE.md (projectClaudeMd) → write to workspace cwd
+  if (typeof job.projectClaudeMd === "string" && job.projectClaudeMd.trim().length > 0) {
+    await fs.mkdir(effectiveCwd, { recursive: true });
+    await fs.writeFile(path.join(effectiveCwd, "CLAUDE.md"), job.projectClaudeMd, "utf-8");
+    if (verbose) {
+      console.log(pc.dim(`[runner] DB projectClaudeMd written to ${effectiveCwd}/CLAUDE.md`));
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   const context: Record<string, unknown> = {
     ...(job.contextSnapshot ?? {}),
   };
@@ -172,6 +202,10 @@ async function executeJob(
       })
       .catch(() => undefined);
     return;
+  } finally {
+    if (tmpInstructionsDir) {
+      await fs.rm(tmpInstructionsDir, { recursive: true, force: true }).catch(() => {});
+    }
   }
 
   const outcome =

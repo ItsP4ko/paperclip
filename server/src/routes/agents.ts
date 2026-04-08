@@ -202,6 +202,16 @@ export function agentRoutes(db: Db) {
     }
   }
 
+  async function assertOwnerAccess(req: Request, companyId: string) {
+    if (req.actor.type !== "board") return;
+    if (req.actor.source === "local_implicit" || req.actor.isInstanceAdmin) return;
+    if (!req.actor.userId) throw forbidden("Authentication required");
+    const membership = await access.getMembership(companyId, "user", req.actor.userId);
+    if (!membership || membership.membershipRole !== "owner") {
+      throw forbidden("Owner role required");
+    }
+  }
+
   async function assertCanCreateAgentsForCompany(req: Request, companyId: string) {
     assertCompanyAccess(req, companyId);
     if (req.actor.type === "board") {
@@ -1811,6 +1821,42 @@ export function agentRoutes(db: Db) {
     });
 
     res.json(result.bundle);
+  });
+
+  router.get("/agents/:id/instructions/md", async (req, res) => {
+    const id = req.params.id as string;
+    const existing = await svc.getById(id);
+    if (!existing) {
+      res.status(404).json({ error: "Agent not found" });
+      return;
+    }
+    assertCompanyAccess(req, existing.companyId);
+    const [row] = await db
+      .select({ agentMd: agentsTable.agentMd })
+      .from(agentsTable)
+      .where(eq(agentsTable.id, existing.id));
+    res.json({ content: row?.agentMd ?? "" });
+  });
+
+  router.put("/agents/:id/instructions/md", async (req, res) => {
+    const id = req.params.id as string;
+    const existing = await svc.getById(id);
+    if (!existing) {
+      res.status(404).json({ error: "Agent not found" });
+      return;
+    }
+    assertCompanyAccess(req, existing.companyId);
+    await assertOwnerAccess(req, existing.companyId);
+    const content = typeof req.body?.content === "string" ? req.body.content : null;
+    if (content === null) {
+      res.status(422).json({ error: "content is required" });
+      return;
+    }
+    await db
+      .update(agentsTable)
+      .set({ agentMd: content, updatedAt: new Date() })
+      .where(eq(agentsTable.id, existing.id));
+    res.json({ content });
   });
 
   router.patch("/agents/:id", validate(updateAgentSchema), async (req, res) => {
