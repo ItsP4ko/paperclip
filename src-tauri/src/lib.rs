@@ -9,6 +9,7 @@ const API_BASE_URL: &str = "https://paperclip-paperclip-api.qiwa34.easypanel.hos
 
 pub struct RunnerState(pub Mutex<Option<Child>>);
 pub struct EmbeddedServerState(pub Mutex<Option<Child>>);
+pub struct EmbeddedServerPin(pub Mutex<Option<String>>);
 
 #[derive(serde::Serialize)]
 pub struct TailscaleStatus {
@@ -23,6 +24,7 @@ pub struct TailscaleStatus {
 pub struct RemoteControlInfo {
     active: bool,
     url: Option<String>,
+    pin: Option<String>,
     tailscale: TailscaleStatus,
     server_port: u16,
 }
@@ -129,6 +131,7 @@ fn get_tailscale_status() -> TailscaleStatus {
 #[tauri::command]
 fn get_remote_control_status(
     server_state: State<'_, EmbeddedServerState>,
+    pin_state: State<'_, EmbeddedServerPin>,
 ) -> RemoteControlInfo {
     let tailscale = get_tailscale_status();
     let server_port: u16 = 3100;
@@ -140,6 +143,7 @@ fn get_remote_control_status(
                 return RemoteControlInfo {
                     active: false,
                     url: None,
+                    pin: None,
                     tailscale,
                     server_port,
                 };
@@ -161,9 +165,16 @@ fn get_remote_control_status(
         None
     };
 
+    let pin = if active {
+        pin_state.0.lock().ok().and_then(|g| g.clone())
+    } else {
+        None
+    };
+
     RemoteControlInfo {
         active,
         url,
+        pin,
         tailscale,
         server_port,
     }
@@ -173,6 +184,7 @@ fn get_remote_control_status(
 fn activate_remote_control(
     handle: tauri::AppHandle,
     server_state: State<'_, EmbeddedServerState>,
+    pin_state: State<'_, EmbeddedServerPin>,
 ) -> Result<RemoteControlInfo, String> {
     let tailscale = get_tailscale_status();
     if !tailscale.running {
@@ -181,7 +193,7 @@ fn activate_remote_control(
 
     let server_port: u16 = 3100;
 
-    // Check if already running
+    // Check if already running — return existing PIN
     {
         let mut guard = server_state.0.lock().map_err(|e| e.to_string())?;
         if let Some(child) = guard.as_mut() {
@@ -191,14 +203,30 @@ fn activate_remote_control(
                     .as_ref()
                     .or(tailscale.ip.as_ref())
                     .map(|host| format!("http://{}:{}", host, server_port));
+                let pin = pin_state.0.lock().ok().and_then(|g| g.clone());
                 return Ok(RemoteControlInfo {
                     active: true,
                     url,
+                    pin,
                     tailscale,
                     server_port,
                 });
             }
         }
+    }
+
+    // Generate a fresh 6-digit PIN
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let seed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.subsec_nanos())
+        .unwrap_or(123456);
+    let pin_value = format!("{:06}", seed % 1_000_000);
+
+    // Store the PIN for later retrieval
+    {
+        let mut guard = pin_state.0.lock().map_err(|e| e.to_string())?;
+        *guard = Some(pin_value.clone());
     }
 
     // Build the allowed hostnames from Tailscale info
@@ -227,16 +255,18 @@ fn activate_remote_control(
         }
     }
 
-    // Start the embedded backend in authenticated/private mode
+    // Start the embedded backend in authenticated/private mode with the PIN
     let shell_cmd = format!(
         "PAPERCLIP_DEPLOYMENT_MODE=authenticated \
          PAPERCLIP_DEPLOYMENT_EXPOSURE=private \
          PAPERCLIP_ALLOWED_HOSTNAMES='{hostnames}' \
          PAPERCLIP_AUTH_BASE_URL_MODE=auto \
+         PAPERCLIP_REMOTE_PIN='{pin}' \
          HOST=0.0.0.0 \
          PORT={port} \
          npx relaycontrol@latest run",
         hostnames = hostnames_csv,
+        pin = pin_value,
         port = server_port,
     );
 
@@ -274,6 +304,7 @@ fn activate_remote_control(
             Ok(RemoteControlInfo {
                 active: true,
                 url,
+                pin: Some(pin_value),
                 tailscale,
                 server_port,
             })
@@ -285,11 +316,15 @@ fn activate_remote_control(
 #[tauri::command]
 fn deactivate_remote_control(
     server_state: State<'_, EmbeddedServerState>,
+    pin_state: State<'_, EmbeddedServerPin>,
 ) -> Result<(), String> {
     let mut guard = server_state.0.lock().map_err(|e| e.to_string())?;
     if let Some(mut child) = guard.take() {
         let _ = child.kill();
         let _ = child.wait();
+    }
+    if let Ok(mut pin_guard) = pin_state.0.lock() {
+        *pin_guard = None;
     }
     Ok(())
 }
@@ -369,6 +404,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(RunnerState(Mutex::new(None)))
         .manage(EmbeddedServerState(Mutex::new(None)))
+        .manage(EmbeddedServerPin(Mutex::new(None)))
         .setup(|app| {
             let handle = app.handle().clone();
             spawn_runner(handle.clone());

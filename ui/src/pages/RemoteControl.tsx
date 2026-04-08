@@ -34,6 +34,7 @@ type TailscaleStatus = {
 type RemoteControlInfo = {
   active: boolean;
   url: string | null;
+  pin: string | null;
   tailscale: TailscaleStatus;
   server_port: number;
 };
@@ -359,6 +360,18 @@ export function RemoteControl() {
                   {deactivating ? "Stopping..." : "Deactivate"}
                 </Button>
               </div>
+
+              {/* PIN display */}
+              {rcInfo?.pin && (
+                <div className="rounded-md border border-border bg-background/50 px-4 py-3 space-y-1 text-center">
+                  <p className="text-xs text-muted-foreground">
+                    Enter this PIN on your phone when prompted:
+                  </p>
+                  <p className="text-3xl font-mono font-bold tracking-[0.25em] text-foreground">
+                    {rcInfo.pin}
+                  </p>
+                </div>
+              )}
 
               {rcInfo?.url && (
                 <>
