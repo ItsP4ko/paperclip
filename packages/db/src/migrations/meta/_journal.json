@@ -379,6 +379,13 @@
       "when": 1775571615000,
       "tag": "0053_project_claude_md",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1775660000000,
+      "tag": "0054_remote_control_enabled",
+      "breakpoints": true
     }
   ]
 }

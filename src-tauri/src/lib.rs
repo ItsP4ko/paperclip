@@ -218,11 +218,20 @@ fn activate_remote_control(
     let _ = std::fs::create_dir_all(&log_dir);
     let log_path = log_dir.join("remote-control-server.log");
 
+    // Validate hostnames to prevent shell injection.
+    // Tailscale hostnames are DNS names or IPs, so they should only contain
+    // alphanumeric chars, dots, hyphens, and colons (for IPv6).
+    for hostname in &allowed_hostnames {
+        if !hostname.chars().all(|c| c.is_alphanumeric() || c == '.' || c == '-' || c == ':') {
+            return Err(format!("Invalid hostname from Tailscale: {}", hostname));
+        }
+    }
+
     // Start the embedded backend in authenticated/private mode
     let shell_cmd = format!(
         "PAPERCLIP_DEPLOYMENT_MODE=authenticated \
          PAPERCLIP_DEPLOYMENT_EXPOSURE=private \
-         PAPERCLIP_ALLOWED_HOSTNAMES={hostnames} \
+         PAPERCLIP_ALLOWED_HOSTNAMES='{hostnames}' \
          PAPERCLIP_AUTH_BASE_URL_MODE=auto \
          HOST=0.0.0.0 \
          PORT={port} \

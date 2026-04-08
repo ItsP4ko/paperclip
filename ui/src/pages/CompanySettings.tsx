@@ -89,6 +89,27 @@ export function CompanySettings() {
     }
   });
 
+  const remoteControlMutation = useMutation({
+    mutationFn: (enabled: boolean) =>
+      companiesApi.update(selectedCompanyId!, {
+        remoteControlEnabled: enabled,
+      }),
+    onSuccess: (_company, enabled) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
+      pushToast({
+        title: enabled ? "Remote Control enabled" : "Remote Control disabled",
+        tone: "success",
+      });
+    },
+    onError: (err) => {
+      pushToast({
+        title: "Failed to update Remote Control setting",
+        body: err instanceof Error ? err.message : "Unknown error",
+        tone: "error",
+      });
+    },
+  });
+
   const feedbackSharingMutation = useMutation({
     mutationFn: (enabled: boolean) =>
       companiesApi.update(selectedCompanyId!, {
@@ -666,15 +687,7 @@ export function CompanySettings() {
             label="Allow Remote Control for developers"
             hint="When enabled, developers with the Desktop app can activate Remote Control via Tailscale to manage local agents from their phone."
             checked={!!selectedCompany.remoteControlEnabled}
-            onChange={(enabled) =>
-              companiesApi.update(selectedCompanyId!, { remoteControlEnabled: enabled }).then(() => {
-                queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
-                pushToast({
-                  title: enabled ? "Remote Control enabled" : "Remote Control disabled",
-                  tone: "success",
-                });
-              })
-            }
+            onChange={(enabled) => remoteControlMutation.mutate(enabled)}
           />
           <p className="text-sm text-muted-foreground">
             Requires Tailscale to be installed and connected on both the desktop machine and the remote device.
