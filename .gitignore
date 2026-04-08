@@ -60,3 +60,6 @@ tests/release-smoke/playwright-report/
 
 # Tauri build artifacts
 src-tauri/target/
+
+# Local dev scripts (personal workflows, not for repo)
+scripts/
