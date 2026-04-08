@@ -79,5 +79,45 @@ jobs:
     needs: build-and-push
     if: github.ref == 'refs/heads/master'
     steps:
+      - name: Sync environment variables to Easypanel
+        env:
+          BACKEND_DATABASE_URL: ${{ secrets.BACKEND_DATABASE_URL }}
+          BACKEND_BETTER_AUTH_SECRET: ${{ secrets.BACKEND_BETTER_AUTH_SECRET }}
+          BACKEND_PAPERCLIP_AUTH_PUBLIC_BASE_URL: ${{ secrets.BACKEND_PAPERCLIP_AUTH_PUBLIC_BASE_URL }}
+          BACKEND_PAPERCLIP_ALLOWED_HOSTNAMES: ${{ secrets.BACKEND_PAPERCLIP_ALLOWED_HOSTNAMES }}
+          BACKEND_BETTER_AUTH_TRUSTED_ORIGINS: ${{ secrets.BACKEND_BETTER_AUTH_TRUSTED_ORIGINS }}
+          BACKEND_PAPERCLIP_EXTRA_ORIGINS: ${{ secrets.BACKEND_PAPERCLIP_EXTRA_ORIGINS }}
+        run: |
+          env_content=$(jq -rn \
+            --arg db_url         "$BACKEND_DATABASE_URL" \
+            --arg auth_secret    "$BACKEND_BETTER_AUTH_SECRET" \
+            --arg auth_base_url  "$BACKEND_PAPERCLIP_AUTH_PUBLIC_BASE_URL" \
+            --arg allowed_hosts  "$BACKEND_PAPERCLIP_ALLOWED_HOSTNAMES" \
+            --arg trusted        "$BACKEND_BETTER_AUTH_TRUSTED_ORIGINS" \
+            --arg extra_origins  "$BACKEND_PAPERCLIP_EXTRA_ORIGINS" \
+            '[
+              "DATABASE_URL=\($db_url)",
+              "BETTER_AUTH_SECRET=\($auth_secret)",
+              "PAPERCLIP_DEPLOYMENT_MODE=authenticated",
+              "PAPERCLIP_DEPLOYMENT_EXPOSURE=public",
+              "SERVE_UI=false",
+              "PORT=3100",
+              "PAPERCLIP_MIGRATION_AUTO_APPLY=true",
+              "PAPERCLIP_ALLOWED_HOSTNAMES=\($allowed_hosts)",
+              "PAPERCLIP_AUTH_PUBLIC_BASE_URL=\($auth_base_url)",
+              "PAPERCLIP_AUTH_BASE_URL_MODE=explicit",
+              "PAPERCLIP_EXTRA_ORIGINS=\($extra_origins)",
+              "BETTER_AUTH_TRUSTED_ORIGINS=\($trusted)"
+            ] | join("\n")')
+
+          payload=$(jq -n --arg env "$env_content" \
+            '{"json":{"projectName":"paperclip","serviceName":"paperclip-api","env":$env}}')
+
+          curl -sf -X POST "https://qiwa34.easypanel.host/api/trpc/services.updateApp" \
+            -H "Authorization: Bearer ${{ secrets.EASYPANEL_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "$payload" \
+            || echo "::warning::Easypanel env sync failed — verify env vars manually in Easypanel UI"
+
       - name: Trigger Easypanel redeploy
         run: curl -s --max-time 10 -X POST "${{ secrets.EASYPANEL_DEPLOY_WEBHOOK }}" || true
