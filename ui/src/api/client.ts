@@ -12,6 +12,8 @@ export class ApiError extends Error {
   }
 }
 
+const REQUEST_TIMEOUT_MS = 30_000;
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers ?? undefined);
   const body = init?.body;
@@ -27,11 +29,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   const res = await fetch(`${API_BASE}${path}`, {
     headers,
     credentials: "include",
     ...init,
-  });
+    signal: init?.signal ?? controller.signal,
+  }).finally(() => clearTimeout(timeoutId));
+
   if (!res.ok) {
     if (res.status === 401) {
       handle401();
