@@ -449,13 +449,15 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
       svc.findMentionedProjectIds(issue.id),
       documentsSvc.getIssueDocumentPayload(issue),
     ]);
-    const mentionedProjects = mentionedProjectIds.length > 0
-      ? await projectsSvc.listByIds(issue.companyId, mentionedProjectIds)
-      : [];
-    const currentExecutionWorkspace = issue.executionWorkspaceId
-      ? await executionWorkspacesSvc.getById(issue.executionWorkspaceId)
-      : null;
-    const workProducts = await workProductsSvc.listForIssue(issue.id);
+    const [mentionedProjects, currentExecutionWorkspace, workProducts] = await Promise.all([
+      mentionedProjectIds.length > 0
+        ? projectsSvc.listByIds(issue.companyId, mentionedProjectIds)
+        : Promise.resolve([]),
+      issue.executionWorkspaceId
+        ? executionWorkspacesSvc.getById(issue.executionWorkspaceId)
+        : Promise.resolve(null),
+      workProductsSvc.listForIssue(issue.id),
+    ]);
     const payload = {
       ...issue,
       goalId: goal?.id ?? issue.goalId,
@@ -1034,6 +1036,13 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
   router.post("/companies/:companyId/issues", validate(createIssueSchema), async (req, res) => {
     const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
+    if (req.body.parentId) {
+      const parentAncestors = await svc.getAncestors(req.body.parentId);
+      if (parentAncestors.length >= 2) {
+        res.status(422).json({ error: "Sub-issue nesting limit reached (max depth: 3)" });
+        return;
+      }
+    }
     if (req.body.assigneeAgentId || req.body.assigneeUserId) {
       await assertCanAssignTasks(req, companyId);
     }
@@ -1078,9 +1087,8 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
       return;
     }
     assertCompanyAccess(req, existing.companyId);
-    // PERM-01/PERM-02: Human member can only mutate their own tasks (unless owner)
-    // TODO: replace with real auth — currently auth is a pass-through bypass in dev;
-    //   local_implicit source exits this gate early, so bypass sessions are unaffected.
+    // PERM-02: Members cannot assign issues to AI agents.
+    // local_implicit source exits this gate early, so bypass sessions are unaffected.
     if (req.actor.type === "board" && req.actor.userId) {
       const isLocalOrAdmin = req.actor.source === "local_implicit" || req.actor.isInstanceAdmin;
       if (!isLocalOrAdmin) {
@@ -1090,10 +1098,6 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
           req.actor.userId,
         );
         const memberRole = membership?.membershipRole;
-        const isOwner = memberRole === "owner";
-        if (!isOwner && existing.assigneeUserId !== req.actor.userId) {
-          throw forbidden("Members can only mutate their own tasks");
-        }
         // Members cannot assign issues to AI agents
         if (
           memberRole === "member" &&

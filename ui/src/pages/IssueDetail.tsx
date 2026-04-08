@@ -318,6 +318,7 @@ export function IssueDetail() {
     queryFn: () => issuesApi.get(issueId!),
     enabled: !!issueId,
     staleTime: 120_000,
+    retry: 1,
   });
   const resolvedCompanyId = issue?.companyId ?? selectedCompanyId;
 
@@ -1842,7 +1843,7 @@ export function IssueDetail() {
               </div>
             )}
 
-            {subtaskInputOpen ? (
+            {(issue.ancestors?.length ?? 0) < 2 && (subtaskInputOpen ? (
               <div className="flex items-center gap-2">
                 <Input
                   value={subtaskTitle}
@@ -1874,7 +1875,7 @@ export function IssueDetail() {
                 <Plus className="h-3.5 w-3.5" />
                 <span className="ml-1">Add sub-issue</span>
               </Button>
-            )}
+            ))}
             {subtaskError && (
               <p className="text-xs text-destructive">{subtaskError}</p>
             )}
