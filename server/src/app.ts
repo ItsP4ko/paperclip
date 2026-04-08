@@ -37,6 +37,7 @@ import { knowledgeRoutes } from "./routes/knowledge.js";
 import { costRecommendationRoutes } from "./routes/cost-recommendations.js";
 import { pipelineRoutes } from "./routes/pipelines.js";
 import { runnerRoutes } from "./routes/runner.js";
+import { geminiAnalysisRoutes } from "./routes/gemini-analysis.js";
 import { pluginRoutes } from "./routes/plugins.js";
 import { pluginUiStaticRoutes } from "./routes/plugin-ui-static.js";
 import { applyUiBranding } from "./ui-branding.js";
@@ -215,6 +216,7 @@ export async function createApp(
   api.use(costRecommendationRoutes(db));
   api.use(pipelineRoutes(db));
   api.use(runnerRoutes(db));
+  api.use(geminiAnalysisRoutes(db, opts.storageService));
   const hostServicesDisposers = new Map<string, () => void>();
   const workerManager = createPluginWorkerManager();
   const pluginRegistry = pluginRegistryService(db);

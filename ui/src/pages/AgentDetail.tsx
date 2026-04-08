@@ -26,7 +26,7 @@ import { queryKeys } from "../lib/queryKeys";
 import { AgentConfigForm } from "../components/AgentConfigForm";
 import { PageTabBar } from "../components/PageTabBar";
 import { adapterLabels, roleLabels, help } from "../components/agent-config-primitives";
-import { MarkdownEditor } from "../components/MarkdownEditor";
+import { MarkdownEditor } from "../components/LazyMarkdownEditor";
 import { assetsApi } from "../api/assets";
 import { getUIAdapter, buildTranscript } from "../adapters";
 import { StatusBadge } from "../components/StatusBadge";
@@ -359,11 +359,17 @@ function WorkspaceOperationLogViewer({
   censorUsernameInLogs: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [pageVisible, setPageVisible] = useState(!document.hidden);
+  useEffect(() => {
+    const handleVis = () => setPageVisible(!document.hidden);
+    document.addEventListener("visibilitychange", handleVis);
+    return () => document.removeEventListener("visibilitychange", handleVis);
+  }, []);
   const { data: logData, isLoading, error } = useQuery({
     queryKey: ["workspace-operation-log", operation.id],
     queryFn: () => heartbeatsApi.workspaceOperationLog(operation.id),
     enabled: open && Boolean(operation.logRef),
-    refetchInterval: open && operation.status === "running" ? 2000 : false,
+    refetchInterval: pageVisible && open && operation.status === "running" ? 5_000 : false,
   });
 
   const chunks = useMemo(
@@ -541,6 +547,12 @@ export function AgentDetail() {
   const [configSaving, setConfigSaving] = useState(false);
   const saveConfigActionRef = useRef<(() => void) | null>(null);
   const cancelConfigActionRef = useRef<(() => void) | null>(null);
+  const [pageVisible, setPageVisible] = useState(!document.hidden);
+  useEffect(() => {
+    const handleVis = () => setPageVisible(!document.hidden);
+    document.addEventListener("visibilitychange", handleVis);
+    return () => document.removeEventListener("visibilitychange", handleVis);
+  }, []);
   const { isMobile } = useSidebar();
   const routeAgentRef = agentId ?? "";
   const routeCompanyId = useMemo(() => {
@@ -591,7 +603,7 @@ export function AgentDetail() {
     queryKey: queryKeys.budgets.overview(resolvedCompanyId ?? "__none__"),
     queryFn: () => budgetsApi.overview(resolvedCompanyId!),
     enabled: !!resolvedCompanyId,
-    refetchInterval: 30_000,
+    refetchInterval: pageVisible ? 60_000 : false,
     staleTime: 5_000,
   });
 
@@ -3496,11 +3508,17 @@ function LogViewer({ run, adapterType }: { run: HeartbeatRun; adapterType: strin
     scrollHeight: 0,
     distanceFromBottom: Number.POSITIVE_INFINITY,
   });
+  const [pageVisible, setPageVisible] = useState(!document.hidden);
+  useEffect(() => {
+    const handleVis = () => setPageVisible(!document.hidden);
+    document.addEventListener("visibilitychange", handleVis);
+    return () => document.removeEventListener("visibilitychange", handleVis);
+  }, []);
   const isLive = run.status === "running" || run.status === "queued";
   const { data: workspaceOperations = [] } = useQuery({
     queryKey: queryKeys.runWorkspaceOperations(run.id),
     queryFn: () => heartbeatsApi.workspaceOperations(run.id),
-    refetchInterval: isLive ? 2000 : false,
+    refetchInterval: pageVisible && isLive ? 5_000 : false,
   });
 
   function isRunLogUnavailable(err: unknown): boolean {

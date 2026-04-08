@@ -62,6 +62,12 @@ export function PluginSettings() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const { companyPrefix, pluginId } = useParams<{ companyPrefix?: string; pluginId: string }>();
   const [activeTab, setActiveTab] = useState<"configuration" | "status">("configuration");
+  const [pageVisible, setPageVisible] = useState(!document.hidden);
+  useEffect(() => {
+    const handleVis = () => setPageVisible(!document.hidden);
+    document.addEventListener("visibilitychange", handleVis);
+    return () => document.removeEventListener("visibilitychange", handleVis);
+  }, []);
 
   const { data: plugin, isLoading: pluginLoading } = useQuery({
     queryKey: queryKeys.plugins.detail(pluginId!),
@@ -73,21 +79,21 @@ export function PluginSettings() {
     queryKey: queryKeys.plugins.health(pluginId!),
     queryFn: () => pluginsApi.health(pluginId!),
     enabled: !!pluginId && plugin?.status === "ready",
-    refetchInterval: 30000,
+    refetchInterval: pageVisible ? 60_000 : false,
   });
 
   const { data: dashboardData } = useQuery({
     queryKey: queryKeys.plugins.dashboard(pluginId!),
     queryFn: () => pluginsApi.dashboard(pluginId!),
     enabled: !!pluginId,
-    refetchInterval: 30000,
+    refetchInterval: pageVisible ? 60_000 : false,
   });
 
   const { data: recentLogs } = useQuery({
     queryKey: queryKeys.plugins.logs(pluginId!),
     queryFn: () => pluginsApi.logs(pluginId!, { limit: 50 }),
     enabled: !!pluginId && plugin?.status === "ready",
-    refetchInterval: 30000,
+    refetchInterval: pageVisible ? 60_000 : false,
   });
 
   // Fetch existing config for the plugin

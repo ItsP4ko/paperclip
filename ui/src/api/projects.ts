@@ -50,4 +50,46 @@ export const projectsApi = {
     api.get<{ content: string }>(projectPath(id, companyId, "/claude-md")),
   updateClaudeMd: (id: string, content: string, companyId?: string) =>
     api.put<{ content: string }>(projectPath(id, companyId, "/claude-md"), { content }),
+  getAiContext: (id: string, companyId?: string) =>
+    api.get<{ content: string }>(projectPath(id, companyId, "/ai-context")),
+  updateAiContext: (id: string, content: string, companyId?: string) =>
+    api.put<{ content: string }>(projectPath(id, companyId, "/ai-context"), { content }),
+  getLibrary: (companyId: string, projectId: string) =>
+    api.get<{
+      folders: Array<{
+        issueId: string;
+        issueTitle: string;
+        issueIdentifier: string | null;
+        issueStatus: string;
+        attachments: Array<{
+          id: string;
+          originalFilename: string | null;
+          contentType: string;
+          byteSize: number;
+          contentPath: string;
+          createdAt: string;
+        }>;
+      }>;
+    }>(`/companies/${companyId}/projects/${projectId}/library`),
+  listDocuments: (companyId: string, projectId: string) =>
+    api.get<Array<{
+      id: string;
+      originalFilename: string | null;
+      contentType: string | null;
+      byteSize: number | null;
+      createdAt: string;
+    }>>(`/companies/${companyId}/projects/${projectId}/documents`),
+  uploadDocument: (companyId: string, projectId: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api.postForm<{
+      id: string;
+      originalFilename: string | null;
+      contentType: string | null;
+      byteSize: number | null;
+      createdAt: string;
+    }>(`/companies/${companyId}/projects/${projectId}/documents`, form);
+  },
+  deleteDocument: (companyId: string, projectId: string, documentId: string) =>
+    api.delete<void>(`/companies/${companyId}/projects/${projectId}/documents/${documentId}`),
 };

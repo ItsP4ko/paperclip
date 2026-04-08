@@ -1,64 +1,74 @@
+import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation, useParams } from "@/lib/router";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Layout } from "./components/Layout";
 import { OnboardingWizard } from "./components/OnboardingWizard";
+import { PageSkeleton } from "./components/PageSkeleton";
 import { authApi } from "./api/auth";
 import { healthApi } from "./api/health";
-import { Dashboard } from "./pages/Dashboard";
-import { Companies } from "./pages/Companies";
-import { Agents } from "./pages/Agents";
-import { AgentDetail } from "./pages/AgentDetail";
-import { Projects } from "./pages/Projects";
-import { ProjectDetail } from "./pages/ProjectDetail";
-import { ProjectWorkspaceDetail } from "./pages/ProjectWorkspaceDetail";
-import { Issues } from "./pages/Issues";
-import { IssueDetail } from "./pages/IssueDetail";
-import { Routines } from "./pages/Routines";
-import { RoutineDetail } from "./pages/RoutineDetail";
-import { ExecutionWorkspaceDetail } from "./pages/ExecutionWorkspaceDetail";
-import { Goals } from "./pages/Goals";
-import { GoalDetail } from "./pages/GoalDetail";
-import { Approvals } from "./pages/Approvals";
-import { ApprovalDetail } from "./pages/ApprovalDetail";
-import { Costs } from "./pages/Costs";
-import { Activity } from "./pages/Activity";
-import { Analytics } from "./pages/Analytics";
-import { AuditLog } from "./pages/AuditLog";
-import { KnowledgeBase } from "./pages/KnowledgeBase";
-import { CostRecommendations } from "./pages/CostRecommendations";
-import { Pipelines } from "./pages/Pipelines";
-import { PipelineDetail } from "./pages/PipelineDetail";
-import { PipelineRunDetail } from "./pages/PipelineRunDetail";
-import { Inbox } from "./pages/Inbox";
-import { CompanySettings } from "./pages/CompanySettings";
-import { MyIssues } from "./pages/MyIssues";
-import { CompanySkills } from "./pages/CompanySkills";
-import { CompanyExport } from "./pages/CompanyExport";
-import { CompanyImport } from "./pages/CompanyImport";
-import { AccountSettings } from "./pages/AccountSettings";
-import { DesignGuide } from "./pages/DesignGuide";
-import { InstanceGeneralSettings } from "./pages/InstanceGeneralSettings";
-import { InstanceSettings } from "./pages/InstanceSettings";
-import { InstanceExperimentalSettings } from "./pages/InstanceExperimentalSettings";
-import { PluginManager } from "./pages/PluginManager";
-import { PluginSettings } from "./pages/PluginSettings";
-import { PluginPage } from "./pages/PluginPage";
-import { RunTranscriptUxLab } from "./pages/RunTranscriptUxLab";
-import { Org } from "./pages/Org";
-import { Members } from "./pages/Members";
-import { NewAgent } from "./pages/NewAgent";
-import { AuthPage } from "./pages/Auth";
-import { BoardClaimPage } from "./pages/BoardClaim";
-import { CliAuthPage } from "./pages/CliAuth";
-import { InviteLandingPage } from "./pages/InviteLanding";
-import { NotFoundPage } from "./pages/NotFound";
-import { DownloadPage } from "./pages/Download";
 import { queryKeys } from "./lib/queryKeys";
 import { useCompany } from "./context/CompanyContext";
 import { useDialog } from "./context/DialogContext";
 import { loadLastInboxTab } from "./lib/inbox";
 import { shouldRedirectCompanylessRouteToOnboarding } from "./lib/onboarding-route";
+import { isTauriEnv } from "./lib/platform";
+
+const Dashboard = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })));
+const Companies = lazy(() => import("./pages/Companies").then((m) => ({ default: m.Companies })));
+const Agents = lazy(() => import("./pages/Agents").then((m) => ({ default: m.Agents })));
+const AgentDetail = lazy(() => import("./pages/AgentDetail").then((m) => ({ default: m.AgentDetail })));
+const Projects = lazy(() => import("./pages/Projects").then((m) => ({ default: m.Projects })));
+const ProjectDetail = lazy(() => import("./pages/ProjectDetail").then((m) => ({ default: m.ProjectDetail })));
+const ProjectWorkspaceDetail = lazy(() => import("./pages/ProjectWorkspaceDetail").then((m) => ({ default: m.ProjectWorkspaceDetail })));
+const Issues = lazy(() => import("./pages/Issues").then((m) => ({ default: m.Issues })));
+const IssueDetail = lazy(() => import("./pages/IssueDetail").then((m) => ({ default: m.IssueDetail })));
+const Routines = lazy(() => import("./pages/Routines").then((m) => ({ default: m.Routines })));
+const RoutineDetail = lazy(() => import("./pages/RoutineDetail").then((m) => ({ default: m.RoutineDetail })));
+const ExecutionWorkspaceDetail = lazy(() => import("./pages/ExecutionWorkspaceDetail").then((m) => ({ default: m.ExecutionWorkspaceDetail })));
+const Goals = lazy(() => import("./pages/Goals").then((m) => ({ default: m.Goals })));
+const GoalDetail = lazy(() => import("./pages/GoalDetail").then((m) => ({ default: m.GoalDetail })));
+const Approvals = lazy(() => import("./pages/Approvals").then((m) => ({ default: m.Approvals })));
+const ApprovalDetail = lazy(() => import("./pages/ApprovalDetail").then((m) => ({ default: m.ApprovalDetail })));
+const Costs = lazy(() => import("./pages/Costs").then((m) => ({ default: m.Costs })));
+const Activity = lazy(() => import("./pages/Activity").then((m) => ({ default: m.Activity })));
+const Analytics = lazy(() => import("./pages/Analytics").then((m) => ({ default: m.Analytics })));
+const AuditLog = lazy(() => import("./pages/AuditLog").then((m) => ({ default: m.AuditLog })));
+const KnowledgeBase = lazy(() => import("./pages/KnowledgeBase").then((m) => ({ default: m.KnowledgeBase })));
+const CostRecommendations = lazy(() => import("./pages/CostRecommendations").then((m) => ({ default: m.CostRecommendations })));
+const Pipelines = lazy(() => import("./pages/Pipelines").then((m) => ({ default: m.Pipelines })));
+const PipelineDetail = lazy(() => import("./pages/PipelineDetail").then((m) => ({ default: m.PipelineDetail })));
+const PipelineRunDetail = lazy(() => import("./pages/PipelineRunDetail").then((m) => ({ default: m.PipelineRunDetail })));
+const Inbox = lazy(() => import("./pages/Inbox").then((m) => ({ default: m.Inbox })));
+const CompanySettings = lazy(() => import("./pages/CompanySettings").then((m) => ({ default: m.CompanySettings })));
+const MyIssues = lazy(() => import("./pages/MyIssues").then((m) => ({ default: m.MyIssues })));
+const CompanySkills = lazy(() => import("./pages/CompanySkills").then((m) => ({ default: m.CompanySkills })));
+const CompanyExport = lazy(() => import("./pages/CompanyExport").then((m) => ({ default: m.CompanyExport })));
+const CompanyImport = lazy(() => import("./pages/CompanyImport").then((m) => ({ default: m.CompanyImport })));
+const AccountSettings = lazy(() => import("./pages/AccountSettings").then((m) => ({ default: m.AccountSettings })));
+const DesignGuide = lazy(() => import("./pages/DesignGuide").then((m) => ({ default: m.DesignGuide })));
+const InstanceGeneralSettings = lazy(() => import("./pages/InstanceGeneralSettings").then((m) => ({ default: m.InstanceGeneralSettings })));
+const InstanceSettings = lazy(() => import("./pages/InstanceSettings").then((m) => ({ default: m.InstanceSettings })));
+const InstanceExperimentalSettings = lazy(() => import("./pages/InstanceExperimentalSettings").then((m) => ({ default: m.InstanceExperimentalSettings })));
+const PluginManager = lazy(() => import("./pages/PluginManager").then((m) => ({ default: m.PluginManager })));
+const PluginSettings = lazy(() => import("./pages/PluginSettings").then((m) => ({ default: m.PluginSettings })));
+const PluginPage = lazy(() => import("./pages/PluginPage").then((m) => ({ default: m.PluginPage })));
+const RunTranscriptUxLab = lazy(() => import("./pages/RunTranscriptUxLab").then((m) => ({ default: m.RunTranscriptUxLab })));
+const Org = lazy(() => import("./pages/Org").then((m) => ({ default: m.Org })));
+const Members = lazy(() => import("./pages/Members").then((m) => ({ default: m.Members })));
+const NewAgent = lazy(() => import("./pages/NewAgent").then((m) => ({ default: m.NewAgent })));
+const AuthPage = lazy(() => import("./pages/Auth").then((m) => ({ default: m.AuthPage })));
+const BoardClaimPage = lazy(() => import("./pages/BoardClaim").then((m) => ({ default: m.BoardClaimPage })));
+const CliAuthPage = lazy(() => import("./pages/CliAuth").then((m) => ({ default: m.CliAuthPage })));
+const InviteLandingPage = lazy(() => import("./pages/InviteLanding").then((m) => ({ default: m.InviteLandingPage })));
+const NotFoundPage = lazy(() => import("./pages/NotFound").then((m) => ({ default: m.NotFoundPage })));
+const DownloadPage = lazy(() => import("./pages/Download").then((m) => ({ default: m.DownloadPage })));
+
+
+function TauriGuard() {
+  if (!isTauriEnv()) return <Navigate to="/" replace />;
+  return <Outlet />;
+}
 
 function BootstrapPendingPage({ hasActiveInvite = false }: { hasActiveInvite?: boolean }) {
   return (
@@ -127,76 +137,83 @@ function CloudAccessGate() {
   return <Outlet />;
 }
 
+const S = ({ children }: { children: ReactNode }) => (
+  <Suspense fallback={<div className="p-6"><PageSkeleton /></div>}>{children}</Suspense>
+);
+
 function boardRoutes() {
   return (
     <>
       <Route index element={<Navigate to="dashboard" replace />} />
-      <Route path="dashboard" element={<Dashboard />} />
+      <Route path="dashboard" element={<S><Dashboard /></S>} />
       <Route path="onboarding" element={<OnboardingRoutePage />} />
-      <Route path="companies" element={<Companies />} />
-      <Route path="company/settings" element={<CompanySettings />} />
-      <Route path="company/export/*" element={<CompanyExport />} />
-      <Route path="company/import" element={<CompanyImport />} />
-      <Route path="skills/*" element={<CompanySkills />} />
+      <Route path="companies" element={<S><Companies /></S>} />
+      <Route path="company/settings" element={<S><CompanySettings /></S>} />
+      <Route path="company/export/*" element={<S><CompanyExport /></S>} />
+      <Route path="company/import" element={<S><CompanyImport /></S>} />
+      <Route path="skills/*" element={<S><CompanySkills /></S>} />
       <Route path="settings" element={<LegacySettingsRedirect />} />
       <Route path="settings/*" element={<LegacySettingsRedirect />} />
-      <Route path="plugins/:pluginId" element={<PluginPage />} />
-      <Route path="org" element={<Org />} />
-      <Route path="members" element={<Members />} />
-      <Route path="agents" element={<Navigate to="/agents/all" replace />} />
-      <Route path="agents/all" element={<Agents />} />
-      <Route path="agents/active" element={<Agents />} />
-      <Route path="agents/paused" element={<Agents />} />
-      <Route path="agents/error" element={<Agents />} />
-      <Route path="agents/new" element={<NewAgent />} />
-      <Route path="agents/:agentId" element={<AgentDetail />} />
-      <Route path="agents/:agentId/:tab" element={<AgentDetail />} />
-      <Route path="agents/:agentId/runs/:runId" element={<AgentDetail />} />
-      <Route path="projects" element={<Projects />} />
-      <Route path="projects/:projectId" element={<ProjectDetail />} />
-      <Route path="projects/:projectId/overview" element={<ProjectDetail />} />
-      <Route path="projects/:projectId/issues" element={<ProjectDetail />} />
-      <Route path="projects/:projectId/issues/:filter" element={<ProjectDetail />} />
-      <Route path="projects/:projectId/workspaces/:workspaceId" element={<ProjectWorkspaceDetail />} />
-      <Route path="projects/:projectId/workspaces" element={<ProjectDetail />} />
-      <Route path="projects/:projectId/configuration" element={<ProjectDetail />} />
-      <Route path="projects/:projectId/budget" element={<ProjectDetail />} />
-      <Route path="my-tasks" element={<MyIssues />} />
-      <Route path="issues" element={<Issues />} />
+      <Route path="plugins/:pluginId" element={<S><PluginPage /></S>} />
+      <Route path="org" element={<S><Org /></S>} />
+      <Route path="members" element={<S><Members /></S>} />
+      <Route element={<TauriGuard />}>
+        <Route path="agents" element={<Navigate to="/agents/all" replace />} />
+        <Route path="agents/all" element={<S><Agents /></S>} />
+        <Route path="agents/active" element={<S><Agents /></S>} />
+        <Route path="agents/paused" element={<S><Agents /></S>} />
+        <Route path="agents/error" element={<S><Agents /></S>} />
+        <Route path="agents/new" element={<S><NewAgent /></S>} />
+        <Route path="agents/:agentId" element={<S><AgentDetail /></S>} />
+        <Route path="agents/:agentId/:tab" element={<S><AgentDetail /></S>} />
+        <Route path="agents/:agentId/runs/:runId" element={<S><AgentDetail /></S>} />
+      </Route>
+      <Route path="projects" element={<S><Projects /></S>} />
+      <Route path="projects/:projectId" element={<S><ProjectDetail /></S>} />
+      <Route path="projects/:projectId/overview" element={<S><ProjectDetail /></S>} />
+      <Route path="projects/:projectId/issues" element={<S><ProjectDetail /></S>} />
+      <Route path="projects/:projectId/issues/:filter" element={<S><ProjectDetail /></S>} />
+      <Route path="projects/:projectId/workspaces/:workspaceId" element={<S><ProjectWorkspaceDetail /></S>} />
+      <Route path="projects/:projectId/workspaces" element={<S><ProjectDetail /></S>} />
+      <Route path="projects/:projectId/library" element={<S><ProjectDetail /></S>} />
+      <Route path="projects/:projectId/configuration" element={<S><ProjectDetail /></S>} />
+      <Route path="projects/:projectId/budget" element={<S><ProjectDetail /></S>} />
+      <Route path="my-tasks" element={<S><MyIssues /></S>} />
+      <Route path="issues" element={<S><Issues /></S>} />
       <Route path="issues/all" element={<Navigate to="/issues" replace />} />
       <Route path="issues/active" element={<Navigate to="/issues" replace />} />
       <Route path="issues/backlog" element={<Navigate to="/issues" replace />} />
       <Route path="issues/done" element={<Navigate to="/issues" replace />} />
       <Route path="issues/recent" element={<Navigate to="/issues" replace />} />
-      <Route path="issues/:issueId" element={<IssueDetail />} />
-      <Route path="routines" element={<Routines />} />
-      <Route path="routines/:routineId" element={<RoutineDetail />} />
-      <Route path="execution-workspaces/:workspaceId" element={<ExecutionWorkspaceDetail />} />
-      <Route path="goals" element={<Goals />} />
-      <Route path="goals/:goalId" element={<GoalDetail />} />
+      <Route path="issues/:issueId" element={<S><IssueDetail /></S>} />
+      <Route path="routines" element={<S><Routines /></S>} />
+      <Route path="routines/:routineId" element={<S><RoutineDetail /></S>} />
+      <Route path="execution-workspaces/:workspaceId" element={<S><ExecutionWorkspaceDetail /></S>} />
+      <Route path="goals" element={<S><Goals /></S>} />
+      <Route path="goals/:goalId" element={<S><GoalDetail /></S>} />
       <Route path="approvals" element={<Navigate to="/approvals/pending" replace />} />
-      <Route path="approvals/pending" element={<Approvals />} />
-      <Route path="approvals/all" element={<Approvals />} />
-      <Route path="approvals/:approvalId" element={<ApprovalDetail />} />
-      <Route path="costs" element={<Costs />} />
-      <Route path="activity" element={<Activity />} />
-      <Route path="analytics" element={<Analytics />} />
-      <Route path="audit" element={<AuditLog />} />
-      <Route path="knowledge" element={<KnowledgeBase />} />
-      <Route path="cost-recommendations" element={<CostRecommendations />} />
-      <Route path="pipelines" element={<Pipelines />} />
-      <Route path="pipelines/:pipelineId" element={<PipelineDetail />} />
-      <Route path="pipelines/:pipelineId/runs/:runId" element={<PipelineRunDetail />} />
+      <Route path="approvals/pending" element={<S><Approvals /></S>} />
+      <Route path="approvals/all" element={<S><Approvals /></S>} />
+      <Route path="approvals/:approvalId" element={<S><ApprovalDetail /></S>} />
+      <Route path="costs" element={<S><Costs /></S>} />
+      <Route path="activity" element={<S><Activity /></S>} />
+      <Route path="analytics" element={<S><Analytics /></S>} />
+      <Route path="audit" element={<S><AuditLog /></S>} />
+      <Route path="knowledge" element={<S><KnowledgeBase /></S>} />
+      <Route path="cost-recommendations" element={<S><CostRecommendations /></S>} />
+      <Route path="pipelines" element={<S><Pipelines /></S>} />
+      <Route path="pipelines/:pipelineId" element={<S><PipelineDetail /></S>} />
+      <Route path="pipelines/:pipelineId/runs/:runId" element={<S><PipelineRunDetail /></S>} />
       <Route path="inbox" element={<InboxRootRedirect />} />
-      <Route path="inbox/mine" element={<Inbox />} />
-      <Route path="inbox/recent" element={<Inbox />} />
-      <Route path="inbox/unread" element={<Inbox />} />
-      <Route path="inbox/all" element={<Inbox />} />
+      <Route path="inbox/mine" element={<S><Inbox /></S>} />
+      <Route path="inbox/recent" element={<S><Inbox /></S>} />
+      <Route path="inbox/unread" element={<S><Inbox /></S>} />
+      <Route path="inbox/all" element={<S><Inbox /></S>} />
       <Route path="inbox/new" element={<Navigate to="/inbox/mine" replace />} />
-      <Route path="design-guide" element={<DesignGuide />} />
-      <Route path="tests/ux/runs" element={<RunTranscriptUxLab />} />
-      <Route path=":pluginRoutePath" element={<PluginPage />} />
-      <Route path="*" element={<NotFoundPage scope="board" />} />
+      <Route path="design-guide" element={<S><DesignGuide /></S>} />
+      <Route path="tests/ux/runs" element={<S><RunTranscriptUxLab /></S>} />
+      <Route path=":pluginRoutePath" element={<S><PluginPage /></S>} />
+      <Route path="*" element={<S><NotFoundPage scope="board" /></S>} />
     </>
   );
 }
@@ -325,11 +342,11 @@ export function App() {
   return (
     <>
       <Routes>
-        <Route path="auth" element={<AuthPage />} />
-        <Route path="download" element={<DownloadPage />} />
-        <Route path="board-claim/:token" element={<BoardClaimPage />} />
-        <Route path="cli-auth/:id" element={<CliAuthPage />} />
-        <Route path="invite/:token" element={<InviteLandingPage />} />
+        <Route path="auth" element={<S><AuthPage /></S>} />
+        <Route path="download" element={<S><DownloadPage /></S>} />
+        <Route path="board-claim/:token" element={<S><BoardClaimPage /></S>} />
+        <Route path="cli-auth/:id" element={<S><CliAuthPage /></S>} />
+        <Route path="invite/:token" element={<S><InviteLandingPage /></S>} />
 
         <Route element={<CloudAccessGate />}>
           <Route index element={<CompanyRootRedirect />} />
@@ -337,11 +354,11 @@ export function App() {
           <Route path="instance" element={<Navigate to="/instance/settings/general" replace />} />
           <Route path="instance/settings" element={<Layout />}>
             <Route index element={<Navigate to="general" replace />} />
-            <Route path="general" element={<InstanceGeneralSettings />} />
-            <Route path="heartbeats" element={<InstanceSettings />} />
-            <Route path="experimental" element={<InstanceExperimentalSettings />} />
-            <Route path="plugins" element={<PluginManager />} />
-            <Route path="plugins/:pluginId" element={<PluginSettings />} />
+            <Route path="general" element={<S><InstanceGeneralSettings /></S>} />
+            <Route path="heartbeats" element={<S><InstanceSettings /></S>} />
+            <Route path="experimental" element={<S><InstanceExperimentalSettings /></S>} />
+            <Route path="plugins" element={<S><PluginManager /></S>} />
+            <Route path="plugins/:pluginId" element={<S><PluginSettings /></S>} />
           </Route>
           <Route path="companies" element={<UnprefixedBoardRedirect />} />
           <Route path="issues" element={<UnprefixedBoardRedirect />} />
@@ -390,12 +407,12 @@ export function App() {
           <Route path="org" element={<UnprefixedBoardRedirect />} />
           <Route path="dashboard" element={<UnprefixedBoardRedirect />} />
           <Route path="account" element={<Layout />}>
-            <Route index element={<AccountSettings />} />
+            <Route index element={<S><AccountSettings /></S>} />
           </Route>
           <Route path=":companyPrefix" element={<Layout />}>
             {boardRoutes()}
           </Route>
-          <Route path="*" element={<NotFoundPage scope="global" />} />
+          <Route path="*" element={<S><NotFoundPage scope="global" /></S>} />
         </Route>
       </Routes>
       <OnboardingWizard />

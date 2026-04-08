@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
 import { useLocation, useSearchParams } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { issuesApi } from "../api/issues";
@@ -24,7 +24,20 @@ export function Issues() {
 
   const initialSearch = searchParams.get("q") ?? "";
   const participantAgentId = searchParams.get("participantAgentId") ?? undefined;
+
+  const [inputValue, setInputValue] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(inputValue);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [inputValue]);
+
   const handleSearchChange = useCallback((search: string) => {
+    setInputValue(search);
+
     const trimmedSearch = search.trim();
     const currentSearch = new URLSearchParams(window.location.search).get("q") ?? "";
     if (currentSearch === trimmedSearch) return;
@@ -84,8 +97,8 @@ export function Issues() {
   }, [setBreadcrumbs]);
 
   const { data: issues, isLoading, error } = useQuery({
-    queryKey: [...queryKeys.issues.list(selectedCompanyId!), "participant-agent", participantAgentId ?? "__all__"],
-    queryFn: () => issuesApi.list(selectedCompanyId!, { participantAgentId }),
+    queryKey: [...queryKeys.issues.list(selectedCompanyId!), "participant-agent", participantAgentId ?? "__all__", debouncedSearch],
+    queryFn: () => issuesApi.list(selectedCompanyId!, { participantAgentId, q: debouncedSearch || undefined }),
     enabled: !!selectedCompanyId,
     staleTime: 120_000,
   });
@@ -148,7 +161,7 @@ export function Issues() {
       viewStateKey="paperclip:issues-view"
       issueLinkState={issueLinkState}
       initialAssignees={searchParams.get("assignee") ? [searchParams.get("assignee")!] : undefined}
-      initialSearch={initialSearch}
+      initialSearch={inputValue}
       onSearchChange={handleSearchChange}
       onUpdateIssue={(id, data) => updateIssue.mutate({ id, data })}
       searchFilters={participantAgentId ? { participantAgentId } : undefined}

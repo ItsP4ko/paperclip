@@ -16,7 +16,7 @@ import { EmptyState } from "../components/EmptyState";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { AgentIcon } from "../components/AgentIconPicker";
 import { InlineEntitySelector, type InlineEntityOption } from "../components/InlineEntitySelector";
-import { MarkdownEditor, type MarkdownEditorRef } from "../components/MarkdownEditor";
+import { MarkdownEditor, type MarkdownEditorRef } from "../components/LazyMarkdownEditor";
 import {
   RoutineRunVariablesDialog,
   routineRunNeedsConfiguration,
