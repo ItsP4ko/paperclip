@@ -1,4 +1,5 @@
 {
+  "installCommand": "pnpm install --filter @paperclipai/ui...",
   "buildCommand": "pnpm --filter @paperclipai/ui build",
   "outputDirectory": "ui/dist",
   "framework": "vite",
