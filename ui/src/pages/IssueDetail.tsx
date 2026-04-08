@@ -322,45 +322,49 @@ export function IssueDetail() {
     queryKey: queryKeys.issues.comments(issueId!),
     queryFn: () => issuesApi.listComments(issueId!),
     enabled: !!issueId,
+    staleTime: 30_000,
   });
 
   const { data: activity } = useQuery({
     queryKey: queryKeys.issues.activity(issueId!),
     queryFn: () => activityApi.forIssue(issueId!),
     enabled: !!issueId,
+    staleTime: 30_000,
   });
 
   const { data: linkedRuns } = useQuery({
     queryKey: queryKeys.issues.runs(issueId!),
     queryFn: () => activityApi.runsForIssue(issueId!),
     enabled: !!issueId,
-    refetchInterval: 5000,
+    staleTime: 30_000,
   });
 
   const { data: linkedApprovals } = useQuery({
     queryKey: queryKeys.issues.approvals(issueId!),
     queryFn: () => issuesApi.listApprovals(issueId!),
     enabled: !!issueId,
+    staleTime: 30_000,
   });
 
   const { data: attachments } = useQuery({
     queryKey: queryKeys.issues.attachments(issueId!),
     queryFn: () => issuesApi.listAttachments(issueId!),
     enabled: !!issueId,
+    staleTime: 30_000,
   });
 
   const { data: liveRuns } = useQuery({
     queryKey: queryKeys.issues.liveRuns(issueId!),
     queryFn: () => heartbeatsApi.liveRunsForIssue(issueId!),
     enabled: !!issueId,
-    refetchInterval: 3000,
+    refetchInterval: (query) => ((query.state.data as unknown[])?.length ? 3000 : 15_000),
   });
 
   const { data: activeRun } = useQuery({
     queryKey: queryKeys.issues.activeRun(issueId!),
     queryFn: () => heartbeatsApi.activeRunForIssue(issueId!),
     enabled: !!issueId,
-    refetchInterval: 3000,
+    refetchInterval: (query) => (query.state.data ? 3000 : 15_000),
   });
 
   const hasLiveRuns = (liveRuns ?? []).length > 0 || !!activeRun;
@@ -413,6 +417,7 @@ export function IssueDetail() {
     queryKey: queryKeys.issues.feedbackVotes(issueId!),
     queryFn: () => issuesApi.listFeedbackVotes(issueId!),
     enabled: !!issueId && !!currentUserId,
+    staleTime: 60_000,
   });
   const { data: instanceGeneralSettings } = useQuery({
     queryKey: queryKeys.instance.generalSettings,
