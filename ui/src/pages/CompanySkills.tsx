@@ -18,7 +18,7 @@ import { useToast } from "../context/ToastContext";
 import { queryKeys } from "../lib/queryKeys";
 import { EmptyState } from "../components/EmptyState";
 import { MarkdownBody } from "../components/MarkdownBody";
-import { MarkdownEditor } from "../components/MarkdownEditor";
+import { MarkdownEditor } from "../components/LazyMarkdownEditor";
 import { PageSkeleton } from "../components/PageSkeleton";
 import {
   Dialog,

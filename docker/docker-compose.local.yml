@@ -1,0 +1,8 @@
+services:
+  server:
+    environment:
+      PAPERCLIP_AUTH_PUBLIC_BASE_URL: "http://localhost:3100"
+      PAPERCLIP_ALLOWED_HOSTNAMES: "localhost"
+      BETTER_AUTH_TRUSTED_ORIGINS: "http://localhost:5173,http://localhost:3100,tauri://localhost"
+      PAPERCLIP_EXTRA_ORIGINS: "http://localhost:5173,tauri://localhost"
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: "public"

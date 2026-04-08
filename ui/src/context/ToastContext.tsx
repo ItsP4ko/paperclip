@@ -150,6 +150,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     timersRef.current.clear();
   }, []);
 
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [key, timestamp] of dedupeRef.current.entries()) {
+        if (now - timestamp > 5 * 60 * 1000) {
+          dedupeRef.current.delete(key);
+        }
+      }
+    }, 60_000);
+    return () => clearInterval(cleanupInterval);
+  }, []);
+
   const value = useMemo<ToastContextValue>(
     () => ({
       toasts,

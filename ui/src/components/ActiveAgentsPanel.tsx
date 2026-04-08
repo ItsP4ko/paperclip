@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "@/lib/router";
+import { isTauriEnv } from "../lib/platform";
 import { useQuery } from "@tanstack/react-query";
 import type { Issue } from "@paperclipai/shared";
 import { heartbeatsApi, type LiveRunForIssue } from "../api/heartbeats";
@@ -115,12 +116,14 @@ function AgentRunCard({
             </div>
           </div>
 
-          <Link
-            to={`/agents/${run.agentId}/runs/${run.id}`}
-            className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ExternalLink className="h-2.5 w-2.5" />
-          </Link>
+          {isTauriEnv() && (
+            <Link
+              to={`/agents/${run.agentId}/runs/${run.id}`}
+              className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ExternalLink className="h-2.5 w-2.5" />
+            </Link>
+          )}
         </div>
 
         {run.issueId && (

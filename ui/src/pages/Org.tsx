@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@/lib/router";
+import { isTauriEnv } from "../lib/platform";
 import { useQuery } from "@tanstack/react-query";
 import { agentsApi, type OrgNode } from "../api/agents";
 import { accessApi, type CompanyMember } from "../api/access";
@@ -21,7 +22,7 @@ function OrgTree({
 }: {
   nodes: OrgNode[];
   depth?: number;
-  hrefFn: (id: string) => string;
+  hrefFn?: (id: string) => string;
   companyId: string;
 }) {
   return (
@@ -41,7 +42,7 @@ function OrgTreeNode({
 }: {
   node: OrgNode;
   depth: number;
-  hrefFn: (id: string) => string;
+  hrefFn?: (id: string) => string;
   companyId: string;
 }) {
   const [expanded, setExpanded] = useState(true);
@@ -56,48 +57,63 @@ function OrgTreeNode({
     (i) => i.status !== "done" && i.status !== "cancelled"
   ).length;
 
+  const rowContent = (
+    <>
+      {hasChildren ? (
+        <button
+          className="p-0.5"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setExpanded(!expanded);
+          }}
+        >
+          <ChevronRight
+            className={cn("h-3 w-3 transition-transform", expanded && "rotate-90")}
+          />
+        </button>
+      ) : (
+        <span className="w-4" />
+      )}
+      <span
+        className={cn(
+          "h-2 w-2 rounded-full shrink-0",
+          node.status === "active"
+            ? "bg-green-400"
+            : node.status === "paused"
+              ? "bg-yellow-400"
+              : node.status === "pending_approval"
+                ? "bg-amber-400"
+              : node.status === "error"
+                ? "bg-red-400"
+                : "bg-neutral-400"
+        )}
+      />
+      <span className="font-medium flex-1">{node.name}</span>
+      <span className="text-xs text-muted-foreground">{node.role}</span>
+      <span className="text-xs tabular-nums font-medium shrink-0">{openCount} open</span>
+      <StatusBadge status={node.status} />
+    </>
+  );
+
+  const rowClassName = "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors no-underline text-inherit";
+  const rowStyle = { paddingLeft: `${depth * 16 + 12}px` };
+
   return (
     <div>
-      <Link
-        to={hrefFn(node.id)}
-        className="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer hover:bg-accent/50 no-underline text-inherit"
-        style={{ paddingLeft: `${depth * 16 + 12}px` }}
-      >
-        {hasChildren ? (
-          <button
-            className="p-0.5"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setExpanded(!expanded);
-            }}
-          >
-            <ChevronRight
-              className={cn("h-3 w-3 transition-transform", expanded && "rotate-90")}
-            />
-          </button>
-        ) : (
-          <span className="w-4" />
-        )}
-        <span
-          className={cn(
-            "h-2 w-2 rounded-full shrink-0",
-            node.status === "active"
-              ? "bg-green-400"
-              : node.status === "paused"
-                ? "bg-yellow-400"
-                : node.status === "pending_approval"
-                  ? "bg-amber-400"
-                : node.status === "error"
-                  ? "bg-red-400"
-                  : "bg-neutral-400"
-          )}
-        />
-        <span className="font-medium flex-1">{node.name}</span>
-        <span className="text-xs text-muted-foreground">{node.role}</span>
-        <span className="text-xs tabular-nums font-medium shrink-0">{openCount} open</span>
-        <StatusBadge status={node.status} />
-      </Link>
+      {hrefFn ? (
+        <Link
+          to={hrefFn(node.id)}
+          className={cn(rowClassName, "cursor-pointer hover:bg-accent/50")}
+          style={rowStyle}
+        >
+          {rowContent}
+        </Link>
+      ) : (
+        <div className={rowClassName} style={rowStyle}>
+          {rowContent}
+        </div>
+      )}
       {hasChildren && expanded && (
         <OrgTree nodes={node.reports} depth={depth + 1} hrefFn={hrefFn} companyId={companyId} />
       )}
@@ -191,7 +207,7 @@ export function Org() {
             <h2 className="text-sm font-semibold text-muted-foreground">AI Agents</h2>
           </div>
           <div className="border border-border py-1">
-            <OrgTree nodes={data} hrefFn={(id) => `/agents/${id}`} companyId={selectedCompanyId!} />
+            <OrgTree nodes={data} hrefFn={isTauriEnv() ? (id) => `/agents/${id}` : undefined} companyId={selectedCompanyId!} />
           </div>
         </div>
       )}

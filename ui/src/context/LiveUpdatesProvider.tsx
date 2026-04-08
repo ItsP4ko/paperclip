@@ -42,15 +42,36 @@ function shortId(value: string) {
   return value.slice(0, 8);
 }
 
+// WeakMap cache: agents array reference → Map<id, Agent>.
+// The query cache returns the same array reference as long as the data hasn't
+// changed, so this gives O(1) lookups without rebuilding the Map on every event.
+const agentMapCache = new WeakMap<Agent[], Map<string, Agent>>();
+
+function getAgentMap(agents: Agent[]): Map<string, Agent> {
+  let map = agentMapCache.get(agents);
+  if (!map) {
+    map = new Map(agents.map((a) => [a.id, a]));
+    agentMapCache.set(agents, map);
+  }
+  return map;
+}
+
+function resolveAgent(
+  queryClient: QueryClient,
+  companyId: string,
+  agentId: string,
+): Agent | null {
+  const agents = queryClient.getQueryData<Agent[]>(queryKeys.agents.list(companyId));
+  if (!agents) return null;
+  return getAgentMap(agents).get(agentId) ?? null;
+}
+
 function resolveAgentName(
   queryClient: QueryClient,
   companyId: string,
   agentId: string,
 ): string | null {
-  const agents = queryClient.getQueryData<Agent[]>(queryKeys.agents.list(companyId));
-  if (!agents) return null;
-  const agent = agents.find((a) => a.id === agentId);
-  return agent?.name ?? null;
+  return resolveAgent(queryClient, companyId, agentId)?.name ?? null;
 }
 
 function truncate(text: string, max: number): string {
@@ -410,8 +431,7 @@ function buildAgentStatusToast(
       ? `${name} started`
       : `${name} errored`;
 
-  const agents = queryClient.getQueryData<Agent[]>(queryKeys.agents.list(companyId));
-  const agent = agents?.find((a) => a.id === agentId);
+  const agent = resolveAgent(queryClient, companyId, agentId);
   const body = agent?.title ?? undefined;
 
   return {

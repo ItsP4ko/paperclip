@@ -1,0 +1,17 @@
+src-tauri/target/
+node_modules/
+.pnpm-store/
+data/
+.planning/
+evals/
+tests/
+docs/
+doc/
+releases/
+docker/
+scripts/
+patches/
+cli/
+server/
+packages/
+skills/
