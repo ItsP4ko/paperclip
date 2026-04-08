@@ -4285,5 +4285,21 @@ export function heartbeatService(db: Db) {
       await db.delete(heartbeatRuns).where(inArray(heartbeatRuns.id, runIds));
       return runIds.length;
     },
+
+    deleteRunsById: async (runIds: string[], companyId: string): Promise<number> => {
+      if (runIds.length === 0) return 0;
+      // Verify all runs belong to the given company before deleting
+      const rows = await db
+        .select({ id: heartbeatRuns.id })
+        .from(heartbeatRuns)
+        .where(and(inArray(heartbeatRuns.id, runIds), eq(heartbeatRuns.companyId, companyId)));
+      if (rows.length === 0) return 0;
+      const verified = rows.map((r) => r.id);
+      await db.delete(heartbeatRunEvents).where(inArray(heartbeatRunEvents.runId, verified));
+      await db.update(costEvents).set({ heartbeatRunId: null }).where(inArray(costEvents.heartbeatRunId, verified));
+      await db.update(financeEvents).set({ heartbeatRunId: null }).where(inArray(financeEvents.heartbeatRunId, verified));
+      await db.delete(heartbeatRuns).where(inArray(heartbeatRuns.id, verified));
+      return verified.length;
+    },
   };
 }

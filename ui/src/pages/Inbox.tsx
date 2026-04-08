@@ -1227,6 +1227,15 @@ export function Inbox() {
 
   const [retryingRunIds, setRetryingRunIds] = useState<Set<string>>(new Set());
 
+  const clearFailedRunsMutation = useMutation({
+    mutationFn: (runs: typeof failedRuns) =>
+      heartbeatsApi.deleteMany(runs.map((r) => r.id), selectedCompanyId!),
+    onSuccess: (_data, runs) => {
+      dismissMany(runs.map((r) => `run:${r.id}`));
+      queryClient.invalidateQueries({ queryKey: queryKeys.heartbeats(selectedCompanyId!) });
+    },
+  });
+
   const retryRunMutation = useMutation({
     mutationFn: async (run: HeartbeatRun) => {
       const payload: Record<string, unknown> = {};
@@ -1706,9 +1715,10 @@ export function Inbox() {
               variant="outline"
               size="sm"
               className="h-8 shrink-0"
-              onClick={() => dismissMany(failedRuns.map((r) => `run:${r.id}`))}
+              disabled={clearFailedRunsMutation.isPending}
+              onClick={() => clearFailedRunsMutation.mutate(failedRuns)}
             >
-              Clear failed runs
+              {clearFailedRunsMutation.isPending ? "Clearing…" : "Clear failed runs"}
             </Button>
           )}
           {canMarkAllRead && (
