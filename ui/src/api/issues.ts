@@ -141,7 +141,10 @@ export const issuesApi = {
   analyzeDocument: (companyId: string, file: File) => {
     const form = new FormData();
     form.append("file", file);
-    return api.postForm<{ tasks: Array<{ title: string; description: string; priority: "low" | "medium" | "high" | "critical" }> }>(
+    return api.postForm<{
+      tasks: Array<{ title: string; description: string; priority: "low" | "medium" | "high" | "critical" }>;
+      transcription?: string;
+    }>(
       `/companies/${companyId}/analyze-document`,
       form,
     );

@@ -77,7 +77,7 @@ export function MobileBottomNav({ visible }: MobileBottomNavProps) {
                 className={cn(
                   "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-md text-[10px] font-medium transition-colors",
                   active
-                    ? "text-foreground"
+                    ? "text-primary dark:glow-text-green"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -96,7 +96,7 @@ export function MobileBottomNav({ visible }: MobileBottomNavProps) {
                 cn(
                   "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-md text-[10px] font-medium transition-colors",
                   isActive
-                    ? "text-foreground"
+                    ? "text-primary dark:glow-text-green"
                     : "text-muted-foreground hover:text-foreground",
                 )
               }

@@ -46,7 +46,7 @@ function ChartLegend({ items }: { items: { color: string; label: string }[] }) {
 
 export function ChartCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="border border-border rounded-lg p-4 space-y-3">
+    <div className="border border-border rounded-lg p-4 space-y-3 scan-line-card hover:border-accent transition-all duration-300">
       <div>
         <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
         {subtitle && <span className="text-[10px] text-muted-foreground/60">{subtitle}</span>}
@@ -88,9 +88,9 @@ export function RunActivityChart({ runs }: { runs: HeartbeatRun[] }) {
             <div key={day} className="flex-1 h-full flex flex-col justify-end" title={`${day}: ${total} runs`}>
               {total > 0 ? (
                 <div className="flex flex-col-reverse gap-px overflow-hidden" style={{ height: `${heightPct}%`, minHeight: 2 }}>
-                  {entry.succeeded > 0 && <div className="bg-emerald-500" style={{ flex: entry.succeeded }} />}
-                  {entry.failed > 0 && <div className="bg-red-500" style={{ flex: entry.failed }} />}
-                  {entry.other > 0 && <div className="bg-neutral-500" style={{ flex: entry.other }} />}
+                  {entry.succeeded > 0 && <div style={{ flex: entry.succeeded, backgroundColor: "#39FF14" }} />}
+                  {entry.failed > 0 && <div style={{ flex: entry.failed, backgroundColor: "#ff4444" }} />}
+                  {entry.other > 0 && <div style={{ flex: entry.other, backgroundColor: "#555" }} />}
                 </div>
               ) : (
                 <div className="bg-muted/30 rounded-sm" style={{ height: 2 }} />
@@ -105,10 +105,10 @@ export function RunActivityChart({ runs }: { runs: HeartbeatRun[] }) {
 }
 
 const priorityColors: Record<string, string> = {
-  critical: "#ef4444",
+  critical: "#ff4444",
   high: "#f97316",
   medium: "#eab308",
-  low: "#6b7280",
+  low: "#00E5FF",
 };
 
 const priorityOrder = ["critical", "high", "medium", "low"] as const;
@@ -158,13 +158,13 @@ export function PriorityChart({ issues }: { issues: { priority: string; createdA
 }
 
 const statusColors: Record<string, string> = {
-  todo: "#3b82f6",
-  in_progress: "#8b5cf6",
-  in_review: "#a855f7",
-  done: "#10b981",
-  blocked: "#ef4444",
-  cancelled: "#6b7280",
-  backlog: "#64748b",
+  todo: "#00E5FF",
+  in_progress: "#a855f7",
+  in_review: "#7c3aed",
+  done: "#39FF14",
+  blocked: "#ff4444",
+  cancelled: "#555",
+  backlog: "#444",
 };
 
 const statusLabels: Record<string, string> = {
