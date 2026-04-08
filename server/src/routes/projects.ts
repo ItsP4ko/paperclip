@@ -518,19 +518,7 @@ export function projectRoutes(db: Db) {
       .select({ claudeMd: projectsTable.claudeMd })
       .from(projectsTable)
       .where(eq(projectsTable.id, existing.id));
-    // Fall back to filesystem for backwards compat (Tauri / legacy installs)
-    if (row?.claudeMd != null) {
-      res.json({ content: row.claudeMd });
-      return;
-    }
-    try {
-      const userId = req.actor.type === "board" ? (req.actor.userId ?? null) : null;
-      const filePath = await resolveClaudeMdPath(id, userId);
-      const content = await fs.readFile(filePath, "utf-8");
-      res.json({ content });
-    } catch {
-      res.json({ content: "" });
-    }
+    res.json({ content: row?.claudeMd ?? "" });
   });
 
   router.put("/projects/:id/claude-md", async (req, res) => {
