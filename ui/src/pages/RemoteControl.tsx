@@ -127,6 +127,13 @@ export function RemoteControl() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
     },
+    onError: (err) => {
+      pushToast({
+        title: "Failed to update Remote Control policy",
+        body: err instanceof Error ? err.message : "Unexpected error",
+        tone: "error",
+      });
+    },
   });
 
   async function handleActivate() {
