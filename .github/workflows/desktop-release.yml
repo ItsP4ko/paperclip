@@ -85,13 +85,10 @@ jobs:
           cd -
 
           echo "Signing with tauri signer..."
-          # Write key to temp file so tauri signer can read it
-          echo "$TAURI_SIGNING_PRIVATE_KEY" > /tmp/tauri-signing.key
+          # TAURI_SIGNING_PRIVATE_KEY is already in env; tauri signer sign reads it automatically
           npx tauri signer sign \
-            --private-key-path /tmp/tauri-signing.key \
             --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
             "$TARGZ"
-          rm /tmp/tauri-signing.key
 
           if [ ! -f "$SIG" ]; then
             echo "::error::Signing failed — .sig not generated"
