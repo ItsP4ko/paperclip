@@ -757,7 +757,7 @@ export function IssueDetail() {
     mutationKey: ["create-subtask", issueId],
     mutationFn: (title: string) => {
       if (!issue) throw new Error("Issue not loaded");
-      return issuesApi.create(issue.companyId, { title, parentId: issueId!, status: "todo" });
+      return issuesApi.create(issue.companyId, { title, parentId: issue.id, status: "todo" });
     },
     onMutate: async (title) => {
       if (!issue || !selectedCompanyId) return {};
