@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Link, useParams, useNavigate, useLocation, Navigate } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { DocumentToTasksDialog } from "../components/DocumentToTasksDialog";
+import { ProjectLibrary } from "../components/ProjectLibrary";
 import { PROJECT_COLORS, isUuidLike, type BudgetPolicySummary, type ExecutionWorkspace, type Issue } from "@paperclipai/shared";
 import { applyOptimisticIssuePatch, mergeIssueInList } from "../lib/optimistic-issue-mutations";
 import { budgetsApi } from "../api/budgets";
@@ -32,12 +34,12 @@ import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
 import { PluginLauncherOutlet } from "@/plugins/launchers";
 import { PluginSlotMount, PluginSlotOutlet, usePluginSlots } from "@/plugins/slots";
-import { Copy, FolderOpen, GitBranch, Loader2, Play, Square } from "lucide-react";
+import { ChevronDown, Copy, FolderOpen, GitBranch, Loader2, Play, Square, Sparkles } from "lucide-react";
 import { IssuesQuicklook } from "../components/IssuesQuicklook";
 
 /* ── Top-level tab types ── */
 
-type ProjectBaseTab = "overview" | "list" | "workspaces" | "configuration" | "budget";
+type ProjectBaseTab = "overview" | "list" | "workspaces" | "configuration" | "budget" | "library";
 type ProjectPluginTab = `plugin:${string}`;
 type ProjectTab = ProjectBaseTab | ProjectPluginTab;
 
@@ -55,6 +57,7 @@ function resolveProjectTab(pathname: string, projectId: string): ProjectTab | nu
   if (tab === "budget") return "budget";
   if (tab === "issues") return "list";
   if (tab === "workspaces") return "workspaces";
+  if (tab === "library") return "library";
   return null;
 }
 
@@ -161,6 +164,13 @@ function ColorPicker({
 function ProjectIssuesList({ projectId, companyId }: { projectId: string; companyId: string }) {
   const queryClient = useQueryClient();
 
+  const [pageVisible, setPageVisible] = useState(!document.hidden);
+  useEffect(() => {
+    const handleVis = () => setPageVisible(!document.hidden);
+    document.addEventListener('visibilitychange', handleVis);
+    return () => document.removeEventListener('visibilitychange', handleVis);
+  }, []);
+
   const { data: agents } = useQuery({
     queryKey: queryKeys.agents.list(companyId),
     queryFn: () => agentsApi.list(companyId),
@@ -171,7 +181,13 @@ function ProjectIssuesList({ projectId, companyId }: { projectId: string; compan
     queryKey: queryKeys.liveRuns(companyId),
     queryFn: () => heartbeatsApi.liveRunsForCompany(companyId),
     enabled: !!companyId,
-    refetchInterval: 5000,
+    refetchInterval: (query) => {
+      if (!pageVisible) return false;
+      const data = query.state.data;
+      if (!data || !Array.isArray(data) || data.length === 0) return false;
+      const hasActive = data.some((r: any) => r.status === 'running' || r.status === 'queued');
+      return hasActive ? 10_000 : false;
+    },
   });
 
   const liveIssueIds = useMemo(() => {
@@ -484,6 +500,13 @@ export function ProjectDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const [fieldSaveStates, setFieldSaveStates] = useState<Partial<Record<ProjectConfigFieldKey, ProjectFieldSaveState>>>({});
+  const [docDialogOpen, setDocDialogOpen] = useState(false);
+  const [pageVisible, setPageVisible] = useState(!document.hidden);
+  useEffect(() => {
+    const handleVis = () => setPageVisible(!document.hidden);
+    document.addEventListener('visibilitychange', handleVis);
+    return () => document.removeEventListener('visibilitychange', handleVis);
+  }, []);
   const fieldSaveRequestIds = useRef<Partial<Record<ProjectConfigFieldKey, number>>>({});
   const fieldSaveTimers = useRef<Partial<Record<ProjectConfigFieldKey, ReturnType<typeof setTimeout>>>>({});
   const routeProjectRef = projectId ?? "";
@@ -621,7 +644,7 @@ export function ProjectDetail() {
     queryKey: queryKeys.budgets.overview(resolvedCompanyId ?? "__none__"),
     queryFn: () => budgetsApi.overview(resolvedCompanyId!),
     enabled: !!resolvedCompanyId,
-    refetchInterval: 30_000,
+    refetchInterval: pageVisible ? 30_000 : false,
     staleTime: 5_000,
   });
 
@@ -653,6 +676,10 @@ export function ProjectDetail() {
     }
     if (activeTab === "workspaces") {
       navigate(`/projects/${canonicalProjectRef}/workspaces`, { replace: true });
+      return;
+    }
+    if (activeTab === "library") {
+      navigate(`/projects/${canonicalProjectRef}/library`, { replace: true });
       return;
     }
     if (activeTab === "list") {
@@ -817,6 +844,8 @@ export function ProjectDetail() {
       navigate(`/projects/${canonicalProjectRef}/budget`);
     } else if (tab === "configuration") {
       navigate(`/projects/${canonicalProjectRef}/configuration`);
+    } else if (tab === "library") {
+      navigate(`/projects/${canonicalProjectRef}/library`);
     } else {
       navigate(`/projects/${canonicalProjectRef}/issues`);
     }
@@ -884,6 +913,7 @@ export function ProjectDetail() {
             { value: "list", label: "Issues" },
             { value: "overview", label: "Overview" },
             ...(showWorkspacesTab ? [{ value: "workspaces", label: "Workspaces" }] : []),
+            { value: "library", label: "Biblioteca" },
             { value: "configuration", label: "Configuration" },
             { value: "budget", label: "Budget" },
             ...pluginTabItems.map((item) => ({
@@ -898,18 +928,29 @@ export function ProjectDetail() {
       </Tabs>
 
       {activeTab === "overview" && (
-        <OverviewContent
-          project={project}
-          onUpdate={(data) => updateProject.mutate(data)}
-          imageUploadHandler={async (file) => {
-            const asset = await uploadImage.mutateAsync(file);
-            return asset.contentPath;
-          }}
-        />
+        <>
+          <OverviewContent
+            project={project}
+            onUpdate={(data) => updateProject.mutate(data)}
+            imageUploadHandler={async (file) => {
+              const asset = await uploadImage.mutateAsync(file);
+              return asset.contentPath;
+            }}
+          />
+          <InfoProyecto projectId={project.id} companyId={resolvedCompanyId ?? undefined} />
+        </>
       )}
 
       {activeTab === "list" && project?.id && resolvedCompanyId && (
-        <ProjectIssuesList projectId={project.id} companyId={resolvedCompanyId} />
+        <>
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={() => setDocDialogOpen(true)}>
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+              Generar desde documento
+            </Button>
+          </div>
+          <ProjectIssuesList projectId={project.id} companyId={resolvedCompanyId} />
+        </>
       )}
 
       {activeTab === "workspaces" ? (
@@ -953,6 +994,10 @@ export function ProjectDetail() {
         </div>
       ) : null}
 
+      {activeTab === "library" && resolvedCompanyId && (
+        <ProjectLibrary companyId={resolvedCompanyId} projectId={project.id} />
+      )}
+
       {activePluginTab && (
         <PluginSlotMount
           slot={activePluginTab.slot}
@@ -966,6 +1011,77 @@ export function ProjectDetail() {
           }}
           missingBehavior="placeholder"
         />
+      )}
+
+      {resolvedCompanyId && project?.id && (
+        <DocumentToTasksDialog
+          open={docDialogOpen}
+          onOpenChange={setDocDialogOpen}
+          companyId={resolvedCompanyId}
+          projectId={project.id}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Info Proyecto (ai_context) ── */
+
+function InfoProyecto({ projectId, companyId }: { projectId: string; companyId: string | undefined }) {
+  const [open, setOpen] = useState(true);
+  const [localValue, setLocalValue] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { data } = useQuery({
+    queryKey: queryKeys.projects.aiContext(projectId),
+    queryFn: () => projectsApi.getAiContext(projectId, companyId),
+    enabled: !!projectId,
+  });
+
+  const updateAiContext = useMutation({
+    mutationFn: (content: string) => projectsApi.updateAiContext(projectId, content, companyId),
+    onMutate: () => setSaveState("saving"),
+    onSuccess: () => {
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 1800);
+    },
+    onError: () => setSaveState("idle"),
+  });
+
+  const value = localValue ?? (data?.content ?? "");
+
+  function handleChange(v: string) {
+    setLocalValue(v);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => updateAiContext.mutate(v), 800);
+  }
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      <button
+        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-accent/20 transition-colors"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className="text-sm font-medium">Info Proyecto</span>
+        <div className="flex items-center gap-2">
+          {saveState === "saving" && <span className="text-xs text-muted-foreground">guardando…</span>}
+          {saveState === "saved" && <span className="text-xs text-emerald-500">guardado</span>}
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`} />
+        </div>
+      </button>
+      {open && (
+        <div className="px-4 pb-4">
+          <p className="text-xs text-muted-foreground mb-2">
+            Contexto para el asistente: stack técnico, tipos de usuario, reglas de negocio, glosario.
+          </p>
+          <textarea
+            value={value}
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder="Ej: Stack: Next.js + Supabase. Usuarios: admin, operador, cliente..."
+            className="w-full min-h-[120px] resize-y rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
       )}
     </div>
   );

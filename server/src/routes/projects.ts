@@ -1,7 +1,9 @@
 import { Router, type Request } from "express";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { eq } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
+import { projects as projectsTable } from "@paperclipai/db";
 import {
   createProjectSchema,
   createProjectWorkspaceSchema,
@@ -519,6 +521,35 @@ export function projectRoutes(db: Db) {
     const userId = req.actor.type === "board" ? (req.actor.userId ?? null) : null;
     const filePath = await resolveClaudeMdPath(id, userId);
     await fs.writeFile(filePath, content, "utf-8");
+    res.json({ content });
+  });
+
+  router.get("/projects/:id/ai-context", async (req, res) => {
+    const id = req.params.id as string;
+    const existing = await svc.getById(id);
+    if (!existing) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    assertCompanyAccess(req, existing.companyId);
+    const [row] = await db.select({ aiContext: projectsTable.aiContext }).from(projectsTable).where(eq(projectsTable.id, existing.id));
+    res.json({ content: row?.aiContext ?? "" });
+  });
+
+  router.put("/projects/:id/ai-context", async (req, res) => {
+    const id = req.params.id as string;
+    const existing = await svc.getById(id);
+    if (!existing) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    assertCompanyAccess(req, existing.companyId);
+    const content = typeof req.body?.content === "string" ? req.body.content : null;
+    if (content === null) {
+      res.status(422).json({ error: "content is required" });
+      return;
+    }
+    await db.update(projectsTable).set({ aiContext: content, updatedAt: new Date() }).where(eq(projectsTable.id, existing.id));
     res.json({ content });
   });
 

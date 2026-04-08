@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from "react";
+import { UserStoriesDialog } from "../components/UserStoriesDialog";
 import { pickTextColorForPillBg } from "@/lib/color-contrast";
 import { Link, useLocation, useNavigate, useParams } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -40,7 +41,7 @@ import { IssueDocumentsSection } from "../components/IssueDocumentsSection";
 import { IssueProperties } from "../components/IssueProperties";
 import { IssueWorkspaceCard } from "../components/IssueWorkspaceCard";
 import { LiveRunWidget } from "../components/LiveRunWidget";
-import type { MentionOption } from "../components/MarkdownEditor";
+import type { MentionOption } from "../components/LazyMarkdownEditor";
 import { ImageGalleryModal } from "../components/ImageGalleryModal";
 import { ScrollToBottom } from "../components/ScrollToBottom";
 import { StatusIcon } from "../components/StatusIcon";
@@ -74,6 +75,7 @@ import {
   Plus,
   Repeat,
   SlidersHorizontal,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import type { ActivityEvent } from "@paperclipai/shared";
@@ -304,6 +306,7 @@ export function IssueDetail() {
   const [optimisticComments, setOptimisticComments] = useState<OptimisticIssueComment[]>([]);
   const [subtaskTitle, setSubtaskTitle] = useState("");
   const [subtaskInputOpen, setSubtaskInputOpen] = useState(false);
+  const [userStoriesOpen, setUserStoriesOpen] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [subtaskError, setSubtaskError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -322,45 +325,63 @@ export function IssueDetail() {
     queryKey: queryKeys.issues.comments(issueId!),
     queryFn: () => issuesApi.listComments(issueId!),
     enabled: !!issueId,
+    staleTime: 30_000,
   });
 
   const { data: activity } = useQuery({
     queryKey: queryKeys.issues.activity(issueId!),
     queryFn: () => activityApi.forIssue(issueId!),
     enabled: !!issueId,
+    staleTime: 60_000,
   });
 
   const { data: linkedRuns } = useQuery({
     queryKey: queryKeys.issues.runs(issueId!),
     queryFn: () => activityApi.runsForIssue(issueId!),
     enabled: !!issueId,
-    refetchInterval: 5000,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data || !Array.isArray(data) || data.length === 0) return false
+      const hasActive = data.some((r: any) => r.status === 'running' || r.status === 'queued')
+      return hasActive ? 15_000 : false
+    },
   });
 
   const { data: linkedApprovals } = useQuery({
     queryKey: queryKeys.issues.approvals(issueId!),
     queryFn: () => issuesApi.listApprovals(issueId!),
     enabled: !!issueId,
+    staleTime: 30_000,
   });
 
   const { data: attachments } = useQuery({
     queryKey: queryKeys.issues.attachments(issueId!),
     queryFn: () => issuesApi.listAttachments(issueId!),
     enabled: !!issueId,
+    staleTime: 60_000,
   });
 
   const { data: liveRuns } = useQuery({
     queryKey: queryKeys.issues.liveRuns(issueId!),
     queryFn: () => heartbeatsApi.liveRunsForIssue(issueId!),
     enabled: !!issueId,
-    refetchInterval: 3000,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data || !Array.isArray(data) || data.length === 0) return false
+      const hasActive = data.some((r: any) => r.status === 'running' || r.status === 'queued')
+      return hasActive ? 10_000 : false
+    },
   });
 
   const { data: activeRun } = useQuery({
     queryKey: queryKeys.issues.activeRun(issueId!),
     queryFn: () => heartbeatsApi.activeRunForIssue(issueId!),
     enabled: !!issueId,
-    refetchInterval: 3000,
+    refetchInterval: (query) => {
+      const run = query.state.data
+      if (!run) return false
+      return (run.status === 'running' || run.status === 'queued') ? 10_000 : false
+    },
   });
 
   const hasLiveRuns = (liveRuns ?? []).length > 0 || !!activeRun;
@@ -386,16 +407,23 @@ export function IssueDetail() {
     return (linkedRuns ?? []).filter((r) => !liveIds.has(r.runId));
   }, [linkedRuns, liveRuns, activeRun]);
 
+  // Load all company issues only to derive child issues (subtasks).
+  // staleTime: Infinity avoids a fresh network call when the issues list is
+  // already in the TanStack Query cache (e.g. populated by the Issues page).
+  // enabled also waits for the parent issue to be loaded first so we don't
+  // fire this expensive request before we even know we need it.
   const { data: allIssues } = useQuery({
     queryKey: queryKeys.issues.list(selectedCompanyId!),
     queryFn: () => issuesApi.list(selectedCompanyId!),
-    enabled: !!selectedCompanyId,
+    enabled: !!selectedCompanyId && !!issue,
+    staleTime: Infinity,
   });
 
   const { data: agents } = useQuery({
     queryKey: queryKeys.agents.list(selectedCompanyId!),
     queryFn: () => agentsApi.list(selectedCompanyId!),
     enabled: !!selectedCompanyId,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: session } = useQuery({
@@ -407,18 +435,21 @@ export function IssueDetail() {
     queryKey: queryKeys.projects.list(selectedCompanyId!),
     queryFn: () => projectsApi.list(selectedCompanyId!),
     enabled: !!selectedCompanyId,
+    staleTime: 5 * 60 * 1000,
   });
   const currentUserId = session?.user?.id ?? session?.session?.userId ?? null;
   const { data: feedbackVotes } = useQuery({
     queryKey: queryKeys.issues.feedbackVotes(issueId!),
     queryFn: () => issuesApi.listFeedbackVotes(issueId!),
     enabled: !!issueId && !!currentUserId,
+    staleTime: 2 * 60 * 1000,
   });
   const { data: instanceGeneralSettings } = useQuery({
     queryKey: queryKeys.instance.generalSettings,
     queryFn: () => instanceSettingsApi.getGeneral(),
     enabled: !!issueId,
     retry: false,
+    staleTime: 10 * 60 * 1000,
   });
   const keyboardShortcutsEnabled = instanceGeneralSettings?.keyboardShortcuts === true;
   const feedbackDataSharingPreference = instanceGeneralSettings?.feedbackDataSharingPreference ?? "prompt";
@@ -639,6 +670,16 @@ export function IssueDetail() {
         queryClient.invalidateQueries({ queryKey: queryKeys.issues.listUnreadTouchedByMe(selectedCompanyId) });
         queryClient.invalidateQueries({ queryKey: queryKeys.sidebarBadges(selectedCompanyId) });
       }
+    },
+  });
+
+  const deleteIssue = useMutation({
+    mutationFn: () => issuesApi.remove(issueId!),
+    onSuccess: () => {
+      if (selectedCompanyId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(selectedCompanyId) });
+      }
+      navigate("/issues/all");
     },
   });
 
@@ -1438,7 +1479,7 @@ export function IssueDetail() {
               </PopoverTrigger>
             <PopoverContent className="w-44 p-1" align="end">
               <button
-                className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-destructive"
+                className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-muted-foreground"
                 onClick={() => {
                   updateIssue.mutate(
                     { hiddenAt: new Date().toISOString() },
@@ -1449,6 +1490,17 @@ export function IssueDetail() {
               >
                 <EyeOff className="h-3 w-3" />
                 Hide this Issue
+              </button>
+              <button
+                className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-destructive"
+                disabled={deleteIssue.isPending}
+                onClick={() => {
+                  setMoreOpen(false);
+                  deleteIssue.mutate();
+                }}
+              >
+                <Trash2 className="h-3 w-3" />
+                {deleteIssue.isPending ? "Eliminando…" : "Eliminar issue"}
               </button>
             </PopoverContent>
             </Popover>
@@ -1826,6 +1878,15 @@ export function IssueDetail() {
             {subtaskError && (
               <p className="text-xs text-destructive">{subtaskError}</p>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() => setUserStoriesOpen(true)}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="ml-1">Generar historias de usuario</span>
+            </Button>
           </div>
         </TabsContent>
 
@@ -1937,6 +1998,14 @@ export function IssueDetail() {
         </SheetContent>
       </Sheet>
       <ScrollToBottom />
+
+      {issue && (
+        <UserStoriesDialog
+          open={userStoriesOpen}
+          onOpenChange={setUserStoriesOpen}
+          issue={issue}
+        />
+      )}
     </div>
   );
 }

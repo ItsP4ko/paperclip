@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { memo, startTransition, useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { pickTextColorForPillBg } from "@/lib/color-contrast";
 import { useDialog } from "../context/DialogContext";
@@ -181,7 +181,7 @@ interface IssuesSearchInputProps {
   onValueCommitted: (value: string) => void;
 }
 
-function IssuesSearchInput({ initialValue, onValueCommitted }: IssuesSearchInputProps) {
+const IssuesSearchInput = memo(function IssuesSearchInput({ initialValue, onValueCommitted }: IssuesSearchInputProps) {
   const [value, setValue] = useState(initialValue);
   const onValueCommittedRef = useRef(onValueCommitted);
 
@@ -212,9 +212,9 @@ function IssuesSearchInput({ initialValue, onValueCommitted }: IssuesSearchInput
       />
     </div>
   );
-}
+})
 
-export function IssuesList({
+export const IssuesList = memo(function IssuesList({
   issues,
   isLoading,
   error,
@@ -375,7 +375,7 @@ export function IssuesList({
     }));
   }, [filtered, viewState.groupBy, agents, agentName, currentUserId]);
 
-  const newIssueDefaults = (groupKey?: string) => {
+  const newIssueDefaults = useCallback((groupKey?: string) => {
     const defaults: Record<string, string> = {};
     if (projectId) defaults.projectId = projectId;
     if (groupKey) {
@@ -387,13 +387,13 @@ export function IssuesList({
       }
     }
     return defaults;
-  };
+  }, [projectId, viewState.groupBy]);
 
-  const assignIssue = (issueId: string, assigneeAgentId: string | null, assigneeUserId: string | null = null) => {
+  const assignIssue = useCallback((issueId: string, assigneeAgentId: string | null, assigneeUserId: string | null = null) => {
     onUpdateIssue(issueId, { assigneeAgentId, assigneeUserId });
     setAssigneePickerIssueId(null);
     setAssigneeSearch("");
-  };
+  }, [onUpdateIssue]);
 
   return (
     <div className="space-y-4">
@@ -936,4 +936,4 @@ export function IssuesList({
       )}
     </div>
   );
-}
+})

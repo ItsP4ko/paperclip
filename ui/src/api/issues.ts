@@ -138,6 +138,19 @@ export const issuesApi = {
     api.post<Approval[]>(`/issues/${id}/approvals`, { approvalId }),
   unlinkApproval: (id: string, approvalId: string) =>
     api.delete<{ ok: true }>(`/issues/${id}/approvals/${approvalId}`),
+  analyzeDocument: (companyId: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api.postForm<{ tasks: Array<{ title: string; description: string; priority: "low" | "medium" | "high" | "critical" }> }>(
+      `/companies/${companyId}/analyze-document`,
+      form,
+    );
+  },
+  generateUserStories: (issueId: string) =>
+    api.post<{ userStories: Array<{ title: string; description: string }> }>(
+      `/issues/${issueId}/generate-user-stories`,
+      {},
+    ),
   listWorkProducts: (id: string) => api.get<IssueWorkProduct[]>(`/issues/${id}/work-products`),
   createWorkProduct: (id: string, data: Record<string, unknown>) =>
     api.post<IssueWorkProduct>(`/issues/${id}/work-products`, data),
