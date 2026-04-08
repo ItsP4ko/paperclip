@@ -1752,6 +1752,15 @@ function PromptsTab({
     enabled: Boolean(companyId && isLocal),
   });
 
+  // Cloud instructions (agentMd) gate: when set, local file management is disabled
+  // to prevent malicious instruction injection by developers.
+  const { data: agentMdData } = useQuery({
+    queryKey: queryKeys.agents.agentMd(agent.id),
+    queryFn: () => agentsApi.getAgentMd(agent.id, companyId),
+    enabled: Boolean(companyId),
+  });
+  const hasCloudInstructions = Boolean(agentMdData?.content?.trim());
+
   const persistedMode = bundle?.mode ?? "managed";
   const persistedRootPath = persistedMode === "managed"
     ? (bundle?.managedRootPath ?? bundle?.rootPath ?? "")
@@ -2008,6 +2017,12 @@ function PromptsTab({
   return (
     <div className="space-y-6">
       <AgentMdSection agent={agent} companyId={companyId} />
+      {hasCloudInstructions ? (
+        <div className="rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-200 mt-4">
+          Local file management is disabled while Cloud Agent Instructions are active. Edit instructions above.
+        </div>
+      ) : (
+      <>
       <Separator className="my-4" />
       {(bundle?.warnings ?? []).length > 0 && (
         <div className="space-y-2">
@@ -2379,6 +2394,8 @@ function PromptsTab({
         </div>
       </div>
 
+      </>
+      )}
     </div>
   );
 }

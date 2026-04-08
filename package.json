@@ -17,6 +17,7 @@
     "test:run": "vitest run",
     "db:generate": "pnpm --filter @paperclipai/db generate",
     "db:migrate": "pnpm --filter @paperclipai/db migrate",
+    "db:seed-local": "SOURCE_DATABASE_URL=$SOURCE_DATABASE_URL DATABASE_URL=${DATABASE_URL:-postgres://paperclip:paperclip@localhost:5432/paperclip} pnpm --filter @paperclipai/db exec tsx src/seed-from-prod.ts",
     "secrets:migrate-inline-env": "tsx scripts/migrate-inline-env-secrets.ts",
     "db:backup": "./scripts/backup-db.sh",
     "relaycontrol": "node cli/node_modules/tsx/dist/cli.mjs cli/src/index.ts",
