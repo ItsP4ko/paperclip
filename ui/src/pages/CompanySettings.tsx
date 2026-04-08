@@ -136,7 +136,7 @@ export function CompanySettings() {
       accessApi.createOpenClawInvitePrompt(selectedCompanyId!),
     onSuccess: async (invite) => {
       setInviteError(null);
-      const base = window.location.origin.replace(/\/+$/, "");
+      const base = (import.meta.env.VITE_API_URL?.trim() || window.location.origin).replace(/\/+$/, "");
       const onboardingTextLink =
         invite.onboardingTextUrl ??
         invite.onboardingTextPath ??
@@ -191,7 +191,8 @@ export function CompanySettings() {
       }),
     onSuccess: (invite) => {
       setHumanInviteError(null);
-      setHumanInviteUrl(window.location.origin + invite.inviteUrl);
+      const webOrigin = (import.meta.env.VITE_API_URL?.trim() || window.location.origin).replace(/\/+$/, "");
+      setHumanInviteUrl(webOrigin + invite.inviteUrl);
       setHumanUrlCopied(false);
       setHumanCopyDelightId(0);
     },

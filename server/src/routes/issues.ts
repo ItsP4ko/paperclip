@@ -449,13 +449,15 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
       svc.findMentionedProjectIds(issue.id),
       documentsSvc.getIssueDocumentPayload(issue),
     ]);
-    const mentionedProjects = mentionedProjectIds.length > 0
-      ? await projectsSvc.listByIds(issue.companyId, mentionedProjectIds)
-      : [];
-    const currentExecutionWorkspace = issue.executionWorkspaceId
-      ? await executionWorkspacesSvc.getById(issue.executionWorkspaceId)
-      : null;
-    const workProducts = await workProductsSvc.listForIssue(issue.id);
+    const [mentionedProjects, currentExecutionWorkspace, workProducts] = await Promise.all([
+      mentionedProjectIds.length > 0
+        ? projectsSvc.listByIds(issue.companyId, mentionedProjectIds)
+        : Promise.resolve([]),
+      issue.executionWorkspaceId
+        ? executionWorkspacesSvc.getById(issue.executionWorkspaceId)
+        : Promise.resolve(null),
+      workProductsSvc.listForIssue(issue.id),
+    ]);
     const payload = {
       ...issue,
       goalId: goal?.id ?? issue.goalId,

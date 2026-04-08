@@ -16,6 +16,7 @@ data/
 .pnpm-store/
 tmp-*
 cli/tmp/
+.worktrees/
 
 # Scratch/seed scripts (but not scripts/ dir)
 check-*.mjs
@@ -56,7 +57,6 @@ tests/release-smoke/test-results/
 tests/release-smoke/playwright-report/
 .superset/
 .claude/worktrees/
-.github/workflows/
 .vercel
 
 # Tauri build artifacts
