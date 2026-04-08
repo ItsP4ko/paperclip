@@ -6,7 +6,8 @@ import { useCompany } from "../context/CompanyContext";
 import { issuesApi } from "../api/issues";
 import { authApi } from "../api/auth";
 import { queryKeys } from "../lib/queryKeys";
-import { formatAssigneeUserLabel } from "../lib/assignees";
+import { formatAssigneeUserLabel, resolveAssigneeName } from "../lib/assignees";
+import { accessApi } from "../api/access";
 import { groupBy } from "../lib/groupBy";
 import { formatDate, cn } from "../lib/utils";
 import { timeAgo } from "../lib/timeAgo";
@@ -261,6 +262,12 @@ export function IssuesList({
     queryFn: () => authApi.getSession(),
   });
   const currentUserId = session?.user?.id ?? session?.session?.userId ?? null;
+
+  const { data: members } = useQuery({
+    queryKey: queryKeys.access.members(selectedCompanyId!),
+    queryFn: () => accessApi.listMembers(selectedCompanyId!),
+    enabled: !!selectedCompanyId,
+  });
 
   // Scope the storage key per company so folding/view state is independent across companies.
   const scopedKey = selectedCompanyId ? `${viewStateKey}:${selectedCompanyId}` : viewStateKey;
@@ -837,7 +844,7 @@ export function IssuesList({
                                 <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-dashed border-muted-foreground/35 bg-muted/30">
                                   <User className="h-3 w-3" />
                                 </span>
-                                {formatAssigneeUserLabel(issue.assigneeUserId, currentUserId) ?? "User"}
+                                {resolveAssigneeName(issue, agents, members, currentUserId) ?? formatAssigneeUserLabel(issue.assigneeUserId, currentUserId) ?? "User"}
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
