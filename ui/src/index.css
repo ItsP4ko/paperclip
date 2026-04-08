@@ -260,8 +260,8 @@
 
 @keyframes dashboard-activity-highlight {
   0% {
-    box-shadow: inset 2px 0 0 var(--primary);
-    background-color: color-mix(in oklab, var(--accent) 55%, transparent);
+    box-shadow: inset 2px 0 0 var(--neon-green);
+    background-color: color-mix(in oklab, var(--accent) 20%, transparent);
   }
   100% {
     box-shadow: inset 0 0 0 transparent;
@@ -278,6 +278,74 @@
 @media (prefers-reduced-motion: reduce) {
   .activity-row-enter {
     animation: none;
+  }
+}
+
+/* === Cyberpunk Animations === */
+
+@keyframes neon-pulse {
+  0%, 100% {
+    box-shadow: var(--glow-green);
+  }
+  50% {
+    box-shadow: 0 0 35px oklch(0.87 0.29 135 / 1), 0 0 60px oklch(0.87 0.29 135 / 0.4);
+  }
+}
+
+@keyframes cyber-flicker {
+  0%, 96%, 100% { opacity: 1; }
+  97%            { opacity: 0.4; }
+  98%            { opacity: 1; }
+  99%            { opacity: 0.6; }
+}
+
+@keyframes scan-line {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  15%  { opacity: 0.5; }
+  100% { transform: translateY(300%); opacity: 0; }
+}
+
+@layer utilities {
+  .animate-neon-pulse {
+    animation: neon-pulse 2s ease-in-out infinite;
+  }
+
+  .animate-cyber-flicker {
+    animation: cyber-flicker 3s ease-in-out infinite;
+  }
+
+  .glow-text-green {
+    text-shadow:
+      0 0 8px oklch(0.87 0.29 135 / 0.8),
+      0 0 20px oklch(0.87 0.29 135 / 0.4);
+  }
+
+  .glow-text-cyan {
+    text-shadow:
+      0 0 8px oklch(0.84 0.17 200 / 0.8),
+      0 0 20px oklch(0.84 0.17 200 / 0.4);
+  }
+
+  .scan-line-card {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scan-line-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--neon-cyan);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-100%);
+    z-index: 10;
+  }
+
+  .scan-line-card:hover::before {
+    animation: scan-line 0.7s ease-out;
   }
 }
 
