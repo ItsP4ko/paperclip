@@ -59,6 +59,12 @@ import { useCompany } from "./context/CompanyContext";
 import { useDialog } from "./context/DialogContext";
 import { loadLastInboxTab } from "./lib/inbox";
 import { shouldRedirectCompanylessRouteToOnboarding } from "./lib/onboarding-route";
+import { isTauriEnv } from "./lib/platform";
+
+function TauriGuard() {
+  if (!isTauriEnv()) return <Navigate to="/" replace />;
+  return <Outlet />;
+}
 
 function BootstrapPendingPage({ hasActiveInvite = false }: { hasActiveInvite?: boolean }) {
   return (
@@ -143,15 +149,17 @@ function boardRoutes() {
       <Route path="plugins/:pluginId" element={<PluginPage />} />
       <Route path="org" element={<Org />} />
       <Route path="members" element={<Members />} />
-      <Route path="agents" element={<Navigate to="/agents/all" replace />} />
-      <Route path="agents/all" element={<Agents />} />
-      <Route path="agents/active" element={<Agents />} />
-      <Route path="agents/paused" element={<Agents />} />
-      <Route path="agents/error" element={<Agents />} />
-      <Route path="agents/new" element={<NewAgent />} />
-      <Route path="agents/:agentId" element={<AgentDetail />} />
-      <Route path="agents/:agentId/:tab" element={<AgentDetail />} />
-      <Route path="agents/:agentId/runs/:runId" element={<AgentDetail />} />
+      <Route element={<TauriGuard />}>
+        <Route path="agents" element={<Navigate to="/agents/all" replace />} />
+        <Route path="agents/all" element={<Agents />} />
+        <Route path="agents/active" element={<Agents />} />
+        <Route path="agents/paused" element={<Agents />} />
+        <Route path="agents/error" element={<Agents />} />
+        <Route path="agents/new" element={<NewAgent />} />
+        <Route path="agents/:agentId" element={<AgentDetail />} />
+        <Route path="agents/:agentId/:tab" element={<AgentDetail />} />
+        <Route path="agents/:agentId/runs/:runId" element={<AgentDetail />} />
+      </Route>
       <Route path="projects" element={<Projects />} />
       <Route path="projects/:projectId" element={<ProjectDetail />} />
       <Route path="projects/:projectId/overview" element={<ProjectDetail />} />

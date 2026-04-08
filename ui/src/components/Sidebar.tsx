@@ -38,11 +38,13 @@ import { Button } from "@/components/ui/button";
 import { PluginSlotOutlet } from "@/plugins/slots";
 import { RunnerStatusIndicator } from "./RunnerStatusIndicator";
 import { DesktopDownloadButton } from "./DesktopDownloadButton";
+import { isTauriEnv } from "../lib/platform";
 
 export function Sidebar() {
   const { openNewIssue } = useDialog();
   const { selectedCompanyId, selectedCompany } = useCompany();
   const { isMember, canManageAgents } = useMemberRole(selectedCompanyId);
+  const isTauri = isTauriEnv();
   const queryClient = useQueryClient();
   const { data: session } = useQuery({
     queryKey: queryKeys.auth.session,
@@ -141,7 +143,7 @@ export function Sidebar() {
 
         <SidebarProjects />
 
-        {canManageAgents && <SidebarAgents />}
+        {canManageAgents && isTauri && <SidebarAgents />}
 
         <SidebarSection label="Company">
           {!isMember && <SidebarNavItem to="/org" label="Org" icon={Network} />}
