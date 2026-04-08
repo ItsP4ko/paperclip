@@ -187,7 +187,7 @@ export function geminiAnalysisRoutes(db: Db, storage: StorageService) {
           try {
             const obj = await storage.getObject(issue.companyId, doc.objectKey);
             const chunks: Buffer[] = [];
-            for await (const chunk of obj.body) chunks.push(Buffer.from(chunk as Uint8Array));
+            for await (const chunk of obj.stream) chunks.push(Buffer.from(chunk as Uint8Array));
             const buf = Buffer.concat(chunks);
             const text = await extractTextFromBuffer(buf, doc.contentType ?? "");
             if (text.trim()) {
