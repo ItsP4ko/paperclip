@@ -1,9 +1,9 @@
 import { Router, type Request } from "express";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
-import { projects as projectsTable } from "@paperclipai/db";
+import { companyMemberships, projects as projectsTable } from "@paperclipai/db";
 import {
   createProjectSchema,
   createProjectWorkspaceSchema,
@@ -12,8 +12,8 @@ import {
   updateProjectWorkspaceSchema,
 } from "@paperclipai/shared";
 import { validate } from "../middleware/validate.js";
-import { projectService, logActivity, workspaceOperationService } from "../services/index.js";
-import { conflict } from "../errors.js";
+import { projectService, accessService, logActivity, workspaceOperationService } from "../services/index.js";
+import { conflict, forbidden } from "../errors.js";
 import { assertCompanyAccess, getActorInfo } from "./authz.js";
 import { startRuntimeServicesForWorkspaceControl, stopRuntimeServicesForProjectWorkspace } from "../services/workspace-runtime.js";
 
@@ -21,6 +21,25 @@ export function projectRoutes(db: Db) {
   const router = Router();
   const svc = projectService(db);
   const workspaceOperations = workspaceOperationService(db);
+
+  async function assertOwnerAccess(req: Request, companyId: string) {
+    if (req.actor.type !== "board") return;
+    if (req.actor.source === "local_implicit" || req.actor.isInstanceAdmin) return;
+    if (!req.actor.userId) throw forbidden("Authentication required");
+    const [membership] = await db
+      .select({ membershipRole: companyMemberships.membershipRole })
+      .from(companyMemberships)
+      .where(
+        and(
+          eq(companyMemberships.companyId, companyId),
+          eq(companyMemberships.principalType, "user"),
+          eq(companyMemberships.principalId, req.actor.userId),
+        ),
+      );
+    if (!membership || membership.membershipRole !== "owner") {
+      throw forbidden("Owner role required");
+    }
+  }
 
   async function resolveCompanyIdForProjectReference(req: Request) {
     const companyIdQuery = req.query.companyId;
@@ -495,9 +514,18 @@ export function projectRoutes(db: Db) {
       return;
     }
     assertCompanyAccess(req, existing.companyId);
-    const userId = req.actor.type === "board" ? (req.actor.userId ?? null) : null;
-    const filePath = await resolveClaudeMdPath(id, userId);
+    const [row] = await db
+      .select({ claudeMd: projectsTable.claudeMd })
+      .from(projectsTable)
+      .where(eq(projectsTable.id, existing.id));
+    // Fall back to filesystem for backwards compat (Tauri / legacy installs)
+    if (row?.claudeMd != null) {
+      res.json({ content: row.claudeMd });
+      return;
+    }
     try {
+      const userId = req.actor.type === "board" ? (req.actor.userId ?? null) : null;
+      const filePath = await resolveClaudeMdPath(id, userId);
       const content = await fs.readFile(filePath, "utf-8");
       res.json({ content });
     } catch {
@@ -513,14 +541,16 @@ export function projectRoutes(db: Db) {
       return;
     }
     assertCompanyAccess(req, existing.companyId);
+    await assertOwnerAccess(req, existing.companyId);
     const content = typeof req.body?.content === "string" ? req.body.content : null;
     if (content === null) {
       res.status(422).json({ error: "content is required" });
       return;
     }
-    const userId = req.actor.type === "board" ? (req.actor.userId ?? null) : null;
-    const filePath = await resolveClaudeMdPath(id, userId);
-    await fs.writeFile(filePath, content, "utf-8");
+    await db
+      .update(projectsTable)
+      .set({ claudeMd: content, updatedAt: new Date() })
+      .where(eq(projectsTable.id, existing.id));
     res.json({ content });
   });
 
