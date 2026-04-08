@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import type { Db } from "@paperclipai/db";
 import type { DeploymentExposure, DeploymentMode } from "@paperclipai/shared";
 import type { StorageService } from "./storage/types.js";
-import { httpLogger, errorHandler, securityHeaders, createRateLimiter } from "./middleware/index.js";
+import { httpLogger, errorHandler, createSecurityHeaders, createRateLimiter } from "./middleware/index.js";
 import { createLoginRateLimiter } from "./middleware/login-rate-limit.js";
 import type { RedisClientType } from "redis";
 import { actorMiddleware } from "./middleware/auth.js";
@@ -111,7 +111,22 @@ export async function createApp(
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin || corsAllowedOrigins.includes(origin)) {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+        // Always allow loopback origins — browser sends Origin: http://localhost:PORT
+        // for <script type="module"> requests, which must not be rejected in local dev.
+        try {
+          const { hostname } = new URL(origin);
+          if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1") {
+            callback(null, true);
+            return;
+          }
+        } catch {
+          // fall through to allowlist check
+        }
+        if (corsAllowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
           callback(new Error("Not allowed by CORS"));
@@ -122,7 +137,7 @@ export async function createApp(
     }),
   );
 
-  app.use(securityHeaders);
+  app.use(createSecurityHeaders({ viteDev: opts.uiMode === "vite-dev" }));
   app.use(createRateLimiter(opts.redisClient));
 
   app.use(express.json({
@@ -333,7 +348,17 @@ export async function createApp(
       },
     });
 
+    // Pre-warm before attaching middleware: server.warmup config only applies to Vite CLI,
+    // not middlewareMode. Awaiting here ensures dep optimization finishes before server.listen()
+    // is called, so the browser never hits unoptimized files.
+    await Promise.all([
+      vite.transformRequest('/@vite/client'),
+      vite.transformRequest('/src/main.tsx'),
+      vite.transformRequest('/@react-refresh'),
+    ]).catch(() => {/* ignore warmup errors */});
+
     app.use(vite.middlewares);
+
     app.get(/.*/, async (req, res, next) => {
       try {
         const templatePath = path.resolve(uiRoot, "index.html");
