@@ -395,6 +395,7 @@ export function IssueDetail() {
     queryKey: queryKeys.issues.list(selectedCompanyId!),
     queryFn: () => issuesApi.list(selectedCompanyId!),
     enabled: !!selectedCompanyId,
+    staleTime: 60_000,
   });
 
   const { data: agents } = useQuery({
