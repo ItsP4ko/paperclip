@@ -2284,6 +2284,18 @@ export function agentRoutes(db: Db) {
     res.json({ deleted });
   });
 
+  const deleteRunsSchema = z.object({
+    runIds: z.array(z.string().uuid()).min(1).max(100),
+    companyId: z.string().uuid(),
+  });
+  router.delete("/heartbeat-runs", validate(deleteRunsSchema), async (req, res) => {
+    assertBoard(req);
+    const { runIds, companyId } = req.body as z.infer<typeof deleteRunsSchema>;
+    assertCompanyAccess(req, companyId);
+    const deleted = await heartbeat.deleteRunsById(runIds, companyId);
+    res.json({ deleted });
+  });
+
   router.post("/heartbeat-runs/:runId/cancel", async (req, res) => {
     assertBoard(req);
     const runId = req.params.runId as string;

@@ -40,7 +40,10 @@
     "metrics:paperclip-commits": "tsx scripts/paperclip-commit-metrics.ts",
     "desktop:ui-dev": "cross-env VITE_API_URL=https://paperclip-paperclip-api.qiwa34.easypanel.host pnpm --filter @paperclipai/ui dev",
     "desktop:ui-build": "cross-env VITE_API_URL=https://paperclip-paperclip-api.qiwa34.easypanel.host pnpm --filter @paperclipai/ui build",
+    "desktop:ui-dev-local": "cross-env VITE_API_URL=http://localhost:3000 pnpm --filter @paperclipai/ui dev",
     "desktop:dev": "tauri dev",
+    "desktop:dev-local": "tauri dev --config src-tauri/tauri.dev-local.conf.json",
+    "dev:sync-db": "./scripts/sync-dev-db.sh",
     "desktop:build": "tauri build"
   },
   "devDependencies": {

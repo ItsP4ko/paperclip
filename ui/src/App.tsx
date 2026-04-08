@@ -41,6 +41,7 @@ const PipelineDetail = lazy(() => import("./pages/PipelineDetail").then((m) => (
 const PipelineRunDetail = lazy(() => import("./pages/PipelineRunDetail").then((m) => ({ default: m.PipelineRunDetail })));
 const Inbox = lazy(() => import("./pages/Inbox").then((m) => ({ default: m.Inbox })));
 const CompanySettings = lazy(() => import("./pages/CompanySettings").then((m) => ({ default: m.CompanySettings })));
+const RemoteControl = lazy(() => import("./pages/RemoteControl").then((m) => ({ default: m.RemoteControl })));
 const MyIssues = lazy(() => import("./pages/MyIssues").then((m) => ({ default: m.MyIssues })));
 const CompanySkills = lazy(() => import("./pages/CompanySkills").then((m) => ({ default: m.CompanySkills })));
 const CompanyExport = lazy(() => import("./pages/CompanyExport").then((m) => ({ default: m.CompanyExport })));
@@ -149,6 +150,7 @@ function boardRoutes() {
       <Route path="onboarding" element={<OnboardingRoutePage />} />
       <Route path="companies" element={<S><Companies /></S>} />
       <Route path="company/settings" element={<S><CompanySettings /></S>} />
+      <Route path="remote-control" element={<S><RemoteControl /></S>} />
       <Route path="company/export/*" element={<S><CompanyExport /></S>} />
       <Route path="company/import" element={<S><CompanyImport /></S>} />
       <Route path="skills/*" element={<S><CompanySkills /></S>} />
@@ -384,6 +386,7 @@ export function App() {
           <Route path="my-tasks" element={<UnprefixedBoardRedirect />} />
           <Route path="execution-workspaces/:workspaceId" element={<UnprefixedBoardRedirect />} />
           <Route path="knowledge" element={<UnprefixedBoardRedirect />} />
+          <Route path="remote-control" element={<UnprefixedBoardRedirect />} />
           <Route path="cost-recommendations" element={<UnprefixedBoardRedirect />} />
           <Route path="pipelines" element={<UnprefixedBoardRedirect />} />
           <Route path="pipelines/:pipelineId" element={<UnprefixedBoardRedirect />} />

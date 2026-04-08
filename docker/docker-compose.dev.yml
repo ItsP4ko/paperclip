@@ -1,3 +1,9 @@
+# Local dev setup — global backend on port 3000 (frees port 3100 for embedded remote-control server)
+# Usage:
+#   BETTER_AUTH_SECRET=devsecret docker compose -f docker/docker-compose.dev.yml up
+#   Then run: pnpm desktop:dev-local
+
+
 services:
   db:
     image: postgres:17-alpine
@@ -16,25 +22,23 @@ services:
       - pgdata-dev:/var/lib/postgresql/data
 
   server:
-    build:
-      context: ..
-      dockerfile: Dockerfile
+    image: pacosemino/paperclip-backend:dev
     ports:
-      - "3100:3100"
-    env_file:
-      - ../server/.env
+      - "3000:3000"
     environment:
       DATABASE_URL: postgres://paperclip:paperclip@db:5432/paperclip
-      PORT: "3100"
+      PORT: "3000"
+      HOST: "0.0.0.0"
       SERVE_UI: "false"
+      PAPERCLIP_MIGRATION_AUTO_APPLY: "true"
       PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
       PAPERCLIP_DEPLOYMENT_EXPOSURE: "public"
-      PAPERCLIP_PUBLIC_URL: "http://localhost:3100"
-      PAPERCLIP_AUTH_PUBLIC_BASE_URL: "http://localhost:3100"
-      PAPERCLIP_ALLOWED_HOSTNAMES: "localhost,127.0.0.1"
-      BETTER_AUTH_TRUSTED_ORIGINS: "http://localhost:5173,http://localhost:3100,tauri://localhost"
-      PAPERCLIP_EXTRA_ORIGINS: "http://localhost:5173,tauri://localhost"
-      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set}"
+      PAPERCLIP_PUBLIC_URL: "http://localhost:3000"
+      PAPERCLIP_AUTH_PUBLIC_BASE_URL: "http://localhost:3000"
+      PAPERCLIP_AUTH_BASE_URL_MODE: "explicit"
+      PAPERCLIP_EXTRA_ORIGINS: "tauri://localhost,http://localhost:5173"
+      BETTER_AUTH_TRUSTED_ORIGINS: "tauri://localhost,http://localhost:5173"
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-dev-secret-change-in-prod}"
     volumes:
       - paperclip-data-dev:/paperclip
     depends_on:
