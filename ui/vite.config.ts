@@ -21,36 +21,6 @@ export default defineConfig({
     },
   },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          // TanStack - changes rarely
-          if (id.includes('@tanstack/')) {
-            return 'tanstack'
-          }
-          // Heavy editors - only on specific pages
-          if (id.includes('@mdxeditor/')) {
-            return 'mdx-editor'
-          }
-          // Charts - only on analytics/dashboard
-          if (id.includes('recharts') || id.includes('mermaid')) {
-            return 'charts'
-          }
-          // React + Radix together to avoid forwardRef undefined on load order
-          if (
-            id.includes('node_modules/react/') ||
-            id.includes('node_modules/react-dom/') ||
-            id.includes('@radix-ui/') ||
-            id.includes('node_modules/radix-ui/')
-          ) {
-            return 'react-radix'
-          }
-          // rest of node_modules
-          if (id.includes('node_modules/')) {
-            return 'vendor'
-          }
-        },
-      },
-    },
+    rollupOptions: {},
   },
 });
