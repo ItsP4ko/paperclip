@@ -1519,54 +1519,12 @@ export function IssueDetail() {
             }}
           />
 
-          {/* Add subtask */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => { setSubtaskInputOpen(true); setSubtaskError(null); }}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline ml-1">Add subtask</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Add subtask</TooltipContent>
-          </Tooltip>
         </div>
       )}
 
       {/* Upload error */}
       {uploadError && (
         <p className="text-xs text-destructive px-1">{uploadError}</p>
-      )}
-
-      {/* Subtask inline input */}
-      {subtaskInputOpen && (
-        <div className="flex items-center gap-2 py-2">
-          <Input
-            value={subtaskTitle}
-            onChange={(e) => setSubtaskTitle(e.target.value)}
-            placeholder="Subtask title"
-            disabled={createSubtask.isPending}
-            className={subtaskError ? "border-destructive" : ""}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && subtaskTitle.trim()) {
-                createSubtask.mutate(subtaskTitle.trim());
-              }
-              if (e.key === "Escape") {
-                setSubtaskInputOpen(false);
-                setSubtaskTitle("");
-                setSubtaskError(null);
-              }
-            }}
-            autoFocus
-          />
-          {createSubtask.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-        </div>
-      )}
-      {subtaskError && (
-        <p className="text-xs text-destructive px-1">{subtaskError}</p>
       )}
 
       <PluginSlotOutlet
@@ -1801,35 +1759,74 @@ export function IssueDetail() {
         </TabsContent>
 
         <TabsContent value="subissues">
-          {childIssues.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No sub-issues.</p>
-          ) : (
-            <div className="border border-border rounded-lg divide-y divide-border">
-              {childIssues.map((child) => (
-                <Link
-                  key={child.id}
-                  to={createIssueDetailPath(child.identifier ?? child.id, location.state, location.search)}
-                  state={location.state}
-                  className="flex items-center justify-between px-3 py-2 text-sm hover:bg-accent/20 transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <StatusIcon status={child.status} />
-                    <PriorityIcon priority={child.priority} />
-                    <span className="font-mono text-muted-foreground shrink-0">
-                      {child.identifier ?? child.id.slice(0, 8)}
-                    </span>
-                    <span className="truncate">{child.title}</span>
-                  </div>
-                  {child.assigneeAgentId && (() => {
-                    const name = agentMap.get(child.assigneeAgentId)?.name;
-                    return name
-                      ? <Identity name={name} size="sm" />
-                      : <span className="text-muted-foreground font-mono">{child.assigneeAgentId.slice(0, 8)}</span>;
-                  })()}
-                </Link>
-              ))}
-            </div>
-          )}
+          <div className="space-y-3">
+            {childIssues.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No sub-issues.</p>
+            ) : (
+              <div className="border border-border rounded-lg divide-y divide-border">
+                {childIssues.map((child) => (
+                  <Link
+                    key={child.id}
+                    to={createIssueDetailPath(child.identifier ?? child.id, location.state, location.search)}
+                    state={location.state}
+                    className="flex items-center justify-between px-3 py-2 text-sm hover:bg-accent/20 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <StatusIcon status={child.status} />
+                      <PriorityIcon priority={child.priority} />
+                      <span className="font-mono text-muted-foreground shrink-0">
+                        {child.identifier ?? child.id.slice(0, 8)}
+                      </span>
+                      <span className="truncate">{child.title}</span>
+                    </div>
+                    {child.assigneeAgentId && (() => {
+                      const name = agentMap.get(child.assigneeAgentId)?.name;
+                      return name
+                        ? <Identity name={name} size="sm" />
+                        : <span className="text-muted-foreground font-mono">{child.assigneeAgentId.slice(0, 8)}</span>;
+                    })()}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {subtaskInputOpen ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={subtaskTitle}
+                  onChange={(e) => setSubtaskTitle(e.target.value)}
+                  placeholder="Sub-issue title"
+                  disabled={createSubtask.isPending}
+                  className={subtaskError ? "border-destructive" : ""}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && subtaskTitle.trim()) {
+                      createSubtask.mutate(subtaskTitle.trim());
+                    }
+                    if (e.key === "Escape") {
+                      setSubtaskInputOpen(false);
+                      setSubtaskTitle("");
+                      setSubtaskError(null);
+                    }
+                  }}
+                  autoFocus
+                />
+                {createSubtask.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+                onClick={() => { setSubtaskInputOpen(true); setSubtaskError(null); }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span className="ml-1">Add sub-issue</span>
+              </Button>
+            )}
+            {subtaskError && (
+              <p className="text-xs text-destructive">{subtaskError}</p>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="activity">
