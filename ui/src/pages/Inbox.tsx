@@ -802,7 +802,7 @@ export function Inbox() {
   const [allCategoryFilter, setAllCategoryFilter] = useState<InboxCategoryFilter>("everything");
   const [allApprovalFilter, setAllApprovalFilter] = useState<InboxApprovalFilter>("all");
   const [visibleIssueColumns, setVisibleIssueColumns] = useState<InboxIssueColumn[]>(loadInboxIssueColumns);
-  const { dismissed, dismiss } = useDismissedInboxItems();
+  const { dismissed, dismiss, dismissMany } = useDismissedInboxItems();
   const { readItems, markRead: markItemRead, markUnread: markItemUnread } = useReadInboxItems();
 
   const pathSegment = location.pathname.split("/").pop() ?? "mine";
@@ -1700,6 +1700,17 @@ export function Inbox() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          {hasRunFailures && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0"
+              onClick={() => dismissMany(failedRuns.map((r) => `run:${r.id}`))}
+            >
+              Clear failed runs
+            </Button>
+          )}
           {canMarkAllRead && (
             <>
               <Button
