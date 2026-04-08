@@ -217,8 +217,8 @@ export async function createApp(
   api.use(secretRoutes(db));
   api.use(costRoutes(db));
   api.use(activityRoutes(db));
-  api.use(dashboardRoutes(db));
-  api.use(sidebarBadgeRoutes(db));
+  api.use(dashboardRoutes(db, opts.redisClient));
+  api.use(sidebarBadgeRoutes(db, opts.redisClient));
   api.use(instanceSettingsRoutes(db, opts.redisClient));
   api.use(analyticsRoutes(db));
   api.use(auditRoutes(db));
