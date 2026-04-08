@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import multer from "multer";
 import { z } from "zod";
 import type { Db } from "@paperclipai/db";
+import type { RedisClientType } from "redis";
 import {
   addIssueCommentSchema,
   createIssueAttachmentMetadataSchema,
@@ -53,7 +54,11 @@ const updateIssueRouteSchema = updateIssueSchema.extend({
   interrupt: z.boolean().optional(),
 });
 
-export function issueRoutes(db: Db, storage: StorageService) {
+const ISSUE_DETAIL_TTL = 20;
+const ISSUE_LIST_TTL = 15;
+const LABELS_TTL = 300;
+
+export function issueRoutes(db: Db, storage: StorageService, redisClient?: RedisClientType) {
   const router = Router();
   const svc = issueService(db);
   const access = accessService(db);
@@ -327,7 +332,7 @@ export function issueRoutes(db: Db, storage: StorageService) {
       return;
     }
 
-    const result = await svc.list(companyId, {
+    const listParams = {
       status: req.query.status as string | undefined,
       assigneeAgentId: req.query.assigneeAgentId as string | undefined,
       participantAgentId: req.query.participantAgentId as string | undefined,
@@ -344,14 +349,35 @@ export function issueRoutes(db: Db, storage: StorageService) {
       includeRoutineExecutions:
         req.query.includeRoutineExecutions === "true" || req.query.includeRoutineExecutions === "1",
       q: req.query.q as string | undefined,
-    });
+    };
+
+    const listCacheKey = `issues-list:${companyId}:${JSON.stringify(Object.entries(listParams).sort())}`;
+    if (redisClient?.isReady) {
+      const cached = await redisClient.get(listCacheKey).catch(() => null);
+      if (cached) { res.json(JSON.parse(cached)); return; }
+    }
+
+    const result = await svc.list(companyId, listParams);
+
+    if (redisClient?.isReady) {
+      await redisClient.set(listCacheKey, JSON.stringify(result), { EX: ISSUE_LIST_TTL }).catch(() => null);
+    }
+
     res.json(result);
   });
 
   router.get("/companies/:companyId/labels", async (req, res) => {
     const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
+    const cacheKey = `labels:${companyId}`;
+    if (redisClient?.isReady) {
+      const cached = await redisClient.get(cacheKey).catch(() => null);
+      if (cached) { res.json(JSON.parse(cached)); return; }
+    }
     const result = await svc.listLabels(companyId);
+    if (redisClient?.isReady) {
+      await redisClient.set(cacheKey, JSON.stringify(result), { EX: LABELS_TTL }).catch(() => null);
+    }
     res.json(result);
   });
 
@@ -371,6 +397,7 @@ export function issueRoutes(db: Db, storage: StorageService) {
       entityId: label.id,
       details: { name: label.name, color: label.color },
     });
+    await redisClient?.del(`labels:${companyId}`).catch(() => null);
     res.status(201).json(label);
   });
 
@@ -399,11 +426,17 @@ export function issueRoutes(db: Db, storage: StorageService) {
       entityId: removed.id,
       details: { name: removed.name, color: removed.color },
     });
+    await redisClient?.del(`labels:${removed.companyId}`).catch(() => null);
     res.json(removed);
   });
 
   router.get("/issues/:id", async (req, res) => {
     const id = req.params.id as string;
+    const cacheKey = `issue:${id}`;
+    if (redisClient?.isReady) {
+      const cached = await redisClient.get(cacheKey).catch(() => null);
+      if (cached) { res.json(JSON.parse(cached)); return; }
+    }
     const issue = await svc.getById(id);
     if (!issue) {
       res.status(404).json({ error: "Issue not found" });
@@ -423,7 +456,7 @@ export function issueRoutes(db: Db, storage: StorageService) {
       ? await executionWorkspacesSvc.getById(issue.executionWorkspaceId)
       : null;
     const workProducts = await workProductsSvc.listForIssue(issue.id);
-    res.json({
+    const payload = {
       ...issue,
       goalId: goal?.id ?? issue.goalId,
       ancestors,
@@ -433,7 +466,11 @@ export function issueRoutes(db: Db, storage: StorageService) {
       mentionedProjects,
       currentExecutionWorkspace,
       workProducts,
-    });
+    };
+    if (redisClient?.isReady) {
+      await redisClient.set(cacheKey, JSON.stringify(payload), { EX: ISSUE_DETAIL_TTL }).catch(() => null);
+    }
+    res.json(payload);
   });
 
   router.get("/issues/:id/heartbeat-context", async (req, res) => {
@@ -1337,6 +1374,7 @@ export function issueRoutes(db: Db, storage: StorageService) {
       }
     })();
 
+    await redisClient?.del(`issue:${id}`).catch(() => null);
     res.json({ ...issue, comment });
   });
 
@@ -1376,6 +1414,7 @@ export function issueRoutes(db: Db, storage: StorageService) {
       entityId: issue.id,
     });
 
+    await redisClient?.del(`issue:${id}`).catch(() => null);
     res.json(issue);
   });
 
