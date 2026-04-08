@@ -12,6 +12,7 @@ import type { RedisClientType } from "redis";
 import { actorMiddleware } from "./middleware/auth.js";
 import { boardMutationGuard } from "./middleware/board-mutation-guard.js";
 import { privateHostnameGuard, resolvePrivateHostnameAllowSet } from "./middleware/private-hostname-guard.js";
+import { createRemotePinAuthMiddleware, createRemotePinAuthHandler } from "./middleware/remote-pin-auth.js";
 import { healthRoutes } from "./routes/health.js";
 import { companyRoutes } from "./routes/companies.js";
 import { companySkillRoutes } from "./routes/company-skills.js";
@@ -40,6 +41,7 @@ import { runnerRoutes } from "./routes/runner.js";
 import { geminiAnalysisRoutes } from "./routes/gemini-analysis.js";
 import { pluginRoutes } from "./routes/plugins.js";
 import { pluginUiStaticRoutes } from "./routes/plugin-ui-static.js";
+import { remoteControlRoutes } from "./routes/remote-control.js";
 import { applyUiBranding } from "./ui-branding.js";
 import { logger } from "./middleware/logger.js";
 import { DEFAULT_LOCAL_PLUGIN_DIR, pluginLoader } from "./services/plugin-loader.js";
@@ -146,6 +148,14 @@ export async function createApp(
       bindHost: opts.bindHost,
     }),
   );
+
+  // PIN-based authentication for private remote control deployments
+  const remotePin = process.env.PAPERCLIP_REMOTE_PIN?.trim();
+  if (remotePin && opts.deploymentExposure === "private") {
+    app.use(createRemotePinAuthMiddleware(remotePin));
+    app.post("/api/remote-pin-auth", express.json(), createRemotePinAuthHandler(remotePin));
+  }
+
   app.use(
     actorMiddleware(db, {
       deploymentMode: opts.deploymentMode,
@@ -217,6 +227,7 @@ export async function createApp(
   api.use(pipelineRoutes(db));
   api.use(runnerRoutes(db));
   api.use(geminiAnalysisRoutes(db, opts.storageService));
+  api.use(remoteControlRoutes(db));
   const hostServicesDisposers = new Map<string, () => void>();
   const workerManager = createPluginWorkerManager();
   const pluginRegistry = pluginRegistryService(db);

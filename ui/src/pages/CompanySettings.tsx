@@ -10,7 +10,7 @@ import { assetsApi } from "../api/assets";
 import { queryKeys } from "../lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/lib/router";
-import { Settings, Check, Download, Upload } from "lucide-react";
+import { Settings, Check, Download, Upload, Smartphone } from "lucide-react";
 import { CompanyPatternIcon } from "../components/CompanyPatternIcon";
 import {
   Field,
@@ -87,6 +87,27 @@ export function CompanySettings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
     }
+  });
+
+  const remoteControlMutation = useMutation({
+    mutationFn: (enabled: boolean) =>
+      companiesApi.update(selectedCompanyId!, {
+        remoteControlEnabled: enabled,
+      }),
+    onSuccess: (_company, enabled) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
+      pushToast({
+        title: enabled ? "Remote Control enabled" : "Remote Control disabled",
+        tone: "success",
+      });
+    },
+    onError: (err) => {
+      pushToast({
+        title: "Failed to update Remote Control setting",
+        body: err instanceof Error ? err.message : "Unknown error",
+        tone: "error",
+      });
+    },
   });
 
   const feedbackSharingMutation = useMutation({
@@ -650,6 +671,32 @@ export function CompanySettings() {
               <Link to="/company/import">
                 <Upload className="mr-1.5 h-3.5 w-3.5" />
                 Import
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Remote Control */}
+      <div className="space-y-4">
+        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Remote Control
+        </div>
+        <div className="space-y-3 rounded-md border border-border px-4 py-4">
+          <ToggleField
+            label="Allow Remote Control for developers"
+            hint="When enabled, developers with the Desktop app can activate Remote Control via Tailscale to manage local agents from their phone."
+            checked={!!selectedCompany.remoteControlEnabled}
+            onChange={(enabled) => remoteControlMutation.mutate(enabled)}
+          />
+          <p className="text-sm text-muted-foreground">
+            Requires Tailscale to be installed and connected on both the desktop machine and the remote device.
+          </p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" asChild>
+              <Link to="/remote-control">
+                <Smartphone className="mr-1.5 h-3.5 w-3.5" />
+                Open Remote Control
               </Link>
             </Button>
           </div>

@@ -51,6 +51,8 @@ export const heartbeatsApi = {
     ),
   cancel: (runId: string) => api.post<void>(`/heartbeat-runs/${runId}/cancel`, {}),
   deleteAllForAgent: (agentId: string) => api.delete<{ deleted: number }>(`/agents/${agentId}/runs`),
+  deleteMany: (runIds: string[], companyId: string) =>
+    api.deleteWithBody<{ deleted: number }>(`/heartbeat-runs`, { runIds, companyId }),
   liveRunsForIssue: (issueId: string) =>
     api.get<LiveRunForIssue[]>(`/issues/${issueId}/live-runs`),
   activeRunForIssue: (issueId: string) =>
