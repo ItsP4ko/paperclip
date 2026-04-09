@@ -24,28 +24,7 @@ export default defineConfig({
     },
   },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes("node_modules")) {
-            if (id.includes("/react-dom/") || id.includes("/react/") || id.includes("/react-router")) {
-              return "vendor-react";
-            }
-            if (id.includes("@tanstack/react-query")) {
-              return "vendor-query";
-            }
-            if (id.includes("@dnd-kit/")) {
-              return "vendor-dnd";
-            }
-            if (id.includes("@radix-ui/")) {
-              return "vendor-radix";
-            }
-            if (id.includes("lucide-react")) {
-              return "vendor-icons";
-            }
-          }
-        },
-      },
-    },
+    // manualChunks removed — splitting React and Radix into separate chunks
+    // causes forwardRef undefined errors in production builds (broke 3 times).
   },
 });
