@@ -29,10 +29,10 @@ export const StepNode = memo(function StepNode({ data }: NodeProps) {
           )}
         </div>
         <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => onEdit(step.id)} className="p-1 rounded hover:bg-accent">
+          <button onClick={(e) => { e.stopPropagation(); onEdit(step.id); }} className="p-1 rounded hover:bg-accent">
             <Pencil className="h-3 w-3 text-muted-foreground" />
           </button>
-          <button onClick={() => onDelete(step.id)} className="p-1 rounded hover:bg-accent">
+          <button onClick={(e) => { e.stopPropagation(); onDelete(step.id); }} className="p-1 rounded hover:bg-accent">
             <Trash2 className="h-3 w-3 text-destructive" />
           </button>
         </div>

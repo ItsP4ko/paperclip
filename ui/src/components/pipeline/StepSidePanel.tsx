@@ -72,7 +72,7 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
   const otherSteps = allSteps.filter((s) => s.id !== step.id);
 
   return (
-    <div className="w-80 border-l border-border bg-card h-full overflow-y-auto p-4 space-y-4">
+    <div className="w-80 border-l border-border bg-card h-full overflow-y-auto p-4 space-y-4 relative z-20">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold">{step.stepType === "if_else" ? "Edit Condition" : "Edit Step"}</span>
         <Button variant="ghost" size="icon-sm" onClick={onClose}><X className="h-4 w-4" /></Button>

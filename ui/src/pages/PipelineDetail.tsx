@@ -120,10 +120,13 @@ export function PipelineDetail() {
 
   const updateStepMutation = useMutation({
     mutationFn: ({ stepId, data }: { stepId: string; data: Record<string, unknown> }) =>
-      pipelinesApi.updateStep(selectedCompanyId!, pipelineId!, stepId, data),
+      pipelinesApi.updateStep(selectedCompanyId!, pipelineId!, stepId, data as Parameters<typeof pipelinesApi.updateStep>[3]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(selectedCompanyId!, pipelineId!) });
       setSelectedStepId(null);
+    },
+    onError: (err) => {
+      console.error("updateStep failed:", err);
     },
   });
 
