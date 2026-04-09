@@ -301,6 +301,13 @@ export function PipelineDetail() {
           onAddStep={(type) => addStepMutation.mutate(type)}
           onAddStepBetween={handleAddStepBetween}
           onAddStepFromNode={handleAddStepFromNode}
+          onUnlinkSteps={(sourceId, targetId) => {
+            const targetStep = pipeline.steps.find(s => s.id === targetId);
+            if (targetStep) {
+              const newDeps = targetStep.dependsOn.filter(d => d !== sourceId);
+              updateStepDepsMutation.mutate({ stepId: targetId, dependsOn: newDeps });
+            }
+          }}
           onAutoLayout={(positions) => batchPositionsMutation.mutate(positions)}
         />
         {selectedStepId && pipeline.steps.find((s) => s.id === selectedStepId) && (

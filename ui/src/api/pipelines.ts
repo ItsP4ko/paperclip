@@ -169,4 +169,7 @@ export const pipelinesApi = {
 
   getRun: (companyId: string, runId: string) =>
     api.get<PipelineRunWithSteps>(`/companies/${companyId}/pipeline-runs/${runId}`),
+
+  completeRunStep: (companyId: string, runId: string, runStepId: string) =>
+    api.post<{ completed: boolean }>(`/companies/${companyId}/pipeline-runs/${runId}/steps/${runStepId}/complete`, {}),
 };

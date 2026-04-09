@@ -40,12 +40,13 @@ interface PipelineCanvasProps {
   onAddStep: (type: "action" | "if_else") => void;
   onAddStepBetween: (sourceId: string, targetId: string) => void;
   onAddStepFromNode: (sourceNodeId: string) => void;
+  onUnlinkSteps: (sourceId: string, targetId: string) => void;
   onAutoLayout: (positions: Array<{ stepId: string; positionX: number; positionY: number }>) => void;
 }
 
 export function PipelineCanvas({
   steps, agentNames, memberNames,
-  onUpdateStepPosition, onUpdateStepDeps, onDeleteStep, onSelectStep, onAddStep, onAddStepBetween, onAddStepFromNode, onAutoLayout,
+  onUpdateStepPosition, onUpdateStepDeps, onDeleteStep, onSelectStep, onAddStep, onAddStepBetween, onAddStepFromNode, onUnlinkSteps, onAutoLayout,
 }: PipelineCanvasProps) {
   const connectingNodeId = useRef<string | null>(null);
   const rawNodes = useMemo(
@@ -56,7 +57,10 @@ export function PipelineCanvas({
     const edges = stepsToEdges(steps);
     return edges.map(e => ({
       ...e,
-      data: { onAddStep: (sourceId: string, targetId: string) => onAddStepBetween(sourceId, targetId) },
+      data: {
+        onAddStep: (sourceId: string, targetId: string) => onAddStepBetween(sourceId, targetId),
+        onUnlink: (sourceId: string, targetId: string) => onUnlinkSteps(sourceId, targetId),
+      },
     }));
   }, [steps, onAddStepBetween]);
   const layoutNodes = useAutoLayout(rawNodes, rawEdges);
