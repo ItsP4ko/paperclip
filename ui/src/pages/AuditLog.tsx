@@ -34,7 +34,6 @@ const ACTION_VERBS: Record<string, string> = {
   "issue.updated": "updated an issue",
   "issue.deleted": "deleted an issue",
   "issue.assigned": "assigned an issue",
-  "issue.read_marked": "marked an issue as read",
   "issue.status_changed": "changed issue status",
   "approval.requested": "requested approval",
   "approval.approved": "approved a request",
