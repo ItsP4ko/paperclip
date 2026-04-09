@@ -223,47 +223,24 @@ function isTauriEnv(): boolean {
   );
 }
 
-async function tauriReadClaudeMd(localFolder: string): Promise<string> {
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<string>("read_claude_md", { path: localFolder });
-}
 
-async function tauriWriteClaudeMd(localFolder: string, content: string): Promise<void> {
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke("write_claude_md", { path: localFolder, content });
-}
-
-function ClaudeMdSection({ projectId, companyId, localFolder }: { projectId: string; companyId?: string; localFolder: string | null }) {
+function ClaudeMdSection({ projectId, companyId }: { projectId: string; companyId?: string }) {
   const [content, setContent] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<ProjectFieldSaveState>("idle");
-  const [isLoading, setIsLoading] = useState(true);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inTauri = isTauriEnv();
   const { isOwner } = useMemberRole(companyId ?? null);
 
-  useEffect(() => {
-    if (!inTauri || !localFolder) {
-      setIsLoading(false);
-      return;
-    }
-    tauriReadClaudeMd(localFolder)
-      .then((text) => { setContent(text); setIsLoading(false); })
-      .catch(() => { setContent(""); setIsLoading(false); });
-  }, [inTauri, localFolder]);
-
-  // Web fallback: use server API
-  const { data } = useQuery({
+  // Always use server API (Supabase) — single source of truth for both web and desktop
+  const { data, isLoading } = useQuery({
     queryKey: ["projects", projectId, "claude-md"],
     queryFn: () => projectsApi.getClaudeMd(projectId, companyId),
-    enabled: !inTauri,
   });
 
   useEffect(() => {
-    if (!inTauri && data !== undefined && content === null) {
+    if (data !== undefined && content === null) {
       setContent(data.content);
-      setIsLoading(false);
     }
-  }, [inTauri, data, content]);
+  }, [data, content]);
 
   const handleChange = (value: string) => {
     setContent(value);
@@ -272,19 +249,13 @@ function ClaudeMdSection({ projectId, companyId, localFolder }: { projectId: str
     saveTimer.current = setTimeout(async () => {
       setSaveState("saving");
       try {
-        if (inTauri && localFolder) {
-          await tauriWriteClaudeMd(localFolder, value);
-        } else {
-          await projectsApi.updateClaudeMd(projectId, value, companyId);
-        }
+        await projectsApi.updateClaudeMd(projectId, value, companyId);
         setSaveState("saved");
       } catch {
         setSaveState("error");
       }
     }, 1000);
   };
-
-  if (inTauri && !localFolder) return null;
 
   return (
     <>
@@ -1243,7 +1214,7 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
 
       </div>
 
-      <ClaudeMdSection projectId={project.id} companyId={selectedCompanyId ?? undefined} localFolder={codebase.localFolder ?? null} />
+      <ClaudeMdSection projectId={project.id} companyId={selectedCompanyId ?? undefined} />
 
       {onArchive && (
         <>
