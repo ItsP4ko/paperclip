@@ -3,6 +3,7 @@ import type { Db } from "@paperclipai/db";
 import {
   activityLog,
   agents,
+  authUsers,
   issues,
   issueComments,
 } from "@paperclipai/db";
@@ -56,8 +57,9 @@ export function auditService(db: Db) {
           runId: activityLog.runId,
           details: activityLog.details,
           createdAt: activityLog.createdAt,
-          // Resolve agent name when actorType is "agent"
+          // Resolve actor names
           actorAgentName: agents.name,
+          actorUserName: authUsers.name,
         })
         .from(activityLog)
         .leftJoin(
@@ -65,6 +67,13 @@ export function auditService(db: Db) {
           and(
             eq(activityLog.actorType, sql`'agent'`),
             sql`${agents.id}::text = ${activityLog.actorId}`,
+          ),
+        )
+        .leftJoin(
+          authUsers,
+          and(
+            eq(activityLog.actorType, sql`'user'`),
+            eq(authUsers.id, activityLog.actorId),
           ),
         )
         .where(and(...conditions))
@@ -78,7 +87,7 @@ export function auditService(db: Db) {
       return {
         items: items.map((row) => ({
           ...row,
-          actorName: row.actorAgentName ?? row.actorId,
+          actorName: row.actorAgentName ?? row.actorUserName ?? (row.actorType === "system" ? "System" : row.actorId),
         })),
         nextCursor,
         hasMore,

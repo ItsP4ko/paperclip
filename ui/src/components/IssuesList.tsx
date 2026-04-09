@@ -1,9 +1,11 @@
 import { memo, startTransition, useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useNavigate } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { pickTextColorForPillBg } from "@/lib/color-contrast";
 import { useDialog } from "../context/DialogContext";
 import { useCompany } from "../context/CompanyContext";
 import { issuesApi } from "../api/issues";
+import { pipelinesApi } from "../api/pipelines";
 import { authApi } from "../api/auth";
 import { queryKeys } from "../lib/queryKeys";
 import { formatAssigneeUserLabel, resolveAssigneeName } from "../lib/assignees";
@@ -22,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { CircleDot, Plus, Filter, ArrowUpDown, Layers, Check, X, ChevronRight, List, Columns3, User, Search } from "lucide-react";
+import { CircleDot, Plus, Filter, ArrowUpDown, Layers, Check, X, ChevronRight, List, Columns3, User, Search, GitBranch } from "lucide-react";
 import { KanbanBoard } from "./KanbanBoard";
 import type { Issue } from "@paperclipai/shared";
 
@@ -262,6 +264,31 @@ export const IssuesList = memo(function IssuesList({
     queryFn: () => authApi.getSession(),
   });
   const currentUserId = session?.user?.id ?? session?.session?.userId ?? null;
+
+  const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(new Set());
+  const [showPipelineModal, setShowPipelineModal] = useState(false);
+  const [pipelineName, setPipelineName] = useState("");
+  const navigate = useNavigate();
+
+  const createPipelineMutation = useMutation({
+    mutationFn: (data: { name: string; issueIds: string[] }) =>
+      pipelinesApi.createFromIssues(selectedCompanyId!, data),
+    onSuccess: (pipeline) => {
+      setSelectedIssueIds(new Set());
+      setShowPipelineModal(false);
+      setPipelineName("");
+      navigate(`/pipelines/${pipeline.id}`);
+    },
+  });
+
+  const toggleIssueSelection = useCallback((issueId: string) => {
+    setSelectedIssueIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(issueId)) next.delete(issueId);
+      else next.add(issueId);
+      return next;
+    });
+  }, []);
 
   const { data: members } = useQuery({
     queryKey: queryKeys.access.members(selectedCompanyId!),
@@ -748,8 +775,14 @@ export const IssuesList = memo(function IssuesList({
             )}
             <CollapsibleContent>
               {group.items.map((issue) => (
+                <div key={issue.id} className="flex items-center gap-2">
+                  <Checkbox
+                    checked={selectedIssueIds.has(issue.id)}
+                    onCheckedChange={() => toggleIssueSelection(issue.id)}
+                    className="shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
                 <IssueRow
-                  key={issue.id}
                   issue={issue}
                   issueLinkState={issueLinkState}
                   desktopLeadingSpacer
@@ -929,10 +962,55 @@ export const IssuesList = memo(function IssuesList({
                   )}
                   trailingMeta={formatDate(issue.createdAt)}
                 />
+                  </div>
+                </div>
               ))}
             </CollapsibleContent>
           </Collapsible>
         ))
+      )}
+
+      {selectedIssueIds.size >= 2 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-card border border-border rounded-lg shadow-lg px-4 py-2.5">
+          <span className="text-sm text-muted-foreground">{selectedIssueIds.size} issues selected</span>
+          <Button size="sm" onClick={() => setShowPipelineModal(true)}>
+            <GitBranch className="h-3.5 w-3.5 mr-1.5" />
+            Create Pipeline
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIssueIds(new Set())}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+
+      {showPipelineModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
+            <h3 className="text-base font-semibold">Create Pipeline from Issues</h3>
+            <input autoFocus type="text" placeholder="Pipeline name" value={pipelineName}
+              onChange={(e) => setPipelineName(e.target.value)}
+              className="w-full text-sm bg-background border border-border rounded px-3 py-2 outline-none focus:ring-1 focus:ring-ring" />
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">Steps (in order):</p>
+              {Array.from(selectedIssueIds).map((id, idx) => {
+                const issue = issues.find((i: any) => i.id === id);
+                return (
+                  <div key={id} className="flex items-center gap-2 px-3 py-1.5 border border-border rounded text-sm">
+                    <span className="text-muted-foreground text-xs w-5">{idx + 1}.</span>
+                    <span className="flex-1 truncate">{issue?.title ?? id.slice(0, 8)}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setShowPipelineModal(false); setPipelineName(""); }}>Cancel</Button>
+              <Button size="sm" disabled={!pipelineName.trim() || createPipelineMutation.isPending}
+                onClick={() => createPipelineMutation.mutate({ name: pipelineName.trim(), issueIds: Array.from(selectedIssueIds) })}>
+                Create
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

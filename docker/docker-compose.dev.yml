@@ -1,7 +1,7 @@
-# Local dev setup — global backend on port 3000 (frees port 3100 for embedded remote-control server)
+# Local dev setup — backend on port 3100, Vite UI on port 5173
 # Usage:
-#   BETTER_AUTH_SECRET=devsecret docker compose -f docker/docker-compose.dev.yml up
-#   Then run: pnpm desktop:dev-local
+#   ./scripts/dev-local.sh
+#   Or manually: docker compose -f docker/docker-compose.dev.yml up -d && pnpm --filter @paperclipai/ui dev
 
 
 services:
@@ -24,17 +24,17 @@ services:
   server:
     image: pacosemino/paperclip-backend:dev
     ports:
-      - "3000:3000"
+      - "3100:3100"
     environment:
       DATABASE_URL: postgres://paperclip:paperclip@db:5432/paperclip
-      PORT: "3000"
+      PORT: "3100"
       HOST: "0.0.0.0"
       SERVE_UI: "false"
       PAPERCLIP_MIGRATION_AUTO_APPLY: "true"
       PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
       PAPERCLIP_DEPLOYMENT_EXPOSURE: "public"
-      PAPERCLIP_PUBLIC_URL: "http://localhost:3000"
-      PAPERCLIP_AUTH_PUBLIC_BASE_URL: "http://localhost:3000"
+      PAPERCLIP_PUBLIC_URL: "http://localhost:3100"
+      PAPERCLIP_AUTH_PUBLIC_BASE_URL: "http://localhost:3100"
       PAPERCLIP_AUTH_BASE_URL_MODE: "explicit"
       PAPERCLIP_EXTRA_ORIGINS: "tauri://localhost,http://localhost:5173"
       BETTER_AUTH_TRUSTED_ORIGINS: "tauri://localhost,http://localhost:5173"

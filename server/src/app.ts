@@ -263,7 +263,7 @@ export async function createApp(
   api.use(auditRoutes(db));
   api.use(knowledgeRoutes(db));
   api.use(costRecommendationRoutes(db));
-  api.use(pipelineRoutes(db));
+  api.use(pipelineRoutes(db, opts.redisClient));
   api.use(sprintRoutes(db));
   api.use(runnerRoutes(db));
   api.use(geminiAnalysisRoutes(db, opts.storageService));
