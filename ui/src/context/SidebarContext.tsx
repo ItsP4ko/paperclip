@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, useEffect, type ReactNode } from "react";
 
 interface SidebarContextValue {
   sidebarOpen: boolean;
@@ -27,8 +27,13 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
   const toggleSidebar = useCallback(() => setSidebarOpen((v) => !v), []);
 
+  const value = useMemo(
+    () => ({ sidebarOpen, setSidebarOpen, toggleSidebar, isMobile }),
+    [sidebarOpen, setSidebarOpen, toggleSidebar, isMobile],
+  );
+
   return (
-    <SidebarContext.Provider value={{ sidebarOpen, setSidebarOpen, toggleSidebar, isMobile }}>
+    <SidebarContext.Provider value={value}>
       {children}
     </SidebarContext.Provider>
   );
