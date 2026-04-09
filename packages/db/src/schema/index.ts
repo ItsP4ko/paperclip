@@ -63,3 +63,5 @@ export { knowledgeEntries } from "./knowledge_entries.js";
 export { knowledgeInjections } from "./knowledge_injections.js";
 export { costRecommendations } from "./cost_recommendations.js";
 export { pipelines, pipelineSteps, pipelineRuns, pipelineRunSteps } from "./pipelines.js";
+export { sprints } from "./sprints.js";
+export { sprintIssueHistory } from "./sprint_issue_history.js";

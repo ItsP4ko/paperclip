@@ -20,3 +20,4 @@ export { auditRoutes } from "./audit.js";
 export { knowledgeRoutes } from "./knowledge.js";
 export { costRecommendationRoutes } from "./cost-recommendations.js";
 export { pipelineRoutes } from "./pipelines.js";
+export { sprintRoutes } from "./sprints.js";

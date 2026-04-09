@@ -36,6 +36,7 @@ import { auditRoutes } from "./routes/audit.js";
 import { knowledgeRoutes } from "./routes/knowledge.js";
 import { costRecommendationRoutes } from "./routes/cost-recommendations.js";
 import { pipelineRoutes } from "./routes/pipelines.js";
+import { sprintRoutes } from "./routes/sprints.js";
 import { runnerRoutes } from "./routes/runner.js";
 import { pluginRoutes } from "./routes/plugins.js";
 import { pluginUiStaticRoutes } from "./routes/plugin-ui-static.js";
@@ -214,6 +215,7 @@ export async function createApp(
   api.use(knowledgeRoutes(db));
   api.use(costRecommendationRoutes(db));
   api.use(pipelineRoutes(db));
+  api.use(sprintRoutes(db));
   api.use(runnerRoutes(db));
   const hostServicesDisposers = new Map<string, () => void>();
   const workerManager = createPluginWorkerManager();

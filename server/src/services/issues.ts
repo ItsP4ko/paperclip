@@ -80,6 +80,8 @@ export interface IssueFilters {
   originKind?: string;
   originId?: string;
   includeRoutineExecutions?: boolean;
+  sprintId?: string;
+  noSprint?: boolean;
   q?: string;
 }
 
@@ -781,6 +783,8 @@ export function issueService(db: Db) {
       if (filters?.parentId) conditions.push(eq(issues.parentId, filters.parentId));
       if (filters?.originKind) conditions.push(eq(issues.originKind, filters.originKind));
       if (filters?.originId) conditions.push(eq(issues.originId, filters.originId));
+      if (filters?.sprintId) conditions.push(eq(issues.sprintId, filters.sprintId));
+      if (filters?.noSprint) conditions.push(isNull(issues.sprintId));
       if (filters?.labelId) {
         const labeledIssueIds = await db
           .select({ issueId: issueLabels.issueId })

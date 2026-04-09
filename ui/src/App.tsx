@@ -28,6 +28,9 @@ import { AuditLog } from "./pages/AuditLog";
 import { KnowledgeBase } from "./pages/KnowledgeBase";
 import { CostRecommendations } from "./pages/CostRecommendations";
 import { Pipelines } from "./pages/Pipelines";
+import { Sprints } from "./pages/Sprints";
+import { SprintPlanning } from "./pages/SprintPlanning";
+import { SprintMetrics } from "./pages/SprintMetrics";
 import { PipelineDetail } from "./pages/PipelineDetail";
 import { PipelineRunDetail } from "./pages/PipelineRunDetail";
 import { Inbox } from "./pages/Inbox";
@@ -192,6 +195,9 @@ function boardRoutes() {
       <Route path="audit" element={<AuditLog />} />
       <Route path="knowledge" element={<KnowledgeBase />} />
       <Route path="cost-recommendations" element={<CostRecommendations />} />
+      <Route path="sprints" element={<Sprints />} />
+      <Route path="sprints/:sprintId/plan" element={<SprintPlanning />} />
+      <Route path="sprints/:sprintId/metrics" element={<SprintMetrics />} />
       <Route path="pipelines" element={<Pipelines />} />
       <Route path="pipelines/:pipelineId" element={<PipelineDetail />} />
       <Route path="pipelines/:pipelineId/runs/:runId" element={<PipelineRunDetail />} />
