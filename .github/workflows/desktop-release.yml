@@ -1,0 +1,161 @@
+name: Desktop Release
+
+# Builds the Tauri desktop app and uploads signed artifacts to the GitHub
+# release whenever a vX.Y.Z tag is pushed to master.
+#
+# Required secrets:
+#   TAURI_SIGNING_PRIVATE_KEY          — minisign private key (full file contents)
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — passphrase (can be empty string)
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (e.g. v0.6.0)'
+        required: true
+        type: string
+
+jobs:
+  build-macos:
+    name: Build macOS (Apple Silicon)
+    runs-on: macos-14
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Tauri app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: pnpm desktop:build
+
+      - name: Sign updater bundle (manual fallback)
+        id: sign
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          BUNDLE_DIR="src-tauri/target/release/bundle/macos"
+          APP=$(find "$BUNDLE_DIR" -maxdepth 1 -name "*.app" -type d | head -1)
+
+          if [ -z "$APP" ]; then
+            echo "::error::.app bundle not found"
+            exit 1
+          fi
+
+          APP_NAME=$(basename "$APP" .app)
+          TARGZ="$BUNDLE_DIR/${APP_NAME}.app.tar.gz"
+          SIG="$TARGZ.sig"
+
+          # If Tauri already created the tar.gz (auto-signing worked), skip
+          if [ -f "$SIG" ]; then
+            echo "Auto-signed by Tauri — skipping manual step"
+            echo "targz=$TARGZ" >> "$GITHUB_OUTPUT"
+            echo "sig=$SIG"     >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Creating tar.gz manually..."
+          cd "$BUNDLE_DIR"
+          tar czf "${APP_NAME}.app.tar.gz" "${APP_NAME}.app"
+          cd -
+
+          echo "Signing with tauri signer..."
+          # TAURI_SIGNING_PRIVATE_KEY is already in env; tauri signer sign reads it automatically
+          npx tauri signer sign \
+            --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
+            "$TARGZ"
+
+          if [ ! -f "$SIG" ]; then
+            echo "::error::Signing failed — .sig not generated"
+            exit 1
+          fi
+
+          echo "Signed successfully"
+          echo "targz=$TARGZ" >> "$GITHUB_OUTPUT"
+          echo "sig=$SIG"     >> "$GITHUB_OUTPUT"
+
+      - name: Prepare artifacts and latest.json
+        id: artifacts
+        shell: bash
+        run: |
+          REF_TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${REF_TAG#v}"
+          BUNDLE_DIR="src-tauri/target/release/bundle"
+
+          DMG=$(find "$BUNDLE_DIR/dmg" -name "*aarch64.dmg" | head -1)
+          TARGZ="${{ steps.sign.outputs.targz }}"
+          SIG="${{ steps.sign.outputs.sig }}"
+
+          SIGNATURE=$(cat "$SIG")
+          TARGZ_FILENAME=$(basename "$TARGZ" | tr ' ' '.')
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+
+          # Version-less DMG keeps a stable /releases/latest/download/ URL
+          DMG_VERSIONLESS="$(dirname "$DMG")/Relay.Control_aarch64.dmg"
+          cp "$DMG" "$DMG_VERSIONLESS"
+
+          cat > /tmp/latest.json <<EOF
+          {
+            "version": "$VERSION",
+            "notes": "v$VERSION",
+            "pub_date": "$PUB_DATE",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "$SIGNATURE",
+                "url": "https://github.com/${{ github.repository }}/releases/download/v$VERSION/$TARGZ_FILENAME"
+              }
+            }
+          }
+          EOF
+
+          echo "dmg=$DMG"                         >> "$GITHUB_OUTPUT"
+          echo "dmg_versionless=$DMG_VERSIONLESS" >> "$GITHUB_OUTPUT"
+          echo "targz=$TARGZ"                     >> "$GITHUB_OUTPUT"
+          echo "sig=$SIG"                         >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifacts to GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          REPO="${GITHUB_REPOSITORY}"
+
+          if ! gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" -R "$REPO" \
+              --title "$TAG Desktop" \
+              --notes ""
+          fi
+
+          gh release upload "$TAG" \
+            "${{ steps.artifacts.outputs.dmg }}" \
+            "${{ steps.artifacts.outputs.dmg_versionless }}" \
+            "${{ steps.artifacts.outputs.targz }}" \
+            "${{ steps.artifacts.outputs.sig }}" \
+            "/tmp/latest.json" \
+            --repo "$REPO" \
+            --clobber

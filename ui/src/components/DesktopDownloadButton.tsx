@@ -1,15 +1,11 @@
 import { Download } from "lucide-react";
 
 const RELEASES_BASE = "https://github.com/ItsP4ko/paperclip/releases/latest";
-const MAC_ARM_URL = `${RELEASES_BASE}/download/Relay.Control_aarch64.dmg`;
+const MAC_DMG_URL = `${RELEASES_BASE}/download/Relay.Control_aarch64.dmg`;
 
 function getDownloadUrl(): string {
-  const isArm = /arm64|aarch64/i.test(
-    (navigator as Navigator & { userAgentData?: { platform?: string } })
-      .userAgentData?.platform ?? navigator.platform ?? ""
-  );
-  // Only Mac ARM has a direct build; all others go to the releases page
-  return isArm ? MAC_ARM_URL : RELEASES_BASE;
+  const isMac = /Mac/i.test(navigator.userAgent);
+  return isMac ? MAC_DMG_URL : RELEASES_BASE;
 }
 
 export function DesktopDownloadButton() {
