@@ -224,12 +224,18 @@ export function accessService(db: Db) {
     membershipRole: string | null = "member",
     status: "pending" | "active" | "suspended" = "active",
   ) {
+    const roleRank: Record<string, number> = { owner: 3, developer: 2, member: 1 };
     const existing = await getMembership(companyId, principalType, principalId);
     if (existing) {
-      if (existing.status !== status || existing.membershipRole !== membershipRole) {
+      // Never downgrade an existing higher-privilege role
+      const existingRank = roleRank[existing.membershipRole ?? ""] ?? 0;
+      const requestedRank = roleRank[membershipRole ?? ""] ?? 0;
+      const effectiveRole = existingRank >= requestedRank ? existing.membershipRole : membershipRole;
+
+      if (existing.status !== status || existing.membershipRole !== effectiveRole) {
         const updated = await db
           .update(companyMemberships)
-          .set({ status, membershipRole, updatedAt: new Date() })
+          .set({ status, membershipRole: effectiveRole, updatedAt: new Date() })
           .where(eq(companyMemberships.id, existing.id))
           .returning()
           .then((rows) => rows[0] ?? null);

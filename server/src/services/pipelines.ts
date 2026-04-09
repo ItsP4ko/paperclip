@@ -12,6 +12,52 @@ import { issueService } from "./issues.js";
 export function pipelineService(db: Db) {
   const issueSvc = issueService(db);
 
+  function evaluateCondition(
+    condition: { field: string; operator: string; value: unknown } | null,
+    context: Record<string, unknown>,
+  ): boolean {
+    if (!condition) return true;
+    const fieldValue = context[condition.field];
+    switch (condition.operator) {
+      case "eq": return fieldValue === condition.value;
+      case "neq": return fieldValue !== condition.value;
+      case "in": return Array.isArray(condition.value) && condition.value.includes(fieldValue);
+      case "not_in": return Array.isArray(condition.value) && !condition.value.includes(fieldValue);
+      default: return false;
+    }
+  }
+
+  async function cascadeSkip(runId: string, stepIdsToSkip: string[]) {
+    if (stepIdsToSkip.length === 0) return;
+    for (const stepId of stepIdsToSkip) {
+      await db
+        .update(pipelineRunSteps)
+        .set({ status: "skipped", completedAt: new Date(), updatedAt: new Date() })
+        .where(and(
+          eq(pipelineRunSteps.pipelineRunId, runId),
+          eq(pipelineRunSteps.pipelineStepId, stepId),
+          eq(pipelineRunSteps.status, "pending"),
+        ));
+    }
+    // Find downstream dependents that only depend on skipped steps
+    const allRunSteps = await db
+      .select({ runStep: pipelineRunSteps, step: pipelineSteps })
+      .from(pipelineRunSteps)
+      .innerJoin(pipelineSteps, eq(pipelineRunSteps.pipelineStepId, pipelineSteps.id))
+      .where(eq(pipelineRunSteps.pipelineRunId, runId));
+    const skippedSet = new Set(stepIdsToSkip);
+    const nextToSkip: string[] = [];
+    for (const { runStep, step } of allRunSteps) {
+      if (runStep.status !== "pending") continue;
+      const deps = step.dependsOn ?? [];
+      if (deps.length === 0) continue;
+      const allDepsSkipped = deps.every((d) => skippedSet.has(d) ||
+        allRunSteps.find((r) => r.runStep.pipelineStepId === d && r.runStep.status === "skipped"));
+      if (allDepsSkipped) nextToSkip.push(step.id);
+    }
+    if (nextToSkip.length > 0) await cascadeSkip(runId, nextToSkip);
+  }
+
   async function evaluateReadySteps(runId: string) {
     const runStepRows = await db
       .select({
@@ -42,6 +88,49 @@ export function pipelineService(db: Db) {
       const deps = step.dependsOn ?? [];
       const allDepsCompleted = deps.every((depStepId) => completedStepIds.has(depStepId));
       if (!allDepsCompleted) continue;
+
+      // Handle if/else steps
+      if (step.stepType === "if_else") {
+        const config = step.config as { branches?: Array<{ id: string; label: string; condition: { field: string; operator: string; value: unknown } | null; nextStepIds: string[] }> };
+        const branches = config.branches ?? [];
+
+        // Build context from predecessor's issue
+        let context: Record<string, unknown> = { projectId: run.projectId, triggeredBy: run.triggeredBy };
+        const completedPredecessors = runStepRows.filter(
+          (r) => r.runStep.status === "completed" && r.runStep.issueId && (step.dependsOn ?? []).includes(r.step.id),
+        );
+        if (completedPredecessors.length > 0) {
+          const predIssueId = completedPredecessors[completedPredecessors.length - 1].runStep.issueId;
+          if (predIssueId) {
+            const [predIssue] = await db.select().from(issues).where(eq(issues.id, predIssueId));
+            if (predIssue) {
+              context = { ...context, status: predIssue.status, priority: predIssue.priority, assigneeAgentId: predIssue.assigneeAgentId, assigneeUserId: predIssue.assigneeUserId };
+            }
+          }
+        }
+
+        // Evaluate - first matching condition wins, null = else fallback
+        let winningIdx = -1;
+        for (let i = 0; i < branches.length; i++) {
+          if (branches[i].condition === null) continue;
+          if (evaluateCondition(branches[i].condition, context)) { winningIdx = i; break; }
+        }
+        if (winningIdx === -1) winningIdx = branches.findIndex((b) => b.condition === null);
+
+        // Mark if/else as completed
+        await db.update(pipelineRunSteps)
+          .set({ status: "completed", completedAt: new Date(), updatedAt: new Date() })
+          .where(eq(pipelineRunSteps.id, runStep.id));
+        completedStepIds.add(step.id);
+
+        // Skip losing branches
+        const losingStepIds: string[] = [];
+        for (let i = 0; i < branches.length; i++) {
+          if (i !== winningIdx) losingStepIds.push(...(branches[i].nextStepIds ?? []));
+        }
+        if (losingStepIds.length > 0) await cascadeSkip(runId, losingStepIds);
+        continue;
+      }
 
       let issueId: string | null = null;
 
@@ -257,6 +346,9 @@ export function pipelineService(db: Db) {
         assigneeType?: "agent" | "user" | null;
         assigneeUserId?: string | null;
         issueId?: string | null;
+        positionX?: number | null;
+        positionY?: number | null;
+        stepType?: "action" | "if_else" | null;
       },
     ) => {
       // Validate assigneeType constraints
@@ -293,6 +385,9 @@ export function pipelineService(db: Db) {
           assigneeType: data.assigneeType ?? null,
           assigneeUserId: data.assigneeUserId ?? null,
           issueId: data.issueId ?? null,
+          positionX: data.positionX ?? null,
+          positionY: data.positionY ?? null,
+          stepType: data.stepType ?? "action",
         })
         .returning();
       return step;
@@ -311,6 +406,9 @@ export function pipelineService(db: Db) {
         assigneeType?: "agent" | "user" | null;
         assigneeUserId?: string | null;
         issueId?: string | null;
+        positionX?: number | null;
+        positionY?: number | null;
+        stepType?: "action" | "if_else" | null;
       },
     ) => {
       const [pipeline] = await db
@@ -349,9 +447,12 @@ export function pipelineService(db: Db) {
         }
       }
 
+      const { stepType, ...rest } = data;
+      const setData: Record<string, unknown> = { ...rest, updatedAt: new Date() };
+      if (stepType !== undefined && stepType !== null) setData.stepType = stepType;
       const [step] = await db
         .update(pipelineSteps)
-        .set({ ...data, updatedAt: new Date() })
+        .set(setData)
         .where(
           and(eq(pipelineSteps.id, stepId), eq(pipelineSteps.pipelineId, pipelineId)),
         )
@@ -370,6 +471,24 @@ export function pipelineService(db: Db) {
         .where(
           and(eq(pipelineSteps.id, stepId), eq(pipelineSteps.pipelineId, pipelineId)),
         );
+    },
+
+    batchUpdatePositions: async (
+      companyId: string,
+      pipelineId: string,
+      positions: Array<{ stepId: string; positionX: number; positionY: number }>,
+    ) => {
+      const [pipeline] = await db
+        .select({ id: pipelines.id })
+        .from(pipelines)
+        .where(and(eq(pipelines.id, pipelineId), eq(pipelines.companyId, companyId)));
+      if (!pipeline) return;
+      for (const pos of positions) {
+        await db
+          .update(pipelineSteps)
+          .set({ positionX: pos.positionX, positionY: pos.positionY, updatedAt: new Date() })
+          .where(and(eq(pipelineSteps.id, pos.stepId), eq(pipelineSteps.pipelineId, pipelineId)));
+      }
     },
 
     triggerRun: async (
@@ -464,6 +583,9 @@ export function pipelineService(db: Db) {
           issueId: s.runStep.issueId ?? s.step.issueId,
           dependsOn: s.step.dependsOn,
           position: s.step.position,
+          stepType: s.step.stepType,
+          positionX: s.step.positionX,
+          positionY: s.step.positionY,
         })),
       };
     },

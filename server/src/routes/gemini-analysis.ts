@@ -52,16 +52,23 @@ Ejemplo de formato esperado:
 `;
 
 const AUDIO_ANALYSIS_PROMPT = `
-Vas a recibir un archivo de audio. Realizá las siguientes dos tareas:
+Vas a recibir un archivo de audio. Seguí estos pasos en orden:
 
-1. TRANSCRIBIR: Transcribí el audio completo, palabra por palabra, en el campo "transcription".
+PASO 1 — TRANSCRIBIR (obligatorio siempre):
+Transcribí el audio completo, palabra por palabra, en el campo "transcription".
+No omitas nada aunque el audio sea largo o repetitivo.
 
-2. EXTRAER TAREAS: A partir de la transcripción, identificá entre 3 y 15 tareas de desarrollo concretas.
-   Para cada tarea devolvé:
-   - title: string (máximo 120 caracteres, en español)
-   - description: string (descripción detallada en markdown, en español)
-   - priority: "low" | "medium" | "high" | "critical"
-   - sourceQuote: string (fragmento EXACTO de la transcripción que originó esta tarea, máximo 200 caracteres)
+PASO 2 — LEER LA TRANSCRIPCIÓN LÍNEA POR LÍNEA:
+Recorré el texto del campo "transcription" línea por línea de principio a fin.
+Por cada línea, preguntate: ¿esta línea menciona una tarea, acción, mejora o problema concreto?
+
+PASO 3 — EXTRAER TAREAS (a partir del texto transcripto, no del audio):
+A partir de lo que leíste en el PASO 2, identificá entre 3 y 15 tareas de desarrollo concretas.
+Para cada tarea devolvé:
+- title: string (máximo 120 caracteres, en español)
+- description: string (descripción detallada en markdown, en español)
+- priority: "low" | "medium" | "high" | "critical"
+- sourceQuote: string (fragmento EXACTO del texto transcripto que originó esta tarea, máximo 200 caracteres)
 
 Respondé ÚNICAMENTE con un objeto JSON válido con esta forma exacta:
 {"transcription":"...","tasks":[{"title":"...","description":"...","priority":"medium","sourceQuote":"..."}]}
