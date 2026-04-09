@@ -100,13 +100,13 @@ export function searchService(db: Db) {
         unionSql = sql`${unionSql} UNION ALL ${subqueries[i]!}`;
       }
 
-      const rows = await db.execute<SearchResult>(sql`
+      const rows = await db.execute(sql`
         SELECT * FROM (${unionSql}) AS unified
         ORDER BY score DESC
         LIMIT ${limit}
       `);
 
-      return (rows.rows ?? rows).map((r: any) => ({
+      return (rows as unknown as { type: string; id: string; title: string; subtitle: string | null; score: number }[]).map((r) => ({
         type: r.type as SearchResult["type"],
         id: String(r.id),
         title: String(r.title ?? ""),
