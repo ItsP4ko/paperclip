@@ -138,8 +138,8 @@ jobs:
             --clobber
 
           # Write metadata for the publish-latest-json job
-          mkdir -p /tmp/updater-meta
-          cat > /tmp/updater-meta/darwin-aarch64.json <<EOF
+          mkdir -p "$RUNNER_TEMP/updater-meta"
+          cat > "$RUNNER_TEMP/updater-meta/darwin-aarch64.json" <<EOF
           {
             "signature": "$SIGNATURE",
             "url": "https://github.com/$REPO/releases/download/v$VERSION/$TARGZ_FILENAME"
@@ -150,7 +150,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: updater-meta-darwin-aarch64
-          path: /tmp/updater-meta/darwin-aarch64.json
+          path: ${{ runner.temp }}/updater-meta/darwin-aarch64.json
 
   build-macos-x86_64:
     name: Build macOS (Intel)
@@ -267,8 +267,8 @@ jobs:
             --repo "$REPO" \
             --clobber
 
-          mkdir -p /tmp/updater-meta
-          cat > /tmp/updater-meta/darwin-x86_64.json <<EOF
+          mkdir -p "$RUNNER_TEMP/updater-meta"
+          cat > "$RUNNER_TEMP/updater-meta/darwin-x86_64.json" <<EOF
           {
             "signature": "$SIGNATURE",
             "url": "https://github.com/$REPO/releases/download/v$VERSION/$TARGZ_FILENAME"
@@ -279,7 +279,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: updater-meta-darwin-x86_64
-          path: /tmp/updater-meta/darwin-x86_64.json
+          path: ${{ runner.temp }}/updater-meta/darwin-x86_64.json
 
   build-windows:
     name: Build Windows (x86_64)
@@ -359,8 +359,8 @@ jobs:
             --repo "$REPO" \
             --clobber
 
-          mkdir -p /tmp/updater-meta
-          cat > /tmp/updater-meta/windows-x86_64.json <<EOF
+          mkdir -p "$RUNNER_TEMP/updater-meta"
+          cat > "$RUNNER_TEMP/updater-meta/windows-x86_64.json" <<EOF
           {
             "signature": "$SIGNATURE",
             "url": "https://github.com/$REPO/releases/download/v$VERSION/$INSTALLER_FILENAME"
@@ -371,7 +371,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: updater-meta-windows-x86_64
-          path: /tmp/updater-meta/windows-x86_64.json
+          path: ${{ runner.temp }}/updater-meta/windows-x86_64.json
 
   publish-latest-json:
     name: Publish latest.json
