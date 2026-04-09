@@ -139,20 +139,29 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
                 const next = [...branches]; next[idx] = { ...next[idx], label: e.target.value }; setBranches(next);
               }} className="w-full text-sm bg-background border border-border rounded px-2 py-1 outline-none" placeholder="Branch label" />
               {branch.condition !== null ? (
-                <div className="flex gap-1">
-                  <select value={branch.condition.field} onChange={(e) => {
-                    const next = [...branches]; next[idx] = { ...next[idx], condition: { ...branch.condition!, field: e.target.value } }; setBranches(next);
-                  }} className="flex-1 text-xs bg-background border border-border rounded px-1.5 py-1 outline-none">
-                    {FIELDS.map((f) => <option key={f} value={f}>{f}</option>)}
-                  </select>
-                  <select value={branch.condition.operator} onChange={(e) => {
-                    const next = [...branches]; next[idx] = { ...next[idx], condition: { ...branch.condition!, operator: e.target.value } }; setBranches(next);
-                  }} className="w-20 text-xs bg-background border border-border rounded px-1.5 py-1 outline-none">
-                    {OPERATORS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                  <input value={branch.condition.value} onChange={(e) => {
-                    const next = [...branches]; next[idx] = { ...next[idx], condition: { ...branch.condition!, value: e.target.value } }; setBranches(next);
-                  }} className="flex-1 text-xs bg-background border border-border rounded px-1.5 py-1 outline-none" placeholder="value" />
+                <div className="space-y-1.5">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground">Field</span>
+                    <select value={branch.condition.field} onChange={(e) => {
+                      const next = [...branches]; next[idx] = { ...next[idx], condition: { ...branch.condition!, field: e.target.value } }; setBranches(next);
+                    }} className="w-full text-xs bg-background border border-border rounded px-2 py-1.5 outline-none">
+                      {FIELDS.map((f) => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground">Operator</span>
+                    <select value={branch.condition.operator} onChange={(e) => {
+                      const next = [...branches]; next[idx] = { ...next[idx], condition: { ...branch.condition!, operator: e.target.value } }; setBranches(next);
+                    }} className="w-full text-xs bg-background border border-border rounded px-2 py-1.5 outline-none">
+                      {OPERATORS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground">Value</span>
+                    <input value={branch.condition.value} onChange={(e) => {
+                      const next = [...branches]; next[idx] = { ...next[idx], condition: { ...branch.condition!, value: e.target.value } }; setBranches(next);
+                    }} className="w-full text-xs bg-background border border-border rounded px-2 py-1.5 outline-none" placeholder="value" />
+                  </div>
                 </div>
               ) : (
                 <span className="text-xs text-muted-foreground">Else (default branch)</span>
