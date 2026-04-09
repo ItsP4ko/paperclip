@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate, useLocation, Navigate } from "@/lib/route
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DocumentToTasksDialog } from "../components/DocumentToTasksDialog";
 import { ProjectLibrary } from "../components/ProjectLibrary";
+import { SprintTab } from "./SprintTab";
 import { PROJECT_COLORS, isUuidLike, type BudgetPolicySummary, type ExecutionWorkspace, type Issue } from "@paperclipai/shared";
 import { applyOptimisticIssuePatch, mergeIssueInList } from "../lib/optimistic-issue-mutations";
 import { budgetsApi } from "../api/budgets";
@@ -39,7 +40,7 @@ import { IssuesQuicklook } from "../components/IssuesQuicklook";
 
 /* ── Top-level tab types ── */
 
-type ProjectBaseTab = "overview" | "list" | "workspaces" | "configuration" | "budget" | "library";
+type ProjectBaseTab = "overview" | "list" | "workspaces" | "configuration" | "budget" | "library" | "sprints";
 type ProjectPluginTab = `plugin:${string}`;
 type ProjectTab = ProjectBaseTab | ProjectPluginTab;
 
@@ -58,6 +59,7 @@ function resolveProjectTab(pathname: string, projectId: string): ProjectTab | nu
   if (tab === "issues") return "list";
   if (tab === "workspaces") return "workspaces";
   if (tab === "library") return "library";
+  if (tab === "sprints") return "sprints";
   return null;
 }
 
@@ -846,6 +848,8 @@ export function ProjectDetail() {
       navigate(`/projects/${canonicalProjectRef}/configuration`);
     } else if (tab === "library") {
       navigate(`/projects/${canonicalProjectRef}/library`);
+    } else if (tab === "sprints") {
+      navigate(`/projects/${canonicalProjectRef}/sprints`);
     } else {
       navigate(`/projects/${canonicalProjectRef}/issues`);
     }
@@ -914,6 +918,7 @@ export function ProjectDetail() {
             { value: "overview", label: "Overview" },
             ...(showWorkspacesTab ? [{ value: "workspaces", label: "Workspaces" }] : []),
             { value: "library", label: "Biblioteca" },
+            { value: "sprints", label: "Sprints" },
             { value: "configuration", label: "Configuration" },
             { value: "budget", label: "Budget" },
             ...pluginTabItems.map((item) => ({
@@ -996,6 +1001,10 @@ export function ProjectDetail() {
 
       {activeTab === "library" && resolvedCompanyId && (
         <ProjectLibrary companyId={resolvedCompanyId} projectId={project.id} />
+      )}
+
+      {activeTab === "sprints" && project?.id && (
+        <SprintTab projectId={project.id} />
       )}
 
       {activePluginTab && (

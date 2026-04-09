@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCompany } from "../context/CompanyContext";
@@ -115,6 +115,59 @@ export function PipelineDetail() {
     },
   });
 
+  const updateStepMutation = useMutation({
+    mutationFn: ({ stepId, data }: { stepId: string; data: Record<string, unknown> }) =>
+      pipelinesApi.updateStep(selectedCompanyId!, pipelineId!, stepId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(selectedCompanyId!, pipelineId!) });
+      setSelectedStepId(null);
+    },
+  });
+
+  const updateStepDepsMutation = useMutation({
+    mutationFn: ({ stepId, dependsOn }: { stepId: string; dependsOn: string[] }) =>
+      pipelinesApi.updateStep(selectedCompanyId!, pipelineId!, stepId, { dependsOn }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(selectedCompanyId!, pipelineId!) });
+    },
+  });
+
+  const handleAddStepBetween = useCallback(
+    async (sourceId: string, targetId: string) => {
+      const newStep = await pipelinesApi.createStep(selectedCompanyId!, pipelineId!, {
+        name: "New Action",
+        stepType: "action",
+        position: (pipeline?.steps.length ?? 0),
+        dependsOn: [sourceId],
+        config: {},
+      });
+      // Update the target step to depend on the new step instead of the source
+      const targetStep = pipeline?.steps.find((s) => s.id === targetId);
+      if (targetStep) {
+        const newDeps = targetStep.dependsOn.map((d) => (d === sourceId ? newStep.id : d));
+        await pipelinesApi.updateStep(selectedCompanyId!, pipelineId!, targetId, { dependsOn: newDeps });
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(selectedCompanyId!, pipelineId!) });
+      setSelectedStepId(newStep.id);
+    },
+    [selectedCompanyId, pipelineId, pipeline?.steps, queryClient],
+  );
+
+  const handleAddStepFromNode = useCallback(
+    async (sourceNodeId: string) => {
+      const newStep = await pipelinesApi.createStep(selectedCompanyId!, pipelineId!, {
+        name: "New Action",
+        stepType: "action",
+        position: (pipeline?.steps.length ?? 0),
+        dependsOn: [sourceNodeId],
+        config: {},
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(selectedCompanyId!, pipelineId!) });
+      setSelectedStepId(newStep.id);
+    },
+    [selectedCompanyId, pipelineId, pipeline?.steps.length, queryClient],
+  );
+
   const runMutation = useMutation({
     mutationFn: () =>
       pipelinesApi.triggerRun(selectedCompanyId!, pipelineId!, {
@@ -206,13 +259,13 @@ export function PipelineDetail() {
             updatePositionMutation.mutate({ stepId, positionX, positionY })
           }
           onUpdateStepDeps={(stepId, dependsOn) =>
-            pipelinesApi.updateStep(selectedCompanyId!, pipelineId!, stepId, { dependsOn }).then(() =>
-              queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(selectedCompanyId!, pipelineId!) })
-            )
+            updateStepDepsMutation.mutate({ stepId, dependsOn })
           }
           onDeleteStep={(stepId) => deleteStepMutation.mutate(stepId)}
           onSelectStep={setSelectedStepId}
           onAddStep={(type) => addStepMutation.mutate(type)}
+          onAddStepBetween={handleAddStepBetween}
+          onAddStepFromNode={handleAddStepFromNode}
           onAutoLayout={(positions) => batchPositionsMutation.mutate(positions)}
         />
         {selectedStepId && pipeline.steps.find((s) => s.id === selectedStepId) && (
@@ -223,10 +276,7 @@ export function PipelineDetail() {
             members={members}
             issues={companyIssues}
             onSave={(stepId, data) => {
-              pipelinesApi.updateStep(selectedCompanyId!, pipelineId!, stepId, data).then(() => {
-                queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(selectedCompanyId!, pipelineId!) });
-                setSelectedStepId(null);
-              });
+              updateStepMutation.mutate({ stepId, data });
             }}
             onClose={() => setSelectedStepId(null)}
           />

@@ -342,8 +342,12 @@ export type {
   ProviderQuotaResult,
   Sprint,
   SprintIssueHistoryEntry,
+  IssueStateHistoryEntry,
   SprintIssueTiming,
   SprintMetrics,
+  SprintSpillSummary,
+  UserSprintActivity,
+  ProjectSprintMetrics,
 } from "./types/index.js";
 
 export {
