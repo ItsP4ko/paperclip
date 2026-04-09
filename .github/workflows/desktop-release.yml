@@ -154,7 +154,7 @@ jobs:
 
   build-macos-x86_64:
     name: Build macOS (Intel)
-    runs-on: macos-13
+    runs-on: macos-14
     permissions:
       contents: write
 
@@ -170,6 +170,8 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -183,7 +185,7 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm desktop:build
+        run: pnpm desktop:build -- --target x86_64-apple-darwin
 
       - name: Sign updater bundle (manual fallback)
         id: sign
@@ -192,7 +194,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         shell: bash
         run: |
-          BUNDLE_DIR="src-tauri/target/release/bundle/macos"
+          BUNDLE_DIR="src-tauri/target/x86_64-apple-darwin/release/bundle/macos"
           APP=$(find "$BUNDLE_DIR" -maxdepth 1 -name "*.app" -type d | head -1)
 
           if [ -z "$APP" ]; then
@@ -238,7 +240,7 @@ jobs:
         run: |
           REF_TAG="${{ github.event.inputs.tag || github.ref_name }}"
           VERSION="${REF_TAG#v}"
-          BUNDLE_DIR="src-tauri/target/release/bundle"
+          BUNDLE_DIR="src-tauri/target/x86_64-apple-darwin/release/bundle"
 
           DMG=$(find "$BUNDLE_DIR/dmg" -name "*.dmg" | head -1)
           TARGZ="${{ steps.sign.outputs.targz }}"
@@ -314,19 +316,42 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: pnpm desktop:build
 
-      - name: Locate NSIS installer and signature
+      - name: Sign NSIS installer (manual fallback)
         id: sign
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         shell: bash
         run: |
           BUNDLE_DIR="src-tauri/target/release/bundle/nsis"
           INSTALLER=$(find "$BUNDLE_DIR" -name "*.exe" | head -1)
-          SIG="${INSTALLER}.sig"
 
-          if [ ! -f "$SIG" ]; then
-            echo "::error::Signature file not found — expected $SIG"
+          if [ -z "$INSTALLER" ]; then
+            echo "::error::NSIS installer not found"
             exit 1
           fi
 
+          SIG="${INSTALLER}.sig"
+
+          # If Tauri already signed (auto-signing worked), skip
+          if [ -f "$SIG" ]; then
+            echo "Auto-signed by Tauri — skipping manual step"
+            echo "installer=$INSTALLER" >> "$GITHUB_OUTPUT"
+            echo "sig=$SIG"             >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Signing manually with tauri signer..."
+          npx tauri signer sign \
+            --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
+            "$INSTALLER"
+
+          if [ ! -f "$SIG" ]; then
+            echo "::error::Signing failed — .sig not generated"
+            exit 1
+          fi
+
+          echo "Signed successfully"
           echo "installer=$INSTALLER" >> "$GITHUB_OUTPUT"
           echo "sig=$SIG"             >> "$GITHUB_OUTPUT"
 
