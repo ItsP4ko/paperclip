@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Upload, FileText, Mic, Download } from "lucide-react";
+import { Loader2, Upload, FileText, Mic } from "lucide-react";
 
 type Priority = "low" | "medium" | "high" | "critical";
 
@@ -44,10 +44,19 @@ export function DocumentToTasksDialog({
 
   const analyze = useMutation({
     mutationFn: (file: File) => issuesApi.analyzeDocument(companyId, file),
-    onSuccess: (data) => {
+    onSuccess: (data, file) => {
       setTasks(data.tasks.map((t) => ({ ...t, selected: true })));
       setTranscription(data.transcription ?? null);
       setStep("preview");
+      if (data.transcription) {
+        const blob = new Blob([data.transcription], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `transcripcion-${file.name.replace(/\.[^.]+$/, "")}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     },
     onError: (e) => setError((e as Error).message),
   });
@@ -82,18 +91,7 @@ export function DocumentToTasksDialog({
     setIsAudioFile(false);
   }
 
-  function downloadTranscription() {
-    if (!transcription) return;
-    const blob = new Blob([transcription], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `transcripcion-${fileName?.replace(/\.[^.]+$/, "") ?? "audio"}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  const handleFile = useCallback((file: File) => {
+const handleFile = useCallback((file: File) => {
     setError(null);
     if (file.size > MAX_SIZE_BYTES) {
       setError("El archivo no puede superar 20 MB");
@@ -175,12 +173,6 @@ export function DocumentToTasksDialog({
                   <FileText className="inline h-3.5 w-3.5 mr-1" />
                   {fileName} — {tasks.length} tareas generadas
                 </p>
-                {transcription && (
-                  <Button variant="ghost" size="sm" onClick={downloadTranscription} className="h-6 px-2 text-xs">
-                    <Download className="h-3 w-3 mr-1" />
-                    Descargar transcripción
-                  </Button>
-                )}
               </div>
               <Button variant="ghost" size="sm" onClick={() => toggleAll(!allSelected)}>
                 {allSelected ? "Deseleccionar todo" : "Seleccionar todo"}
