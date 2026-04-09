@@ -1,99 +1,75 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createDb } from "./client.js";
-import { companies, agents, goals, projects, issues } from "./schema/index.js";
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is required");
 
 const db = createDb(url);
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 console.log("Seeding database...");
 
-const [company] = await db
-  .insert(companies)
-  .values({
-    name: "Paperclip Demo Co",
-    description: "A demo autonomous company",
-    status: "active",
-    budgetMonthlyCents: 50000,
-  })
-  .returning();
+// 1. Load and execute prod data SQL
+const sqlPath = join(__dirname, "seed-data.sql");
+const sql = readFileSync(sqlPath, "utf-8");
 
-const [ceo] = await db
-  .insert(agents)
-  .values({
-    companyId: company!.id,
-    name: "CEO Agent",
-    role: "ceo",
-    title: "Chief Executive Officer",
-    status: "idle",
-    adapterType: "process",
-    adapterConfig: { command: "echo", args: ["hello from ceo"] },
-    budgetMonthlyCents: 15000,
-  })
-  .returning();
+const client = (db as unknown as { $client: { unsafe: (q: string) => Promise<unknown> } }).$client;
+await client.unsafe(sql);
+console.log("Prod data seeded (companies, agents, projects, issues, etc.)");
 
-const [engineer] = await db
-  .insert(agents)
-  .values({
-    companyId: company!.id,
-    name: "Engineer Agent",
-    role: "engineer",
-    title: "Software Engineer",
-    status: "idle",
-    reportsTo: ceo!.id,
-    adapterType: "process",
-    adapterConfig: { command: "echo", args: ["hello from engineer"] },
-    budgetMonthlyCents: 10000,
-  })
-  .returning();
+// 2. Create dev user via better-auth signup API
+const signupUrl = process.env.AUTH_BASE_URL ?? "http://localhost:3100";
+const email = "paco.semino@gmail.com";
+const password = "paperclip123";
 
-const [goal] = await db
-  .insert(goals)
-  .values({
-    companyId: company!.id,
-    title: "Ship V1",
-    description: "Deliver first control plane release",
-    level: "company",
-    status: "active",
-    ownerAgentId: ceo!.id,
-  })
-  .returning();
+const res = await fetch(`${signupUrl}/api/auth/sign-up/email`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "Origin": signupUrl },
+  body: JSON.stringify({ name: "Paco Semino", email, password }),
+});
 
-const [project] = await db
-  .insert(projects)
-  .values({
-    companyId: company!.id,
-    goalId: goal!.id,
-    name: "Control Plane MVP",
-    description: "Implement core board + agent loop",
-    status: "in_progress",
-    leadAgentId: ceo!.id,
-  })
-  .returning();
+if (res.ok) {
+  console.log(`Dev user created: ${email} / ${password}`);
+} else {
+  const body = await res.text();
+  if (body.includes("already") || body.includes("UNIQUE")) {
+    console.log(`Dev user already exists: ${email}`);
+  } else {
+    console.warn(`Dev user signup (${res.status}): ${body}`);
+  }
+}
 
-await db.insert(issues).values([
-  {
-    companyId: company!.id,
-    projectId: project!.id,
-    goalId: goal!.id,
-    title: "Implement atomic task checkout",
-    description: "Ensure in_progress claiming is conflict-safe",
-    status: "todo",
-    priority: "high",
-    assigneeAgentId: engineer!.id,
-    createdByAgentId: ceo!.id,
-  },
-  {
-    companyId: company!.id,
-    projectId: project!.id,
-    goalId: goal!.id,
-    title: "Add budget auto-pause",
-    description: "Pause agent at hard budget ceiling",
-    status: "backlog",
-    priority: "medium",
-    createdByAgentId: ceo!.id,
-  },
-]);
+// 3. Grant instance_admin to dev user
+const { authUsers, instanceUserRoles } = await import("./schema/index.js");
+const { eq } = await import("drizzle-orm");
+
+const devUser = await db.select().from(authUsers).where(eq(authUsers.email, email)).then(r => r[0]);
+if (devUser) {
+  await db.insert(instanceUserRoles).values({ userId: devUser.id, role: "instance_admin" }).onConflictDoNothing();
+  console.log("Dev user granted instance_admin role");
+
+  // 4. Add dev user as member of all companies
+  const { companies, companyMemberships } = await import("./schema/index.js");
+  const allCompanies = await db.select({ id: companies.id }).from(companies);
+  for (const company of allCompanies) {
+    await db.insert(companyMemberships).values({
+      companyId: company.id,
+      principalType: "user",
+      principalId: devUser.id,
+      status: "active",
+      membershipRole: "owner",
+    }).onConflictDoNothing();
+  }
+  console.log(`Dev user added to ${allCompanies.length} companies`);
+}
+
+// 5. Clean up instance_user_roles pointing to non-existent users (prod IDs)
+await client.unsafe(`
+  DELETE FROM instance_user_roles
+  WHERE user_id NOT IN (SELECT id FROM "user");
+`);
 
 console.log("Seed complete");
 process.exit(0);

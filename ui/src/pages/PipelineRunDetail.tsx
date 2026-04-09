@@ -5,6 +5,8 @@ import { useCompany } from "../context/CompanyContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { queryKeys } from "../lib/queryKeys";
 import { pipelinesApi, type PipelineRunStep } from "../api/pipelines";
+import { accessApi, type CompanyMember } from "../api/access";
+import { agentsApi } from "../api/agents";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, CircleDot, CheckCircle2, XCircle, Clock, SkipForward } from "lucide-react";
@@ -29,9 +31,13 @@ const RUN_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive"
 function RunStepRow({
   step,
   allSteps,
+  agentNames,
+  memberNames,
 }: {
   step: PipelineRunStep;
   allSteps: PipelineRunStep[];
+  agentNames: Record<string, string>;
+  memberNames: Record<string, string>;
 }) {
   const cfg = STATUS_CONFIG[step.status];
   const Icon = cfg.icon;
@@ -41,6 +47,13 @@ function RunStepRow({
       return dep?.stepName ?? depId.slice(0, 8);
     })
     .join(", ");
+
+  let assigneeLabel: string | null = null;
+  if (step.assigneeType === "agent" && step.agentId) {
+    assigneeLabel = `Agent: ${agentNames[step.agentId] ?? step.agentId.slice(0, 8)}`;
+  } else if (step.assigneeType === "user" && step.assigneeUserId) {
+    assigneeLabel = `User: ${memberNames[step.assigneeUserId] ?? step.assigneeUserId.slice(0, 8)}`;
+  }
 
   return (
     <div className="flex items-start gap-3 px-4 py-3 border border-border rounded-lg">
@@ -62,6 +75,9 @@ function RunStepRow({
             {cfg.label}
           </Badge>
         </div>
+        {assigneeLabel && (
+          <p className="text-xs text-muted-foreground mt-0.5">{assigneeLabel}</p>
+        )}
         {deps && (
           <p className="text-xs text-muted-foreground mt-0.5">Depends on: {deps}</p>
         )}
@@ -92,6 +108,28 @@ export function PipelineRunDetail() {
       return data?.status === "running" ? 3000 : false;
     },
   });
+
+  const { data: members = [] } = useQuery({
+    queryKey: queryKeys.access.members(selectedCompanyId!),
+    queryFn: () => accessApi.listMembers(selectedCompanyId!),
+    enabled: !!selectedCompanyId,
+  });
+
+  const { data: agents = [] } = useQuery({
+    queryKey: queryKeys.agents.list(selectedCompanyId!),
+    queryFn: () => agentsApi.list(selectedCompanyId!),
+    enabled: !!selectedCompanyId,
+  });
+
+  const agentNames: Record<string, string> = Object.fromEntries(
+    agents.map((a: { id: string; name: string }) => [a.id, a.name]),
+  );
+
+  const memberNames: Record<string, string> = Object.fromEntries(
+    members
+      .filter((m: CompanyMember) => m.principalType === "user")
+      .map((m: CompanyMember) => [m.principalId, m.userDisplayName ?? m.userEmail ?? m.principalId.slice(0, 8)]),
+  );
 
   const { setBreadcrumbs } = useBreadcrumbs();
   useEffect(() => {
@@ -152,7 +190,7 @@ export function PipelineRunDetail() {
           </div>
         ) : (
           run.steps.map((step) => (
-            <RunStepRow key={step.id} step={step} allSteps={run.steps} />
+            <RunStepRow key={step.id} step={step} allSteps={run.steps} agentNames={agentNames} memberNames={memberNames} />
           ))
         )}
       </div>
