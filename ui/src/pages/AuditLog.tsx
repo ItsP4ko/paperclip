@@ -5,7 +5,13 @@ import { queryKeys } from "../lib/queryKeys";
 import { auditApi, type AuditTimelineItem } from "../api/audit";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
-import { Download, ChevronDown } from "lucide-react";
+import { Download, ChevronDown, ChevronRight, Bot, User, Cog } from "lucide-react";
+
+const ACTOR_ICONS: Record<string, typeof Bot> = {
+  agent: Bot,
+  user: User,
+  system: Cog,
+};
 
 const ACTOR_TYPE_LABELS: Record<string, string> = {
   agent: "Agent",
@@ -13,8 +19,97 @@ const ACTOR_TYPE_LABELS: Record<string, string> = {
   system: "System",
 };
 
-function formatAction(action: string) {
-  return action.replace(/\./g, " \u203a ").replace(/_/g, " ");
+/* ── Human-readable action verbs ── */
+const ACTION_VERBS: Record<string, string> = {
+  "agent.created": "created an agent",
+  "agent.updated": "updated an agent",
+  "agent.deleted": "deleted an agent",
+  "agent.dismissed": "dismissed an agent",
+  "agent.started": "started an agent",
+  "agent.stopped": "stopped an agent",
+  "agent.paused": "paused an agent",
+  "agent.resumed": "resumed an agent",
+  "issue.created": "created an issue",
+  "issue.updated": "updated an issue",
+  "issue.deleted": "deleted an issue",
+  "issue.assigned": "assigned an issue",
+  "issue.read_marked": "marked an issue as read",
+  "issue.status_changed": "changed issue status",
+  "approval.requested": "requested approval",
+  "approval.approved": "approved a request",
+  "approval.rejected": "rejected a request",
+  "budget.updated": "updated the budget",
+  "budget.threshold_reached": "reached budget threshold",
+  "cost.recorded": "recorded a cost",
+  "company.updated": "updated company settings",
+  "routine.created": "created a routine",
+  "routine.updated": "updated a routine",
+  "routine.deleted": "deleted a routine",
+  "routine.triggered": "triggered a routine",
+  "heartbeat.received": "sent a heartbeat",
+  "heartbeat.missed": "missed a heartbeat",
+};
+
+function describeAction(item: AuditTimelineItem): string {
+  const verb = ACTION_VERBS[item.action];
+  if (verb) return verb;
+  // Fallback: "action_name" → "action name"
+  const parts = item.action.split(".");
+  const actionPart = parts.slice(1).join(" ").replace(/_/g, " ");
+  return actionPart || item.action.replace(/[._]/g, " ");
+}
+
+/* ── Details: only show human-relevant fields ── */
+const HIDDEN_DETAIL_KEYS = new Set([
+  "eventId",
+  "actorId",
+  "actorType",
+  "entityId",
+  "entityType",
+  "agentId",
+  "runId",
+  "companyId",
+  "id",
+  "createdAt",
+  "updatedAt",
+]);
+
+const DETAIL_LABELS: Record<string, string> = {
+  taskId: "Task",
+  issueNumber: "Issue",
+  costModel: "Model",
+  modelName: "Model",
+  amount: "Amount",
+  status: "Status",
+  reason: "Reason",
+  description: "Description",
+  name: "Name",
+  title: "Title",
+  label: "Label",
+  assignee: "Assignee",
+  priority: "Priority",
+  sprintName: "Sprint",
+  routineName: "Routine",
+  threshold: "Threshold",
+  inputTokens: "Input tokens",
+  outputTokens: "Output tokens",
+  totalCost: "Total cost",
+  duration: "Duration",
+};
+
+function getVisibleDetails(details: Record<string, unknown> | null): [string, string][] {
+  if (!details) return [];
+  const result: [string, string][] = [];
+  for (const [key, value] of Object.entries(details)) {
+    if (HIDDEN_DETAIL_KEYS.has(key)) continue;
+    if (value == null || value === "") continue;
+    // Skip long UUIDs shown as values
+    if (typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(value)) continue;
+    const label = DETAIL_LABELS[key] || key.replace(/([A-Z])/g, " $1").replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()).trim();
+    const display = typeof value === "object" ? JSON.stringify(value) : String(value);
+    result.push([label, display]);
+  }
+  return result;
 }
 
 function timeAgo(iso: string) {
@@ -25,23 +120,81 @@ function timeAgo(iso: string) {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
 }
 
 function ActionBadge({ action }: { action: string }) {
   const prefix = action.split(".")[0];
   const tones: Record<string, string> = {
-    agent: "bg-violet-500/10 text-violet-700",
-    issue: "bg-blue-500/10 text-blue-700",
-    approval: "bg-amber-500/10 text-amber-700",
-    budget: "bg-red-500/10 text-red-700",
-    cost: "bg-green-500/10 text-green-700",
-    company: "bg-slate-500/10 text-slate-700",
-    routine: "bg-cyan-500/10 text-cyan-700",
-    heartbeat: "bg-orange-500/10 text-orange-700",
+    agent: "bg-violet-500/15 text-violet-400 border-violet-500/20",
+    issue: "bg-blue-500/15 text-blue-400 border-blue-500/20",
+    approval: "bg-amber-500/15 text-amber-400 border-amber-500/20",
+    budget: "bg-red-500/15 text-red-400 border-red-500/20",
+    cost: "bg-green-500/15 text-green-400 border-green-500/20",
+    company: "bg-slate-500/15 text-slate-400 border-slate-500/20",
+    routine: "bg-cyan-500/15 text-cyan-400 border-cyan-500/20",
+    heartbeat: "bg-orange-500/15 text-orange-400 border-orange-500/20",
   };
-  const tone = tones[prefix] ?? "bg-muted text-muted-foreground";
-  return <span className={`inline-block text-[11px] font-medium px-1.5 py-0.5 rounded ${tone}`}>{prefix}</span>;
+  const tone = tones[prefix] ?? "bg-muted text-muted-foreground border-border";
+  return <span className={`inline-block text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded border ${tone}`}>{prefix}</span>;
+}
+
+function ActorIcon({ actorType }: { actorType: string }) {
+  const Icon = ACTOR_ICONS[actorType] ?? Cog;
+  const colors: Record<string, string> = {
+    agent: "bg-violet-500/15 text-violet-400",
+    user: "bg-blue-500/15 text-blue-400",
+    system: "bg-slate-500/15 text-slate-400",
+  };
+  const color = colors[actorType] ?? "bg-muted text-muted-foreground";
+  return (
+    <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${color}`}>
+      <Icon className="h-4 w-4" />
+    </div>
+  );
+}
+
+function AuditRow({ item }: { item: AuditTimelineItem }) {
+  const [expanded, setExpanded] = useState(false);
+  const visibleDetails = getVisibleDetails(item.details);
+  const hasDetails = visibleDetails.length > 0;
+
+  return (
+    <div
+      className={`px-4 py-3 transition-colors ${hasDetails ? "cursor-pointer hover:bg-muted/30" : ""}`}
+      onClick={() => hasDetails && setExpanded(!expanded)}
+    >
+      <div className="flex items-center gap-3">
+        <ActorIcon actorType={item.actorType} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium">{item.actorName}</span>
+            <span className="text-sm text-muted-foreground">{describeAction(item)}</span>
+            <ActionBadge action={item.action} />
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs text-muted-foreground">{timeAgo(item.createdAt)}</span>
+          {hasDetails && (
+            expanded
+              ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+        </div>
+      </div>
+      {expanded && visibleDetails.length > 0 && (
+        <div className="mt-2 ml-11 flex flex-wrap gap-x-4 gap-y-1">
+          {visibleDetails.map(([label, value]) => (
+            <span key={label} className="text-xs text-muted-foreground">
+              <span className="font-medium text-muted-foreground/80">{label}:</span>{" "}
+              <span className="text-foreground/70">{value}</span>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function AuditLog() {
@@ -77,7 +230,6 @@ export function AuditLog() {
     enabled: !!selectedCompanyId,
   });
 
-  // Append new items when data arrives (for pagination)
   useEffect(() => {
     if (timelineQuery.data) {
       if (cursor) {
@@ -89,7 +241,6 @@ export function AuditLog() {
     }
   }, [timelineQuery.data, cursor]);
 
-  // Reset pagination when filters change
   const resetAndFetch = useCallback(() => {
     setItems([]);
     setCursor(undefined);
@@ -117,7 +268,7 @@ export function AuditLog() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Audit Log</h1>
-          <p className="text-sm text-muted-foreground mt-1">Complete activity trail for compliance and debugging</p>
+          <p className="text-sm text-muted-foreground mt-1">Activity trail for your workspace</p>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -175,27 +326,7 @@ export function AuditLog() {
           <p className="text-sm text-muted-foreground py-12 text-center">No activity found</p>
         )}
         {items.map((item) => (
-          <div key={item.id} className="px-4 py-3 flex items-start gap-3">
-            <div className="pt-0.5">
-              <ActionBadge action={item.action} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-2">
-                <span className="text-sm font-medium truncate">{item.actorName}</span>
-                <span className="text-xs text-muted-foreground">{ACTOR_TYPE_LABELS[item.actorType] ?? item.actorType}</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {formatAction(item.action)} on <span className="font-medium text-foreground">{item.entityType}</span>{" "}
-                <span className="text-xs font-mono">{item.entityId.slice(0, 8)}</span>
-              </p>
-              {item.details && Object.keys(item.details).length > 0 && (
-                <pre className="mt-1 text-[11px] text-muted-foreground bg-muted/30 rounded px-2 py-1 overflow-x-auto max-w-full">
-                  {JSON.stringify(item.details, null, 2)}
-                </pre>
-              )}
-            </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">{timeAgo(item.createdAt)}</span>
-          </div>
+          <AuditRow key={item.id} item={item} />
         ))}
         {timelineQuery.isLoading && (
           <p className="text-sm text-muted-foreground py-6 text-center">Loading...</p>
