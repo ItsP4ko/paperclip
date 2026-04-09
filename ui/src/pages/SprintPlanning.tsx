@@ -1,6 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, X, Play } from "lucide-react";
+import { Search, Play } from "lucide-react";
 import { useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  useDraggable,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import { sprintsApi } from "../api/sprints";
 import { issuesApi } from "../api/issues";
 import { queryKeys } from "../lib/queryKeys";
@@ -20,30 +32,60 @@ interface Props {
   onCreateNew: () => void;
 }
 
-function priorityBadge(priority: string | null) {
-  if (!priority) return null;
-  const map: Record<string, string> = { critical: "text-destructive", high: "text-orange-500", medium: "text-yellow-500", low: "text-muted-foreground" };
-  return <span className={cn("text-xs font-medium capitalize", map[priority] ?? "text-muted-foreground")}>{priority}</span>;
+const PRIORITY_COLOR: Record<string, string> = {
+  critical: "text-destructive",
+  high: "text-orange-500",
+  medium: "text-yellow-500",
+  low: "text-muted-foreground",
+};
+
+function IssueCardContent({ issue }: { issue: Issue }) {
+  return (
+    <>
+      <p className="text-sm text-foreground truncate">{issue.title}</p>
+      <div className="flex items-center gap-2 mt-0.5">
+        {issue.priority && (
+          <span className={cn("text-xs font-medium capitalize", PRIORITY_COLOR[issue.priority] ?? "text-muted-foreground")}>
+            {issue.priority}
+          </span>
+        )}
+        {issue.identifier && <span className="text-xs text-muted-foreground font-mono">{issue.identifier}</span>}
+      </div>
+    </>
+  );
 }
 
-function IssueCard({ issue, action, onAction }: { issue: Issue; action: "add" | "remove"; onAction: () => void }) {
+function DraggableIssueCard({ issue, isDragging }: { issue: Issue; isDragging?: boolean }) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: issue.id });
+  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
+
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card hover:bg-muted/40 transition-colors group">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-foreground truncate">{issue.title}</p>
-        <div className="flex items-center gap-2 mt-0.5">
-          {priorityBadge(issue.priority)}
-          {issue.identifier && <span className="text-xs text-muted-foreground font-mono">{issue.identifier}</span>}
-        </div>
-      </div>
-      <Button
-        size="icon"
-        variant={action === "add" ? "outline" : "ghost"}
-        className={cn("h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity", action === "remove" && "text-muted-foreground hover:text-destructive")}
-        onClick={onAction}
-      >
-        {action === "add" ? <Plus className="h-3 w-3" /> : <X className="h-3 w-3" />}
-      </Button>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={cn(
+        "flex-1 min-w-0 px-3 py-2 rounded-md border border-border bg-card transition-colors cursor-grab select-none",
+        isDragging ? "opacity-40" : "hover:bg-muted/40 hover:border-primary/30",
+      )}
+    >
+      <IssueCardContent issue={issue} />
+    </div>
+  );
+}
+
+function DroppableZone({ id, children, isOver }: { id: string; children: React.ReactNode; isOver: boolean }) {
+  const { setNodeRef } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "flex-1 p-2 space-y-1 transition-colors rounded-md min-h-[60px]",
+        isOver && "bg-primary/5 ring-1 ring-primary/20 ring-inset",
+      )}
+    >
+      {children}
     </div>
   );
 }
@@ -51,7 +93,11 @@ function IssueCard({ issue, action, onAction }: { issue: Issue; action: "add" | 
 export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: Props) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
   const { selectedCompanyId: companyId } = useCompany();
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const { data: backlog = [], isLoading: backlogLoading } = useQuery({
     queryKey: queryKeys.sprints.backlog(projectId),
@@ -86,6 +132,33 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
     onSuccess: () => onActivated(),
   });
 
+  const allIssues = [...backlog, ...sprintIssues];
+  const isInBacklog = (id: string) => backlog.some((i) => i.id === id);
+  const isInSprint = (id: string) => sprintIssues.some((i) => i.id === id);
+
+  function handleDragStart({ active }: DragStartEvent) {
+    setActiveIssue(allIssues.find((i) => i.id === active.id) ?? null);
+  }
+
+  function handleDragOver({ over }: { over: { id: string | number } | null }) {
+    setOverId(over ? String(over.id) : null);
+  }
+
+  function handleDragEnd({ active, over }: DragEndEvent) {
+    setActiveIssue(null);
+    setOverId(null);
+    if (!over || !sprint) return;
+
+    const issueId = String(active.id);
+    const target = String(over.id);
+
+    if (target === "sprint" && isInBacklog(issueId)) {
+      addIssue.mutate(issueId);
+    } else if (target === "backlog" && isInSprint(issueId)) {
+      removeIssue.mutate(issueId);
+    }
+  }
+
   const filteredBacklog = backlog.filter((i) =>
     !search || i.title.toLowerCase().includes(search.toLowerCase()) || (i.identifier ?? "").toLowerCase().includes(search.toLowerCase()),
   );
@@ -99,88 +172,88 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Sprint header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <div>
-          <h2 className="font-display font-semibold text-foreground">{sprint.name}</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {sprint.startDate && sprint.endDate ? `${sprint.startDate} → ${sprint.endDate} · ` : ""}
-            {sprintIssues.length} tareas asignadas
-          </p>
-        </div>
-        <Button
-          size="sm"
-          onClick={() => activate.mutate()}
-          disabled={sprintIssues.length === 0 || activate.isPending}
-        >
-          <Play className="h-3.5 w-3.5 mr-1.5" />
-          {activate.isPending ? "Activando..." : "Activar Sprint"}
-        </Button>
-      </div>
-
-      {/* Two panels */}
-      <div className="flex-1 min-h-0 grid grid-cols-2 divide-x divide-border">
-        {/* Backlog */}
-        <div className="flex flex-col min-h-0">
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Backlog</span>
-            <Badge variant="secondary" className="text-xs">{backlog.length}</Badge>
-            <div className="flex-1" />
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar..."
-                className="h-6 pl-6 text-xs w-28"
-              />
-            </div>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+      <div className="flex flex-col h-full min-h-0">
+        {/* Sprint header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div>
+            <h2 className="font-display font-semibold text-foreground">{sprint.name}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {sprint.startDate && sprint.endDate ? `${sprint.startDate} → ${sprint.endDate} · ` : ""}
+              {sprintIssues.length} tareas asignadas
+            </p>
           </div>
-          <ScrollArea className="flex-1">
-            <div className="p-2 space-y-1">
-              {backlogLoading
-                ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)
-                : filteredBacklog.map((issue) => (
-                    <IssueCard
-                      key={issue.id}
-                      issue={issue}
-                      action="add"
-                      onAction={() => addIssue.mutate(issue.id)}
-                    />
-                  ))}
-              {!backlogLoading && filteredBacklog.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-6">Sin tareas en el backlog</p>
-              )}
-            </div>
-          </ScrollArea>
+          <Button
+            size="sm"
+            onClick={() => activate.mutate()}
+            disabled={sprintIssues.length === 0 || activate.isPending}
+          >
+            <Play className="h-3.5 w-3.5 mr-1.5" />
+            {activate.isPending ? "Activando..." : "Activar Sprint"}
+          </Button>
         </div>
 
-        {/* Sprint tasks */}
-        <div className="flex flex-col min-h-0">
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{sprint.name}</span>
-            <Badge variant="secondary" className="text-xs">{sprintIssues.length}</Badge>
-          </div>
-          <ScrollArea className="flex-1">
-            <div className="p-2 space-y-1">
-              {sprintLoading
-                ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)
-                : sprintIssues.map((issue) => (
-                    <IssueCard
-                      key={issue.id}
-                      issue={issue}
-                      action="remove"
-                      onAction={() => removeIssue.mutate(issue.id)}
-                    />
-                  ))}
-              {!sprintLoading && sprintIssues.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-6">Agregá tareas del backlog</p>
-              )}
+        {/* Two panels */}
+        <div className="flex-1 min-h-0 grid grid-cols-2 divide-x divide-border overflow-hidden">
+          {/* Backlog */}
+          <div className="flex flex-col min-h-0">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Backlog</span>
+              <Badge variant="secondary" className="text-xs">{backlog.length}</Badge>
+              <div className="flex-1" />
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar..."
+                  className="h-6 pl-6 text-xs w-28"
+                />
+              </div>
             </div>
-          </ScrollArea>
+            <ScrollArea className="flex-1">
+              <DroppableZone id="backlog" isOver={overId === "backlog"}>
+                {backlogLoading
+                  ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)
+                  : filteredBacklog.map((issue) => (
+                      <DraggableIssueCard key={issue.id} issue={issue} isDragging={activeIssue?.id === issue.id} />
+                    ))}
+                {!backlogLoading && filteredBacklog.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-6">Sin tareas en el backlog</p>
+                )}
+              </DroppableZone>
+            </ScrollArea>
+          </div>
+
+          {/* Sprint tasks */}
+          <div className="flex flex-col min-h-0">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{sprint.name}</span>
+              <Badge variant="secondary" className="text-xs">{sprintIssues.length}</Badge>
+            </div>
+            <ScrollArea className="flex-1">
+              <DroppableZone id="sprint" isOver={overId === "sprint"}>
+                {sprintLoading
+                  ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)
+                  : sprintIssues.map((issue) => (
+                      <DraggableIssueCard key={issue.id} issue={issue} isDragging={activeIssue?.id === issue.id} />
+                    ))}
+                {!sprintLoading && sprintIssues.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-6">Arrastrá tareas del backlog</p>
+                )}
+              </DroppableZone>
+            </ScrollArea>
+          </div>
         </div>
       </div>
-    </div>
+
+      <DragOverlay dropAnimation={null}>
+        {activeIssue && (
+          <div className="px-3 py-2 rounded-md border border-primary/40 bg-card shadow-lg shadow-black/20 cursor-grabbing min-w-[200px]">
+            <IssueCardContent issue={activeIssue} />
+          </div>
+        )}
+      </DragOverlay>
+    </DndContext>
   );
 }
