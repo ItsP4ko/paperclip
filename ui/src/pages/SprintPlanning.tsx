@@ -42,7 +42,7 @@ const PRIORITY_COLOR: Record<string, string> = {
 function IssueCardContent({ issue }: { issue: Issue }) {
   return (
     <>
-      <p className="text-sm text-foreground truncate">{issue.title}</p>
+      <p className="text-sm text-foreground line-clamp-2" title={issue.title}>{issue.title}</p>
       <div className="flex items-center gap-2 mt-0.5">
         {issue.priority && (
           <span className={cn("text-xs font-medium capitalize", PRIORITY_COLOR[issue.priority] ?? "text-muted-foreground")}>
@@ -81,7 +81,7 @@ function DroppableZone({ id, children, isOver }: { id: string; children: React.R
     <div
       ref={setNodeRef}
       className={cn(
-        "flex-1 p-2 space-y-1 transition-colors rounded-md min-h-[60px]",
+        "flex-1 min-h-0 overflow-hidden transition-colors",
         isOver && "bg-primary/5 ring-1 ring-primary/20 ring-inset",
       )}
     >
@@ -140,8 +140,15 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
     setActiveIssue(allIssues.find((i) => i.id === active.id) ?? null);
   }
 
+  function resolvePanel(id: string): "sprint" | "backlog" | null {
+    if (id === "sprint" || isInSprint(id)) return "sprint";
+    if (id === "backlog" || isInBacklog(id)) return "backlog";
+    return null;
+  }
+
   function handleDragOver({ over }: { over: { id: string | number } | null }) {
-    setOverId(over ? String(over.id) : null);
+    if (!over) { setOverId(null); return; }
+    setOverId(resolvePanel(String(over.id)));
   }
 
   function handleDragEnd({ active, over }: DragEndEvent) {
@@ -150,11 +157,11 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
     if (!over || !sprint) return;
 
     const issueId = String(active.id);
-    const target = String(over.id);
+    const panel = resolvePanel(String(over.id));
 
-    if (target === "sprint" && isInBacklog(issueId)) {
+    if (panel === "sprint" && isInBacklog(issueId)) {
       addIssue.mutate(issueId);
-    } else if (target === "backlog" && isInSprint(issueId)) {
+    } else if (panel === "backlog" && isInSprint(issueId)) {
       removeIssue.mutate(issueId);
     }
   }
@@ -211,18 +218,20 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
                 />
               </div>
             </div>
-            <ScrollArea className="flex-1">
-              <DroppableZone id="backlog" isOver={overId === "backlog"}>
-                {backlogLoading
-                  ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)
-                  : filteredBacklog.map((issue) => (
-                      <DraggableIssueCard key={issue.id} issue={issue} isDragging={activeIssue?.id === issue.id} />
-                    ))}
-                {!backlogLoading && filteredBacklog.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-6">Sin tareas en el backlog</p>
-                )}
-              </DroppableZone>
-            </ScrollArea>
+            <DroppableZone id="backlog" isOver={overId === "backlog"}>
+              <ScrollArea className="h-full">
+                <div className="p-2 space-y-1">
+                  {backlogLoading
+                    ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)
+                    : filteredBacklog.map((issue) => (
+                        <DraggableIssueCard key={issue.id} issue={issue} isDragging={activeIssue?.id === issue.id} />
+                      ))}
+                  {!backlogLoading && filteredBacklog.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-6">Sin tareas en el backlog</p>
+                  )}
+                </div>
+              </ScrollArea>
+            </DroppableZone>
           </div>
 
           {/* Sprint tasks */}
@@ -231,18 +240,20 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{sprint.name}</span>
               <Badge variant="secondary" className="text-xs">{sprintIssues.length}</Badge>
             </div>
-            <ScrollArea className="flex-1">
-              <DroppableZone id="sprint" isOver={overId === "sprint"}>
-                {sprintLoading
-                  ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)
-                  : sprintIssues.map((issue) => (
-                      <DraggableIssueCard key={issue.id} issue={issue} isDragging={activeIssue?.id === issue.id} />
-                    ))}
-                {!sprintLoading && sprintIssues.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-6">Arrastrá tareas del backlog</p>
-                )}
-              </DroppableZone>
-            </ScrollArea>
+            <DroppableZone id="sprint" isOver={overId === "sprint"}>
+              <ScrollArea className="h-full">
+                <div className="p-2 space-y-1">
+                  {sprintLoading
+                    ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)
+                    : sprintIssues.map((issue) => (
+                        <DraggableIssueCard key={issue.id} issue={issue} isDragging={activeIssue?.id === issue.id} />
+                      ))}
+                  {!sprintLoading && sprintIssues.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-6">Arrastrá tareas del backlog</p>
+                  )}
+                </div>
+              </ScrollArea>
+            </DroppableZone>
           </div>
         </div>
       </div>
