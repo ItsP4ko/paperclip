@@ -1436,6 +1436,7 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
       action: "issue.deleted",
       entityType: "issue",
       entityId: issue.id,
+      details: { identifier: issue.identifier, title: issue.title },
     });
 
     await redisClient?.del(`issue:${id}`).catch(() => null);

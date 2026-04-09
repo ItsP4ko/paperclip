@@ -4,6 +4,7 @@ import { useCompany } from "../context/CompanyContext";
 import { queryKeys } from "../lib/queryKeys";
 import { auditApi, type AuditTimelineItem } from "../api/audit";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
+import { Link } from "@/lib/router";
 import { Button } from "@/components/ui/button";
 import { Download, ChevronDown, ChevronRight, Bot, User, Cog } from "lucide-react";
 
@@ -70,6 +71,7 @@ const HIDDEN_DETAIL_KEYS = new Set([
   "runId",
   "companyId",
   "id",
+  "identifier",
   "createdAt",
   "updatedAt",
 ]);
@@ -171,6 +173,19 @@ function AuditRow({ item }: { item: AuditTimelineItem }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium">{item.actorName}</span>
             <span className="text-sm text-muted-foreground">{describeAction(item)}</span>
+            {item.entityType === "issue" && item.details?.identifier && (
+              item.action === "issue.deleted" ? (
+                <span className="text-xs font-mono font-medium text-muted-foreground">{String(item.details.identifier)}</span>
+              ) : (
+                <Link
+                  to={`/issues/${item.entityId}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-xs font-mono font-medium text-blue-400 hover:text-blue-300 hover:underline"
+                >
+                  {String(item.details.identifier)}
+                </Link>
+              )
+            )}
             <ActionBadge action={item.action} />
           </div>
         </div>
