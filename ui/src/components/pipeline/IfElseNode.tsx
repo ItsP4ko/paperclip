@@ -11,7 +11,7 @@ export const IfElseNode = memo(function IfElseNode({ data }: NodeProps) {
   const branches = config.branches ?? [];
 
   return (
-    <div className="group w-[280px] border-2 border-amber-500/50 rounded-lg bg-card shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.03)] px-4 py-3 transition-all duration-200">
+    <div className="group w-[280px] border-2 border-amber-500/50 rounded-lg bg-card shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.03)] px-4 py-3">
       <Handle type="target" position={Position.Top} className="!bg-amber-500 !w-2 !h-2" />
       <div className="flex items-start gap-2">
         <GitFork className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
