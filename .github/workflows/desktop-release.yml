@@ -1,6 +1,6 @@
 name: Desktop Release
 
-# Builds the Tauri desktop app for macOS (universal) and Windows,
+# Builds the Tauri desktop app for macOS (Apple Silicon) and Windows,
 # then publishes a merged latest.json so the in-app updater can find every
 # platform.
 #
@@ -21,7 +21,7 @@ on:
 
 jobs:
   build-macos:
-    name: Build macOS (Universal)
+    name: Build macOS (Apple Silicon)
     runs-on: macos-14
     permissions:
       contents: write
@@ -38,8 +38,6 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-apple-darwin,aarch64-apple-darwin
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -49,11 +47,11 @@ jobs:
       - name: Install JS dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Tauri app (universal)
+      - name: Build Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm desktop:build -- --target universal-apple-darwin
+        run: pnpm desktop:build
 
       - name: Sign updater bundle (manual fallback)
         id: sign
@@ -62,7 +60,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         shell: bash
         run: |
-          BUNDLE_DIR="src-tauri/target/universal-apple-darwin/release/bundle/macos"
+          BUNDLE_DIR="src-tauri/target/release/bundle/macos"
           APP=$(find "$BUNDLE_DIR" -maxdepth 1 -name "*.app" -type d | head -1)
 
           if [ -z "$APP" ]; then
@@ -109,7 +107,7 @@ jobs:
         run: |
           REF_TAG="${{ github.event.inputs.tag || github.ref_name }}"
           VERSION="${REF_TAG#v}"
-          BUNDLE_DIR="src-tauri/target/universal-apple-darwin/release/bundle"
+          BUNDLE_DIR="src-tauri/target/release/bundle"
 
           DMG=$(find "$BUNDLE_DIR/dmg" -name "*.dmg" | head -1)
           TARGZ="${{ steps.sign.outputs.targz }}"
@@ -119,7 +117,7 @@ jobs:
           TARGZ_FILENAME=$(basename "$TARGZ" | tr ' ' '.')
 
           # Version-less DMG keeps a stable /releases/latest/download/ URL
-          DMG_VERSIONLESS="$(dirname "$DMG")/Relay.Control_universal.dmg"
+          DMG_VERSIONLESS="$(dirname "$DMG")/Relay.Control_aarch64.dmg"
           cp "$DMG" "$DMG_VERSIONLESS"
 
           TAG="${{ github.event.inputs.tag || github.ref_name }}"
@@ -139,16 +137,9 @@ jobs:
             --repo "$REPO" \
             --clobber
 
-          # Both darwin platforms point to the same universal binary
           DOWNLOAD_URL="https://github.com/$REPO/releases/download/v$VERSION/$TARGZ_FILENAME"
           mkdir -p "$RUNNER_TEMP/updater-meta"
           cat > "$RUNNER_TEMP/updater-meta/darwin-aarch64.json" <<EOF
-          {
-            "signature": "$SIGNATURE",
-            "url": "$DOWNLOAD_URL"
-          }
-          EOF
-          cat > "$RUNNER_TEMP/updater-meta/darwin-x86_64.json" <<EOF
           {
             "signature": "$SIGNATURE",
             "url": "$DOWNLOAD_URL"
@@ -303,7 +294,6 @@ jobs:
 
           # Read per-platform metadata fragments
           DARWIN_AARCH64=$(cat /tmp/updater-meta/darwin-aarch64.json)
-          DARWIN_X86_64=$(cat /tmp/updater-meta/darwin-x86_64.json)
           WINDOWS_X86_64=$(cat /tmp/updater-meta/windows-x86_64.json)
 
           # Merge into final latest.json using jq
@@ -312,7 +302,6 @@ jobs:
             --arg notes "v$VERSION" \
             --arg pub_date "$PUB_DATE" \
             --argjson darwin_aarch64 "$DARWIN_AARCH64" \
-            --argjson darwin_x86_64 "$DARWIN_X86_64" \
             --argjson windows_x86_64 "$WINDOWS_X86_64" \
             '{
               version: $version,
@@ -320,7 +309,6 @@ jobs:
               pub_date: $pub_date,
               platforms: {
                 "darwin-aarch64": $darwin_aarch64,
-                "darwin-x86_64": $darwin_x86_64,
                 "windows-x86_64": $windows_x86_64
               }
             }' > /tmp/latest.json
