@@ -42,7 +42,7 @@ function IssueCard({
   return (
     <div className="flex items-start gap-2 p-3 border border-border rounded-md bg-card hover:bg-accent/30 transition-colors">
       <div className="flex items-center gap-1 mt-0.5 shrink-0">
-        <PriorityIcon priority={issue.priority} size={14} />
+        <PriorityIcon priority={issue.priority} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium leading-snug line-clamp-2">{issue.title}</p>
@@ -50,7 +50,7 @@ function IssueCard({
           {issue.identifier && (
             <span className="text-xs font-mono text-muted-foreground">{issue.identifier}</span>
           )}
-          <StatusBadge status={issue.status} size="xs" />
+          <StatusBadge status={issue.status} />
         </div>
       </div>
       <Button
@@ -91,7 +91,7 @@ export function SprintPlanning() {
 
   const { data: backlogIssues = [] } = useQuery({
     queryKey: queryKeys.sprints.backlog(selectedCompanyId!),
-    queryFn: () => issuesApi.list(selectedCompanyId!, { noSprint: true } as Parameters<typeof issuesApi.list>[1]),
+    queryFn: () => issuesApi.list(selectedCompanyId!, { noSprint: true }),
     enabled: !!selectedCompanyId,
   });
 

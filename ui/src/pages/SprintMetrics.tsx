@@ -98,9 +98,9 @@ export function SprintMetrics() {
             />
           </div>
           <div className="flex gap-4 text-xs text-muted-foreground">
-            {Object.entries(metrics.byStatus).map(([status, count]) => (
+            {(Object.entries(metrics.byStatus) as [string, number][]).map(([status, count]) => (
               <span key={status} className="flex items-center gap-1">
-                <StatusBadge status={status} size="xs" />
+                <StatusBadge status={status} />
                 {count}
               </span>
             ))}
@@ -138,7 +138,7 @@ export function SprintMetrics() {
                       </div>
                     </td>
                     <td className="px-3 py-2">
-                      <StatusBadge status={t.status} size="xs" />
+                      <StatusBadge status={t.status} />
                     </td>
                     <td className="px-3 py-2 text-right font-mono">{formatDuration(t.cycleTimeMs)}</td>
                     <td className="px-3 py-2 text-right">
