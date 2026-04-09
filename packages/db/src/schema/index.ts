@@ -66,3 +66,4 @@ export { costRecommendations } from "./cost_recommendations.js";
 export { pipelines, pipelineSteps, pipelineRuns, pipelineRunSteps } from "./pipelines.js";
 export { sprints } from "./sprints.js";
 export { sprintIssueHistory } from "./sprint_issue_history.js";
+export { issueStateHistory } from "./issue_state_history.js";
