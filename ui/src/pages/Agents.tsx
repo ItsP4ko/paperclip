@@ -137,8 +137,8 @@ export function Agents() {
     return <PageSkeleton variant="list" />;
   }
 
-  const filtered = filterAgents(agents ?? [], tab, showTerminated);
-  const filteredOrg = filterOrgTree(orgTree ?? [], tab, showTerminated);
+  const filtered = useMemo(() => filterAgents(agents ?? [], tab, showTerminated), [agents, tab, showTerminated]);
+  const filteredOrg = useMemo(() => filterOrgTree(orgTree ?? [], tab, showTerminated), [orgTree, tab, showTerminated]);
 
   return (
     <div className="space-y-4">

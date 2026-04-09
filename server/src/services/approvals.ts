@@ -82,7 +82,12 @@ export function approvalService(db: Db) {
     list: (companyId: string, status?: string) => {
       const conditions = [eq(approvals.companyId, companyId)];
       if (status) conditions.push(eq(approvals.status, status));
-      return db.select().from(approvals).where(and(...conditions));
+      return db
+        .select()
+        .from(approvals)
+        .where(and(...conditions))
+        .orderBy(asc(approvals.createdAt))
+        .limit(500);
     },
 
     getById: (id: string) =>
