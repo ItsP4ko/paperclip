@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "@/lib/router";
 import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "../context/CompanyContext";
@@ -9,90 +9,21 @@ import { accessApi, type CompanyMember } from "../api/access";
 import { agentsApi } from "../api/agents";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CircleDot, CheckCircle2, XCircle, Clock, SkipForward } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { ReactFlow, Background, Controls, type Node, type Edge } from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import { stepsToEdges } from "../components/pipeline/utils";
+import { useAutoLayout } from "../components/pipeline/useAutoLayout";
+import { StepNode } from "../components/pipeline/StepNode";
+import { IfElseNode } from "../components/pipeline/IfElseNode";
 
-const STATUS_CONFIG: Record<
-  PipelineRunStep["status"],
-  { label: string; icon: React.ComponentType<{ className?: string }>; variant: "default" | "secondary" | "destructive" | "outline" }
-> = {
-  pending: { label: "Pending", icon: Clock, variant: "secondary" },
-  running: { label: "Running", icon: CircleDot, variant: "default" },
-  completed: { label: "Completed", icon: CheckCircle2, variant: "outline" },
-  failed: { label: "Failed", icon: XCircle, variant: "destructive" },
-  skipped: { label: "Skipped", icon: SkipForward, variant: "secondary" },
-};
+const nodeTypes = { stepNode: StepNode, ifElse: IfElseNode };
 
 const RUN_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   running: "default",
   completed: "outline",
   failed: "destructive",
 };
-
-function RunStepRow({
-  step,
-  allSteps,
-  agentNames,
-  memberNames,
-}: {
-  step: PipelineRunStep;
-  allSteps: PipelineRunStep[];
-  agentNames: Record<string, string>;
-  memberNames: Record<string, string>;
-}) {
-  const cfg = STATUS_CONFIG[step.status];
-  const Icon = cfg.icon;
-  const deps = step.dependsOn
-    .map((depId) => {
-      const dep = allSteps.find((s) => s.pipelineStepId === depId);
-      return dep?.stepName ?? depId.slice(0, 8);
-    })
-    .join(", ");
-
-  let assigneeLabel: string | null = null;
-  if (step.assigneeType === "agent" && step.agentId) {
-    assigneeLabel = `Agent: ${agentNames[step.agentId] ?? step.agentId.slice(0, 8)}`;
-  } else if (step.assigneeType === "user" && step.assigneeUserId) {
-    assigneeLabel = `User: ${memberNames[step.assigneeUserId] ?? step.assigneeUserId.slice(0, 8)}`;
-  }
-
-  return (
-    <div className="flex items-start gap-3 px-4 py-3 border border-border rounded-lg">
-      <Icon
-        className={`h-4 w-4 mt-0.5 shrink-0 ${
-          step.status === "running"
-            ? "text-primary animate-pulse"
-            : step.status === "completed"
-              ? "text-green-500"
-              : step.status === "failed"
-                ? "text-destructive"
-                : "text-muted-foreground"
-        }`}
-      />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium">{step.stepName}</span>
-          <Badge variant={cfg.variant} className="text-[10px] px-1.5 py-0">
-            {cfg.label}
-          </Badge>
-        </div>
-        {assigneeLabel && (
-          <p className="text-xs text-muted-foreground mt-0.5">{assigneeLabel}</p>
-        )}
-        {deps && (
-          <p className="text-xs text-muted-foreground mt-0.5">Depends on: {deps}</p>
-        )}
-        {step.issueId && (
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Issue: <span className="font-mono">{step.issueId.slice(0, 8)}…</span>
-          </p>
-        )}
-        {step.error && (
-          <p className="text-xs text-destructive mt-0.5">{step.error}</p>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export function PipelineRunDetail() {
   const { pipelineId, runId } = useParams<{ pipelineId: string; runId: string }>();
@@ -140,6 +71,66 @@ export function PipelineRunDetail() {
     ]);
   }, [setBreadcrumbs, pipelineId]);
 
+  // No-op handlers for read-only node rendering
+  const noop = useMemo(() => () => {}, []);
+
+  const runNodes: Node[] = useMemo(() => {
+    if (!run) return [];
+    return run.steps.map((step: PipelineRunStep) => ({
+      id: step.pipelineStepId,
+      type: step.stepType === "if_else" ? "ifElse" : "stepNode",
+      position: { x: step.positionX ?? 0, y: step.positionY ?? 0 },
+      data: {
+        step: {
+          ...step,
+          id: step.pipelineStepId,
+          name: step.stepName,
+          dependsOn: step.dependsOn,
+          config: {},
+        },
+        agentNames,
+        memberNames,
+        onEdit: noop,
+        onDelete: noop,
+      },
+      className:
+        step.status === "running"
+          ? "ring-2 ring-blue-500 rounded-lg animate-pulse"
+          : step.status === "completed"
+            ? "ring-2 ring-green-500 rounded-lg"
+            : step.status === "failed"
+              ? "ring-2 ring-destructive rounded-lg"
+              : step.status === "skipped"
+                ? "opacity-40"
+                : "",
+    }));
+  }, [run, agentNames, memberNames, noop]);
+
+  const runEdges: Edge[] = useMemo(() => {
+    if (!run) return [];
+    // Build pseudo-steps from run steps to use stepsToEdges
+    const pseudoSteps = run.steps.map((s: PipelineRunStep) => ({
+      id: s.pipelineStepId,
+      pipelineId: "",
+      name: s.stepName,
+      agentId: s.agentId,
+      assigneeType: s.assigneeType,
+      assigneeUserId: s.assigneeUserId,
+      issueId: s.issueId,
+      dependsOn: s.dependsOn,
+      config: {},
+      position: s.position,
+      positionX: s.positionX,
+      positionY: s.positionY,
+      stepType: s.stepType,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+    }));
+    return stepsToEdges(pseudoSteps);
+  }, [run]);
+
+  const layoutNodes = useAutoLayout(runNodes, runEdges);
+
   if (!selectedCompanyId) return null;
   if (isLoading) {
     return <div className="px-6 py-8 text-sm text-muted-foreground">Loading...</div>;
@@ -173,7 +164,7 @@ export function PipelineRunDetail() {
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground font-mono">
-            {run.id.slice(0, 12)}…
+            {run.id.slice(0, 12)}...
           </p>
         </div>
         {totalCount > 0 && (
@@ -183,15 +174,27 @@ export function PipelineRunDetail() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
+      {/* Read-only React Flow canvas */}
+      <div className="flex-1 overflow-hidden">
         {run.steps.length === 0 ? (
           <div className="py-8 text-center">
             <p className="text-sm text-muted-foreground">No steps in this run.</p>
           </div>
         ) : (
-          run.steps.map((step) => (
-            <RunStepRow key={step.id} step={step} allSteps={run.steps} agentNames={agentNames} memberNames={memberNames} />
-          ))
+          <ReactFlow
+            nodes={layoutNodes}
+            edges={runEdges}
+            nodeTypes={nodeTypes}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={false}
+            fitView
+            fitViewOptions={{ padding: 0.2 }}
+            className="bg-background"
+          >
+            <Background gap={20} size={1} className="!bg-muted/30" />
+            <Controls className="!bg-card !border-border !shadow-sm" />
+          </ReactFlow>
         )}
       </div>
     </div>

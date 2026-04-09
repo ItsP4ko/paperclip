@@ -22,6 +22,9 @@ export interface PipelineStep {
   dependsOn: string[];
   config: Record<string, unknown>;
   position: number;
+  positionX: number | null;
+  positionY: number | null;
+  stepType: "action" | "if_else";
   createdAt: string;
   updatedAt: string;
 }
@@ -58,6 +61,9 @@ export interface PipelineRunStep {
   assigneeUserId: string | null;
   dependsOn: string[];
   position: number;
+  positionX: number | null;
+  positionY: number | null;
+  stepType: "action" | "if_else";
   createdAt: string;
   updatedAt: string;
 }
@@ -101,6 +107,9 @@ export const pipelinesApi = {
       issueId?: string | null;
       dependsOn?: string[];
       position?: number;
+      positionX?: number;
+      positionY?: number;
+      stepType?: "action" | "if_else";
       config?: Record<string, unknown>;
     },
   ) => api.post<PipelineStep>(`/companies/${companyId}/pipelines/${pipelineId}/steps`, data),
@@ -112,8 +121,15 @@ export const pipelinesApi = {
     data: {
       name?: string;
       agentId?: string | null;
+      assigneeType?: "agent" | "user";
+      assigneeUserId?: string | null;
+      issueId?: string | null;
       dependsOn?: string[];
       position?: number;
+      positionX?: number;
+      positionY?: number;
+      stepType?: "action" | "if_else";
+      config?: Record<string, unknown>;
     },
   ) =>
     api.patch<PipelineStep>(
@@ -124,6 +140,16 @@ export const pipelinesApi = {
   deleteStep: (companyId: string, pipelineId: string, stepId: string) =>
     api.delete<void>(
       `/companies/${companyId}/pipelines/${pipelineId}/steps/${stepId}`,
+    ),
+
+  batchUpdatePositions: (
+    companyId: string,
+    pipelineId: string,
+    positions: Array<{ stepId: string; positionX: number; positionY: number }>,
+  ) =>
+    api.patch<{ updated: number }>(
+      `/companies/${companyId}/pipelines/${pipelineId}/steps/positions`,
+      { positions },
     ),
 
   triggerRun: (
