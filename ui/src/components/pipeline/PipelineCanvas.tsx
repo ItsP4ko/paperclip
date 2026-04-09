@@ -8,7 +8,7 @@ import {
   useEdgesState,
   addEdge,
   type Connection,
-  type NodeDragHandler,
+  type OnNodeDrag,
   type OnConnect,
   type OnNodesDelete,
 } from "@xyflow/react";
@@ -57,7 +57,7 @@ export function PipelineCanvas({
   // Sync when steps change
   useMemo(() => { setNodes(layoutNodes); setEdges(rawEdges); }, [layoutNodes, rawEdges, setNodes, setEdges]);
 
-  const onNodeDragStop: NodeDragHandler = useCallback(
+  const onNodeDragStop: OnNodeDrag = useCallback(
     (_event, node) => { onUpdateStepPosition(node.id, node.position.x, node.position.y); },
     [onUpdateStepPosition],
   );

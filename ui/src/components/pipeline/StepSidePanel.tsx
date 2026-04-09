@@ -9,7 +9,7 @@ interface StepSidePanelProps {
   allSteps: PipelineStep[];
   agents: Array<{ id: string; name: string }>;
   members: CompanyMember[];
-  issues: Array<{ id: string; title: string; identifier?: string }>;
+  issues: Array<{ id: string; title: string; identifier?: string | null }>;
   onSave: (stepId: string, data: Record<string, unknown>) => void;
   onClose: () => void;
 }
