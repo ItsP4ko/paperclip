@@ -468,7 +468,16 @@ export async function startServer(): Promise<StartedServer> {
   if (config.deploymentMode === "local_trusted") {
     await ensureLocalTrustedBoardPrincipal(db as any);
   }
-  if (config.deploymentMode === "authenticated") {
+  // Remote Control PIN mode: when a remote PIN is configured for a private
+  // deployment, the PIN *is* the authentication mechanism — BetterAuth is not
+  // needed.  Skip the full BetterAuth initialization so the server can start
+  // without BETTER_AUTH_SECRET.
+  const isRemotePinMode =
+    config.deploymentMode === "authenticated" &&
+    config.deploymentExposure === "private" &&
+    !!process.env.PAPERCLIP_REMOTE_PIN?.trim();
+
+  if (config.deploymentMode === "authenticated" && !isRemotePinMode) {
     const {
       createBetterAuthHandler,
       createBetterAuthInstance,
@@ -507,6 +516,15 @@ export async function startServer(): Promise<StartedServer> {
     resolveSessionFromHeaders = (headers) => resolveBetterAuthSessionFromHeaders(auth, headers);
     await initializeBoardClaimChallenge(db as any, { deploymentMode: config.deploymentMode });
     authReady = true;
+  }
+
+  if (isRemotePinMode) {
+    // In remote-PIN mode the embedded server is local-only behind Tailscale;
+    // treat it similarly to local_trusted — ensure the local board principal
+    // exists so that PIN-promoted requests have valid company memberships.
+    await ensureLocalTrustedBoardPrincipal(db as any);
+    authReady = true;
+    logger.info("Remote Control PIN mode: skipping BetterAuth, using PIN authentication");
   }
   
   const listenPort = await detectPort(config.port);
