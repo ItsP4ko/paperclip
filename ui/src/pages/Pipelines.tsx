@@ -7,6 +7,14 @@ import { queryKeys } from "../lib/queryKeys";
 import { pipelinesApi, type Pipeline } from "../api/pipelines";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { GitBranch, Play, Plus, Trash2 } from "lucide-react";
 
 const STATUS_VARIANT: Record<Pipeline["status"], "default" | "secondary" | "outline"> = {
@@ -21,6 +29,7 @@ export function Pipelines() {
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
+  const [deletingPipelineId, setDeletingPipelineId] = useState<string | null>(null);
 
   const { setBreadcrumbs } = useBreadcrumbs();
   useEffect(() => { setBreadcrumbs([{ label: "Pipelines" }]); }, [setBreadcrumbs]);
@@ -30,6 +39,8 @@ export function Pipelines() {
     queryFn: () => pipelinesApi.list(selectedCompanyId!),
     enabled: !!selectedCompanyId,
   });
+
+  const deletingPipeline = pipelines?.find(p => p.id === deletingPipelineId);
 
   const createMutation = useMutation({
     mutationFn: (name: string) =>
@@ -161,9 +172,7 @@ export function Pipelines() {
                     disabled={deleteMutation.isPending}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm(`Delete pipeline "${pipeline.name}"?`)) {
-                        deleteMutation.mutate(pipeline.id);
-                      }
+                      setDeletingPipelineId(pipeline.id);
                     }}
                   >
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -174,6 +183,33 @@ export function Pipelines() {
           </div>
         )}
       </div>
+
+      <Dialog open={!!deletingPipelineId} onOpenChange={(open) => !open && setDeletingPipelineId(null)}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Delete Pipeline</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &ldquo;{deletingPipeline?.name}&rdquo;? This action cannot be undone. All steps and run history will be permanently removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingPipelineId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deletingPipelineId) {
+                  deleteMutation.mutate(deletingPipelineId);
+                  setDeletingPipelineId(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -24,15 +24,15 @@ const updatePipelineSchema = z.object({
 
 const createPipelineStepSchema = z.object({
   name:           z.string().min(1),
-  agentId:        z.string().optional(),
-  assigneeType:   z.enum(["agent", "user"]).optional(),
-  assigneeUserId: z.string().optional(),
-  issueId:        z.string().optional(),
+  agentId:        z.string().nullable().optional(),
+  assigneeType:   z.enum(["agent", "user"]).nullable().optional(),
+  assigneeUserId: z.string().nullable().optional(),
+  issueId:        z.string().nullable().optional(),
   dependsOn:      z.array(z.string()).optional(),
   position:       z.number().optional(),
   config:         z.record(z.unknown()).optional(),
-  positionX:      z.number().optional(),
-  positionY:      z.number().optional(),
+  positionX:      z.number().nullable().optional(),
+  positionY:      z.number().nullable().optional(),
   stepType:       z.enum(["action", "if_else"]).optional(),
 });
 
@@ -260,6 +260,23 @@ export function pipelineRoutes(db: Db, redisClient?: RedisClientType) {
 
     res.json(run);
   });
+
+  // Complete a run step (human assignee marks their step as done)
+  router.post(
+    "/companies/:companyId/pipeline-runs/:runId/steps/:runStepId/complete",
+    async (req, res) => {
+      const companyId = req.params.companyId as string;
+      const runId = req.params.runId as string;
+      const runStepId = req.params.runStepId as string;
+      assertCompanyAccess(req, companyId);
+      const userId = (req as any).actor?.userId;
+      if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
+      const result = await svc.completeRunStep(companyId, runId, runStepId, userId);
+      if (!result) { res.status(404).json({ error: "Step not found or not assignable" }); return; }
+      await redisClient?.del(`paperclip:pipeline:run:${runId}`).catch(() => null);
+      res.json({ completed: true });
+    },
+  );
 
   return router;
 }

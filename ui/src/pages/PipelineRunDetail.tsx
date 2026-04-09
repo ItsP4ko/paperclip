@@ -1,12 +1,13 @@
 import { useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "@/lib/router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCompany } from "../context/CompanyContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { queryKeys } from "../lib/queryKeys";
 import { pipelinesApi, type PipelineRunStep } from "../api/pipelines";
 import { accessApi, type CompanyMember } from "../api/access";
 import { agentsApi } from "../api/agents";
+import { authApi } from "../api/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft } from "lucide-react";
@@ -62,6 +63,21 @@ export function PipelineRunDetail() {
       .map((m: CompanyMember) => [m.principalId, m.userDisplayName ?? m.userEmail ?? m.principalId.slice(0, 8)]),
   );
 
+  const queryClient = useQueryClient();
+  const { data: session } = useQuery({
+    queryKey: queryKeys.auth.session,
+    queryFn: () => authApi.getSession(),
+  });
+  const currentUserId = session?.user?.id ?? session?.session?.userId ?? null;
+
+  const completeStepMutation = useMutation({
+    mutationFn: (runStepId: string) =>
+      pipelinesApi.completeRunStep(selectedCompanyId!, runId!, runStepId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.run(selectedCompanyId!, runId!) });
+    },
+  });
+
   const { setBreadcrumbs } = useBreadcrumbs();
   useEffect(() => {
     setBreadcrumbs([
@@ -92,6 +108,9 @@ export function PipelineRunDetail() {
         memberNames,
         onEdit: noop,
         onDelete: noop,
+        runStatus: step.status,
+        canComplete: step.status === "running" && step.assigneeType === "user" && step.assigneeUserId === currentUserId,
+        onComplete: () => completeStepMutation.mutate(step.id),
       },
       className:
         step.status === "running"

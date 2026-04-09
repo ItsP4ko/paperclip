@@ -145,8 +145,8 @@ export function pipelineService(db: Db) {
           if (existingIssue) {
             const patch: Partial<typeof issues.$inferInsert> = {};
             // Only promote to "todo" if still in "backlog"
-            if (existingIssue.status === "backlog") {
-              patch.status = "todo";
+            if (existingIssue.status === "backlog" || existingIssue.status === "todo") {
+              patch.status = "in_progress";
             }
             // Assign based on assigneeType
             if (step.assigneeType === "agent") {
@@ -185,7 +185,7 @@ export function pipelineService(db: Db) {
             title: step.name,
             ...assigneeData,
             priority: "medium",
-            status: "todo",
+            status: "in_progress",
           });
           issueId = issue.id;
         } catch {
@@ -600,7 +600,7 @@ export function pipelineService(db: Db) {
             eq(pipelineRunSteps.status, "running"),
           ),
         );
-      if (!runStep) return;
+      if (!runStep) return null;
 
       await db
         .update(pipelineRunSteps)
@@ -608,6 +608,48 @@ export function pipelineService(db: Db) {
         .where(eq(pipelineRunSteps.id, runStep.id));
 
       await evaluateReadySteps(runStep.pipelineRunId);
+      return runStep.pipelineRunId;
+    },
+
+    completeRunStep: async (companyId: string, runId: string, runStepId: string, userId: string) => {
+      // Verify run belongs to company
+      const [run] = await db
+        .select()
+        .from(pipelineRuns)
+        .where(and(eq(pipelineRuns.id, runId), eq(pipelineRuns.companyId, companyId)));
+      if (!run) return null;
+
+      // Get the run step with its pipeline step
+      const [runStepRow] = await db
+        .select({ runStep: pipelineRunSteps, step: pipelineSteps })
+        .from(pipelineRunSteps)
+        .innerJoin(pipelineSteps, eq(pipelineRunSteps.pipelineStepId, pipelineSteps.id))
+        .where(and(eq(pipelineRunSteps.id, runStepId), eq(pipelineRunSteps.pipelineRunId, runId)));
+      if (!runStepRow) return null;
+      if (runStepRow.runStep.status !== "running") return null;
+
+      // Verify the user is the assignee
+      if (runStepRow.step.assigneeType !== "user" || runStepRow.step.assigneeUserId !== userId) {
+        return null;
+      }
+
+      // If there's a linked issue, mark it as done
+      if (runStepRow.runStep.issueId) {
+        await db
+          .update(issues)
+          .set({ status: "done", completedAt: new Date(), updatedAt: new Date() })
+          .where(eq(issues.id, runStepRow.runStep.issueId));
+      }
+
+      // Mark the run step as completed
+      await db
+        .update(pipelineRunSteps)
+        .set({ status: "completed", completedAt: new Date(), updatedAt: new Date() })
+        .where(eq(pipelineRunSteps.id, runStepId));
+
+      // Cascade to next steps
+      await evaluateReadySteps(runId);
+      return runId;
     },
   };
 }

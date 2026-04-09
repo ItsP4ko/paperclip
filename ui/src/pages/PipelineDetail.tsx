@@ -10,6 +10,8 @@ import { projectsApi } from "../api/projects";
 import { accessApi, type CompanyMember } from "../api/access";
 import { issuesApi } from "../api/issues";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { ArrowLeft, GitBranch, Play, X } from "lucide-react";
 import { PipelineCanvas } from "../components/pipeline/PipelineCanvas";
 import { StepSidePanel } from "../components/pipeline/StepSidePanel";
@@ -26,6 +28,12 @@ export function PipelineDetail() {
   const { data: pipeline, isLoading } = useQuery({
     queryKey: queryKeys.pipelines.detail(selectedCompanyId!, pipelineId!),
     queryFn: () => pipelinesApi.get(selectedCompanyId!, pipelineId!),
+    enabled: !!selectedCompanyId && !!pipelineId,
+  });
+
+  const { data: runs = [] } = useQuery({
+    queryKey: queryKeys.pipelines.runs(selectedCompanyId!, pipelineId),
+    queryFn: () => pipelinesApi.listRuns(selectedCompanyId!, pipelineId!),
     enabled: !!selectedCompanyId && !!pipelineId,
   });
 
@@ -72,18 +80,21 @@ export function PipelineDetail() {
   );
 
   const addStepMutation = useMutation({
-    mutationFn: (type: "action" | "if_else") =>
-      pipelinesApi.createStep(selectedCompanyId!, pipelineId!, {
+    mutationFn: (type: "action" | "if_else") => {
+      const lastStep = pipeline?.steps[pipeline.steps.length - 1];
+      return pipelinesApi.createStep(selectedCompanyId!, pipelineId!, {
         name: type === "action" ? "New Action" : "New Condition",
         stepType: type,
         position: (pipeline?.steps.length ?? 0),
+        dependsOn: lastStep ? [lastStep.id] : [],
         config: type === "if_else" ? {
           branches: [
             { id: "branch-yes", label: "Yes", condition: { field: "status", operator: "eq", value: "done" }, nextStepIds: [] },
             { id: "branch-no", label: "No", condition: null, nextStepIds: [] },
           ],
         } : {},
-      }),
+      });
+    },
     onSuccess: (step) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(selectedCompanyId!, pipelineId!) });
       setSelectedStepId(step.id);
@@ -93,9 +104,7 @@ export function PipelineDetail() {
   const updatePositionMutation = useMutation({
     mutationFn: ({ stepId, positionX, positionY }: { stepId: string; positionX: number; positionY: number }) =>
       pipelinesApi.updateStep(selectedCompanyId!, pipelineId!, stepId, { positionX, positionY }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(selectedCompanyId!, pipelineId!) });
-    },
+    // Do NOT invalidate query on position save — causes snap-back/ghost effect during drag
   });
 
   const batchPositionsMutation = useMutation({
@@ -117,10 +126,13 @@ export function PipelineDetail() {
 
   const updateStepMutation = useMutation({
     mutationFn: ({ stepId, data }: { stepId: string; data: Record<string, unknown> }) =>
-      pipelinesApi.updateStep(selectedCompanyId!, pipelineId!, stepId, data),
+      pipelinesApi.updateStep(selectedCompanyId!, pipelineId!, stepId, data as Parameters<typeof pipelinesApi.updateStep>[3]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(selectedCompanyId!, pipelineId!) });
       setSelectedStepId(null);
+    },
+    onError: (err) => {
+      console.error("updateStep failed:", err);
     },
   });
 
@@ -202,13 +214,36 @@ export function PipelineDetail() {
         </Button>
         <GitBranch className="h-4 w-4 text-muted-foreground" />
         <h1 className="text-base font-semibold flex-1 truncate">{pipeline.name}</h1>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => navigate(`/pipelines/${pipelineId}/runs`)}
-        >
-          View Runs
-        </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline">View Runs</Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-72 p-0">
+            <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
+              {runs.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-2">No runs yet</p>
+              ) : (
+                runs.slice().reverse().map(run => (
+                  <button
+                    key={run.id}
+                    className="flex items-center justify-between w-full px-3 py-2 text-sm rounded-md hover:bg-accent"
+                    onClick={() => navigate(`/pipelines/${pipelineId}/runs/${run.id}`)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Badge variant={run.status === "completed" ? "outline" : run.status === "failed" ? "destructive" : "default"} className="text-[10px] capitalize">
+                        {run.status}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{run.triggeredBy ?? "manual"}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(run.createdAt).toLocaleDateString()}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
         {runningWith ? (
           <div className="flex items-center gap-2">
             <select
@@ -266,6 +301,13 @@ export function PipelineDetail() {
           onAddStep={(type) => addStepMutation.mutate(type)}
           onAddStepBetween={handleAddStepBetween}
           onAddStepFromNode={handleAddStepFromNode}
+          onUnlinkSteps={(sourceId, targetId) => {
+            const targetStep = pipeline.steps.find(s => s.id === targetId);
+            if (targetStep) {
+              const newDeps = targetStep.dependsOn.filter(d => d !== sourceId);
+              updateStepDepsMutation.mutate({ stepId: targetId, dependsOn: newDeps });
+            }
+          }}
           onAutoLayout={(positions) => batchPositionsMutation.mutate(positions)}
         />
         {selectedStepId && pipeline.steps.find((s) => s.id === selectedStepId) && (

@@ -35,7 +35,6 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
   const [agentId, setAgentId] = useState(step.agentId ?? "");
   const [assigneeUserId, setAssigneeUserId] = useState(step.assigneeUserId ?? "");
   const [issueId, setIssueId] = useState(step.issueId ?? "");
-  const [dependsOn, setDependsOn] = useState<string[]>(step.dependsOn);
   const [branches, setBranches] = useState<BranchForm[]>(() => {
     const config = step.config as { branches?: BranchForm[] };
     return config.branches ?? [
@@ -50,7 +49,6 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
     setAgentId(step.agentId ?? "");
     setAssigneeUserId(step.assigneeUserId ?? "");
     setIssueId(step.issueId ?? "");
-    setDependsOn(step.dependsOn);
     const config = step.config as { branches?: BranchForm[] };
     setBranches(config.branches ?? [
       { id: "branch-yes", label: "Yes", condition: { field: "status", operator: "eq", value: "done" }, nextStepIds: [] },
@@ -59,11 +57,20 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
   }, [step]);
 
   function handleSave() {
-    const data: Record<string, unknown> = { name, dependsOn };
+    const data: Record<string, unknown> = { name };
     if (step.stepType === "action") {
-      data.assigneeType = assigneeType || undefined;
-      data.agentId = assigneeType === "agent" ? agentId || null : null;
-      data.assigneeUserId = assigneeType === "user" ? assigneeUserId || null : null;
+      if (assigneeType === "agent") {
+        data.assigneeType = "agent";
+        data.agentId = agentId || null;
+        data.assigneeUserId = null;
+      } else if (assigneeType === "user") {
+        data.assigneeType = "user";
+        data.assigneeUserId = assigneeUserId || null;
+        data.agentId = null;
+      } else {
+        data.agentId = null;
+        data.assigneeUserId = null;
+      }
       data.issueId = issueId || null;
     } else {
       data.config = { branches };
@@ -74,7 +81,7 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
   const otherSteps = allSteps.filter((s) => s.id !== step.id);
 
   return (
-    <div className="w-80 border-l border-border bg-card h-full overflow-y-auto p-4 space-y-4">
+    <div className="w-80 border-l border-border bg-card h-full overflow-y-auto p-4 space-y-4 relative z-20">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold">{step.stepType === "if_else" ? "Edit Condition" : "Edit Step"}</span>
         <Button variant="ghost" size="icon-sm" onClick={onClose}><X className="h-4 w-4" /></Button>
@@ -117,7 +124,7 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
             <label className="text-xs text-muted-foreground">Linked issue</label>
             <select value={issueId} onChange={(e) => setIssueId(e.target.value)} className="w-full text-sm bg-background border border-border rounded px-2 py-1.5 outline-none">
               <option value="">None</option>
-              {issues.map((i) => <option key={i.id} value={i.id}>{i.identifier ? `${i.identifier} - ` : ""}{i.title}</option>)}
+              {issues.filter((i: any) => !i.status || i.status === "backlog" || i.status === "todo").map((i) => <option key={i.id} value={i.id}>{i.identifier ? `${i.identifier} - ` : ""}{i.title}</option>)}
             </select>
           </div>
         </>
@@ -132,20 +139,29 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
                 const next = [...branches]; next[idx] = { ...next[idx], label: e.target.value }; setBranches(next);
               }} className="w-full text-sm bg-background border border-border rounded px-2 py-1 outline-none" placeholder="Branch label" />
               {branch.condition !== null ? (
-                <div className="flex gap-1">
-                  <select value={branch.condition.field} onChange={(e) => {
-                    const next = [...branches]; next[idx] = { ...next[idx], condition: { ...branch.condition!, field: e.target.value } }; setBranches(next);
-                  }} className="flex-1 text-xs bg-background border border-border rounded px-1.5 py-1 outline-none">
-                    {FIELDS.map((f) => <option key={f} value={f}>{f}</option>)}
-                  </select>
-                  <select value={branch.condition.operator} onChange={(e) => {
-                    const next = [...branches]; next[idx] = { ...next[idx], condition: { ...branch.condition!, operator: e.target.value } }; setBranches(next);
-                  }} className="w-20 text-xs bg-background border border-border rounded px-1.5 py-1 outline-none">
-                    {OPERATORS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                  <input value={branch.condition.value} onChange={(e) => {
-                    const next = [...branches]; next[idx] = { ...next[idx], condition: { ...branch.condition!, value: e.target.value } }; setBranches(next);
-                  }} className="flex-1 text-xs bg-background border border-border rounded px-1.5 py-1 outline-none" placeholder="value" />
+                <div className="space-y-1.5">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground">Field</span>
+                    <select value={branch.condition.field} onChange={(e) => {
+                      const next = [...branches]; next[idx] = { ...next[idx], condition: { ...branch.condition!, field: e.target.value } }; setBranches(next);
+                    }} className="w-full text-xs bg-background border border-border rounded px-2 py-1.5 outline-none">
+                      {FIELDS.map((f) => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground">Operator</span>
+                    <select value={branch.condition.operator} onChange={(e) => {
+                      const next = [...branches]; next[idx] = { ...next[idx], condition: { ...branch.condition!, operator: e.target.value } }; setBranches(next);
+                    }} className="w-full text-xs bg-background border border-border rounded px-2 py-1.5 outline-none">
+                      {OPERATORS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground">Value</span>
+                    <input value={branch.condition.value} onChange={(e) => {
+                      const next = [...branches]; next[idx] = { ...next[idx], condition: { ...branch.condition!, value: e.target.value } }; setBranches(next);
+                    }} className="w-full text-xs bg-background border border-border rounded px-2 py-1.5 outline-none" placeholder="value" />
+                  </div>
                 </div>
               ) : (
                 <span className="text-xs text-muted-foreground">Else (default branch)</span>
@@ -168,20 +184,6 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {otherSteps.length > 0 && (
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Depends on</label>
-          <div className="flex flex-wrap gap-1">
-            {otherSteps.map((s) => (
-              <button key={s.id} onClick={() => setDependsOn((prev) => prev.includes(s.id) ? prev.filter((d) => d !== s.id) : [...prev, s.id])}
-                className={`text-xs px-2 py-0.5 rounded border transition-colors ${dependsOn.includes(s.id) ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:bg-accent"}`}>
-                {s.name}
-              </button>
-            ))}
-          </div>
         </div>
       )}
 

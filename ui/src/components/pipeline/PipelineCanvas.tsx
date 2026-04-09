@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ReactFlow,
   Background,
@@ -40,12 +40,13 @@ interface PipelineCanvasProps {
   onAddStep: (type: "action" | "if_else") => void;
   onAddStepBetween: (sourceId: string, targetId: string) => void;
   onAddStepFromNode: (sourceNodeId: string) => void;
+  onUnlinkSteps: (sourceId: string, targetId: string) => void;
   onAutoLayout: (positions: Array<{ stepId: string; positionX: number; positionY: number }>) => void;
 }
 
 export function PipelineCanvas({
   steps, agentNames, memberNames,
-  onUpdateStepPosition, onUpdateStepDeps, onDeleteStep, onSelectStep, onAddStep, onAddStepBetween, onAddStepFromNode, onAutoLayout,
+  onUpdateStepPosition, onUpdateStepDeps, onDeleteStep, onSelectStep, onAddStep, onAddStepBetween, onAddStepFromNode, onUnlinkSteps, onAutoLayout,
 }: PipelineCanvasProps) {
   const connectingNodeId = useRef<string | null>(null);
   const rawNodes = useMemo(
@@ -56,7 +57,10 @@ export function PipelineCanvas({
     const edges = stepsToEdges(steps);
     return edges.map(e => ({
       ...e,
-      data: { onAddStep: (sourceId: string, targetId: string) => onAddStepBetween(sourceId, targetId) },
+      data: {
+        onAddStep: (sourceId: string, targetId: string) => onAddStepBetween(sourceId, targetId),
+        onUnlink: (sourceId: string, targetId: string) => onUnlinkSteps(sourceId, targetId),
+      },
     }));
   }, [steps, onAddStepBetween]);
   const layoutNodes = useAutoLayout(rawNodes, rawEdges);
@@ -64,8 +68,16 @@ export function PipelineCanvas({
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rawEdges);
 
-  // Sync when steps change
-  useMemo(() => { setNodes(layoutNodes); setEdges(rawEdges); }, [layoutNodes, rawEdges, setNodes, setEdges]);
+  // Only sync from server when steps actually change (add/delete/edit), not on every render
+  const prevStepIdsRef = useRef<string>("");
+  useEffect(() => {
+    const stepKey = steps.map(s => `${s.id}:${s.name}:${s.stepType}:${s.assigneeType}`).join("|");
+    if (stepKey !== prevStepIdsRef.current) {
+      prevStepIdsRef.current = stepKey;
+      setNodes(layoutNodes);
+      setEdges(rawEdges);
+    }
+  }, [layoutNodes, rawEdges, setNodes, setEdges, steps]);
 
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_event, node) => { onUpdateStepPosition(node.id, node.position.x, node.position.y); },
@@ -113,8 +125,19 @@ export function PipelineCanvas({
 
   const handleAutoLayout = useCallback(() => {
     const reLayout = computeFullLayout(nodes, edges);
-    setNodes(reLayout);
-    onAutoLayout(reLayout.map((n) => ({ stepId: n.id, positionX: n.position.x, positionY: n.position.y })));
+    // Animate nodes to new positions
+    setNodes(reLayout.map(n => ({
+      ...n,
+      style: { ...n.style, transition: "all 0.5s ease" },
+    })));
+    // Remove transition style after animation completes
+    setTimeout(() => {
+      setNodes(prev => prev.map(n => ({
+        ...n,
+        style: { ...n.style, transition: undefined },
+      })));
+    }, 600);
+    onAutoLayout(reLayout.map(n => ({ stepId: n.id, positionX: n.position.x, positionY: n.position.y })));
   }, [nodes, edges, setNodes, onAutoLayout]);
 
   return (
@@ -140,6 +163,7 @@ export function PipelineCanvas({
         onPaneClick={() => onSelectStep(null)}
         nodeTypes={nodeTypes} edgeTypes={edgeTypes}
         fitView fitViewOptions={{ padding: 0.2 }}
+        snapToGrid={true} snapGrid={[20, 20]}
         deleteKeyCode="Delete" className="bg-background"
       >
         <Background gap={20} size={1} className="!bg-muted/30" />
