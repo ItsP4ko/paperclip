@@ -1,7 +1,8 @@
 name: Desktop Release
 
-# Builds the Tauri desktop app and uploads signed artifacts to the GitHub
-# release whenever a vX.Y.Z tag is pushed to master.
+# Builds the Tauri desktop app for macOS (aarch64 + x86_64) and Windows,
+# then publishes a merged latest.json so the in-app updater can find every
+# platform.
 #
 # Required secrets:
 #   TAURI_SIGNING_PRIVATE_KEY          — minisign private key (full file contents)
@@ -19,7 +20,7 @@ on:
         type: string
 
 jobs:
-  build-macos:
+  build-macos-aarch64:
     name: Build macOS (Apple Silicon)
     runs-on: macos-14
     permissions:
@@ -85,7 +86,6 @@ jobs:
           cd -
 
           echo "Signing with tauri signer..."
-          # TAURI_SIGNING_PRIVATE_KEY is already in env; tauri signer sign reads it automatically
           npx tauri signer sign \
             --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
             "$TARGZ"
@@ -99,8 +99,10 @@ jobs:
           echo "targz=$TARGZ" >> "$GITHUB_OUTPUT"
           echo "sig=$SIG"     >> "$GITHUB_OUTPUT"
 
-      - name: Prepare artifacts and latest.json
+      - name: Prepare artifacts and upload to release
         id: artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           REF_TAG="${{ github.event.inputs.tag || github.ref_name }}"
@@ -113,35 +115,11 @@ jobs:
 
           SIGNATURE=$(cat "$SIG")
           TARGZ_FILENAME=$(basename "$TARGZ" | tr ' ' '.')
-          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
 
           # Version-less DMG keeps a stable /releases/latest/download/ URL
           DMG_VERSIONLESS="$(dirname "$DMG")/Relay.Control_aarch64.dmg"
           cp "$DMG" "$DMG_VERSIONLESS"
 
-          cat > /tmp/latest.json <<EOF
-          {
-            "version": "$VERSION",
-            "notes": "v$VERSION",
-            "pub_date": "$PUB_DATE",
-            "platforms": {
-              "darwin-aarch64": {
-                "signature": "$SIGNATURE",
-                "url": "https://github.com/${{ github.repository }}/releases/download/v$VERSION/$TARGZ_FILENAME"
-              }
-            }
-          }
-          EOF
-
-          echo "dmg=$DMG"                         >> "$GITHUB_OUTPUT"
-          echo "dmg_versionless=$DMG_VERSIONLESS" >> "$GITHUB_OUTPUT"
-          echo "targz=$TARGZ"                     >> "$GITHUB_OUTPUT"
-          echo "sig=$SIG"                         >> "$GITHUB_OUTPUT"
-
-      - name: Upload artifacts to GitHub release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
           TAG="${{ github.event.inputs.tag || github.ref_name }}"
           REPO="${GITHUB_REPOSITORY}"
 
@@ -152,10 +130,299 @@ jobs:
           fi
 
           gh release upload "$TAG" \
-            "${{ steps.artifacts.outputs.dmg }}" \
-            "${{ steps.artifacts.outputs.dmg_versionless }}" \
-            "${{ steps.artifacts.outputs.targz }}" \
-            "${{ steps.artifacts.outputs.sig }}" \
-            "/tmp/latest.json" \
+            "$DMG" \
+            "$DMG_VERSIONLESS" \
+            "$TARGZ" \
+            "$SIG" \
+            --repo "$REPO" \
+            --clobber
+
+          # Write metadata for the publish-latest-json job
+          mkdir -p "$RUNNER_TEMP/updater-meta"
+          cat > "$RUNNER_TEMP/updater-meta/darwin-aarch64.json" <<EOF
+          {
+            "signature": "$SIGNATURE",
+            "url": "https://github.com/$REPO/releases/download/v$VERSION/$TARGZ_FILENAME"
+          }
+          EOF
+
+      - name: Upload updater metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-meta-darwin-aarch64
+          path: ${{ runner.temp }}/updater-meta/darwin-aarch64.json
+
+  build-macos-x86_64:
+    name: Build macOS (Intel)
+    runs-on: macos-13
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Tauri app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: pnpm desktop:build
+
+      - name: Sign updater bundle (manual fallback)
+        id: sign
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          BUNDLE_DIR="src-tauri/target/release/bundle/macos"
+          APP=$(find "$BUNDLE_DIR" -maxdepth 1 -name "*.app" -type d | head -1)
+
+          if [ -z "$APP" ]; then
+            echo "::error::.app bundle not found"
+            exit 1
+          fi
+
+          APP_NAME=$(basename "$APP" .app)
+          TARGZ="$BUNDLE_DIR/${APP_NAME}.app.tar.gz"
+          SIG="$TARGZ.sig"
+
+          if [ -f "$SIG" ]; then
+            echo "Auto-signed by Tauri — skipping manual step"
+            echo "targz=$TARGZ" >> "$GITHUB_OUTPUT"
+            echo "sig=$SIG"     >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Creating tar.gz manually..."
+          cd "$BUNDLE_DIR"
+          tar czf "${APP_NAME}.app.tar.gz" "${APP_NAME}.app"
+          cd -
+
+          echo "Signing with tauri signer..."
+          npx tauri signer sign \
+            --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
+            "$TARGZ"
+
+          if [ ! -f "$SIG" ]; then
+            echo "::error::Signing failed — .sig not generated"
+            exit 1
+          fi
+
+          echo "Signed successfully"
+          echo "targz=$TARGZ" >> "$GITHUB_OUTPUT"
+          echo "sig=$SIG"     >> "$GITHUB_OUTPUT"
+
+      - name: Prepare artifacts and upload to release
+        id: artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          REF_TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${REF_TAG#v}"
+          BUNDLE_DIR="src-tauri/target/release/bundle"
+
+          DMG=$(find "$BUNDLE_DIR/dmg" -name "*.dmg" | head -1)
+          TARGZ="${{ steps.sign.outputs.targz }}"
+          SIG="${{ steps.sign.outputs.sig }}"
+
+          SIGNATURE=$(cat "$SIG")
+          TARGZ_FILENAME=$(basename "$TARGZ" | tr ' ' '.')
+
+          DMG_VERSIONLESS="$(dirname "$DMG")/Relay.Control_x86_64.dmg"
+          cp "$DMG" "$DMG_VERSIONLESS"
+
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          REPO="${GITHUB_REPOSITORY}"
+
+          if ! gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" -R "$REPO" \
+              --title "$TAG Desktop" \
+              --notes ""
+          fi
+
+          gh release upload "$TAG" \
+            "$DMG" \
+            "$DMG_VERSIONLESS" \
+            "$TARGZ" \
+            "$SIG" \
+            --repo "$REPO" \
+            --clobber
+
+          mkdir -p "$RUNNER_TEMP/updater-meta"
+          cat > "$RUNNER_TEMP/updater-meta/darwin-x86_64.json" <<EOF
+          {
+            "signature": "$SIGNATURE",
+            "url": "https://github.com/$REPO/releases/download/v$VERSION/$TARGZ_FILENAME"
+          }
+          EOF
+
+      - name: Upload updater metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-meta-darwin-x86_64
+          path: ${{ runner.temp }}/updater-meta/darwin-x86_64.json
+
+  build-windows:
+    name: Build Windows (x86_64)
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Tauri app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: pnpm desktop:build
+
+      - name: Locate NSIS installer and signature
+        id: sign
+        shell: bash
+        run: |
+          BUNDLE_DIR="src-tauri/target/release/bundle/nsis"
+          INSTALLER=$(find "$BUNDLE_DIR" -name "*.exe" | head -1)
+          SIG="${INSTALLER}.sig"
+
+          if [ ! -f "$SIG" ]; then
+            echo "::error::Signature file not found — expected $SIG"
+            exit 1
+          fi
+
+          echo "installer=$INSTALLER" >> "$GITHUB_OUTPUT"
+          echo "sig=$SIG"             >> "$GITHUB_OUTPUT"
+
+      - name: Prepare artifacts and upload to release
+        id: artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          REF_TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${REF_TAG#v}"
+
+          INSTALLER="${{ steps.sign.outputs.installer }}"
+          SIG="${{ steps.sign.outputs.sig }}"
+          SIGNATURE=$(cat "$SIG")
+          INSTALLER_FILENAME=$(basename "$INSTALLER" | tr ' ' '.')
+
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          REPO="${GITHUB_REPOSITORY}"
+
+          if ! gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" -R "$REPO" \
+              --title "$TAG Desktop" \
+              --notes ""
+          fi
+
+          gh release upload "$TAG" \
+            "$INSTALLER" \
+            "$SIG" \
+            --repo "$REPO" \
+            --clobber
+
+          mkdir -p "$RUNNER_TEMP/updater-meta"
+          cat > "$RUNNER_TEMP/updater-meta/windows-x86_64.json" <<EOF
+          {
+            "signature": "$SIGNATURE",
+            "url": "https://github.com/$REPO/releases/download/v$VERSION/$INSTALLER_FILENAME"
+          }
+          EOF
+
+      - name: Upload updater metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-meta-windows-x86_64
+          path: ${{ runner.temp }}/updater-meta/windows-x86_64.json
+
+  publish-latest-json:
+    name: Publish latest.json
+    needs: [build-macos-aarch64, build-macos-x86_64, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all updater metadata
+        uses: actions/download-artifact@v4
+        with:
+          pattern: updater-meta-*
+          path: /tmp/updater-meta
+          merge-multiple: true
+
+      - name: Build and upload latest.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+          REPO="${{ github.repository }}"
+
+          # Read per-platform metadata fragments
+          DARWIN_AARCH64=$(cat /tmp/updater-meta/darwin-aarch64.json)
+          DARWIN_X86_64=$(cat /tmp/updater-meta/darwin-x86_64.json)
+          WINDOWS_X86_64=$(cat /tmp/updater-meta/windows-x86_64.json)
+
+          # Merge into final latest.json using jq
+          jq -n \
+            --arg version "$VERSION" \
+            --arg notes "v$VERSION" \
+            --arg pub_date "$PUB_DATE" \
+            --argjson darwin_aarch64 "$DARWIN_AARCH64" \
+            --argjson darwin_x86_64 "$DARWIN_X86_64" \
+            --argjson windows_x86_64 "$WINDOWS_X86_64" \
+            '{
+              version: $version,
+              notes: $notes,
+              pub_date: $pub_date,
+              platforms: {
+                "darwin-aarch64": $darwin_aarch64,
+                "darwin-x86_64": $darwin_x86_64,
+                "windows-x86_64": $windows_x86_64
+              }
+            }' > /tmp/latest.json
+
+          gh release upload "$TAG" \
+            /tmp/latest.json \
             --repo "$REPO" \
             --clobber
