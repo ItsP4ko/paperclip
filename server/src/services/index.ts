@@ -35,4 +35,5 @@ export { reconcilePersistedRuntimeServicesOnStartup, restartDesiredRuntimeServic
 export { createStorageServiceFromConfig, getStorageService } from "../storage/index.js";
 export { pipelineService } from "./pipelines.js";
 export { sprintService } from "./sprints.js";
+export { searchService } from "./search.js";
 export { brainService } from "./brain.js";
