@@ -12,7 +12,7 @@ import type { RedisClientType } from "redis";
 import { actorMiddleware } from "./middleware/auth.js";
 import { boardMutationGuard } from "./middleware/board-mutation-guard.js";
 import { privateHostnameGuard, resolvePrivateHostnameAllowSet } from "./middleware/private-hostname-guard.js";
-import { createRemotePinAuthMiddleware, createRemotePinAuthHandler } from "./middleware/remote-pin-auth.js";
+import { createRemotePinAuthMiddleware, createRemotePinAuthHandler, parseCookies, validatePinSession, SESSION_COOKIE } from "./middleware/remote-pin-auth.js";
 import { healthRoutes } from "./routes/health.js";
 import { companyRoutes } from "./routes/companies.js";
 import { companySkillRoutes } from "./routes/company-skills.js";
@@ -177,6 +177,29 @@ export async function createApp(
       resolveSession: opts.resolveSession,
     }),
   );
+
+  // Promote PIN-authenticated requests to board access.
+  // The actor middleware does not know about PIN sessions, so requests that
+  // passed the PIN gate still end up as { type: "none" }.  This middleware
+  // fills the gap: if we are in remote-PIN mode and the request carries a
+  // valid rc_session cookie, upgrade the actor to a local board user.
+  if (remotePin && opts.deploymentExposure === "private") {
+    app.use((req, _res, next) => {
+      if (req.actor.type === "none") {
+        const cookies = parseCookies(req.headers.cookie);
+        if (validatePinSession(cookies[SESSION_COOKIE] ?? "", remotePin)) {
+          req.actor = {
+            type: "board",
+            userId: "local-board",
+            isInstanceAdmin: true,
+            source: "remote_pin",
+          };
+        }
+      }
+      next();
+    });
+  }
+
   app.get("/api/auth/get-session", (req, res) => {
     if (req.actor.type !== "board" || !req.actor.userId) {
       res.status(401).json({ error: "Unauthorized" });
