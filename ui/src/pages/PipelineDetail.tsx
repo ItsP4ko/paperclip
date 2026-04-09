@@ -104,9 +104,7 @@ export function PipelineDetail() {
   const updatePositionMutation = useMutation({
     mutationFn: ({ stepId, positionX, positionY }: { stepId: string; positionX: number; positionY: number }) =>
       pipelinesApi.updateStep(selectedCompanyId!, pipelineId!, stepId, { positionX, positionY }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(selectedCompanyId!, pipelineId!) });
-    },
+    // Do NOT invalidate query on position save — causes snap-back/ghost effect during drag
   });
 
   const batchPositionsMutation = useMutation({

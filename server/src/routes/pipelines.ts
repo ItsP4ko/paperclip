@@ -24,15 +24,15 @@ const updatePipelineSchema = z.object({
 
 const createPipelineStepSchema = z.object({
   name:           z.string().min(1),
-  agentId:        z.string().optional(),
-  assigneeType:   z.enum(["agent", "user"]).optional(),
-  assigneeUserId: z.string().optional(),
-  issueId:        z.string().optional(),
+  agentId:        z.string().nullable().optional(),
+  assigneeType:   z.enum(["agent", "user"]).nullable().optional(),
+  assigneeUserId: z.string().nullable().optional(),
+  issueId:        z.string().nullable().optional(),
   dependsOn:      z.array(z.string()).optional(),
   position:       z.number().optional(),
   config:         z.record(z.unknown()).optional(),
-  positionX:      z.number().optional(),
-  positionY:      z.number().optional(),
+  positionX:      z.number().nullable().optional(),
+  positionY:      z.number().nullable().optional(),
   stepType:       z.enum(["action", "if_else"]).optional(),
 });
 
