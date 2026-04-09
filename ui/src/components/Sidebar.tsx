@@ -140,7 +140,6 @@ export function Sidebar() {
           <SidebarNavItem to="/issues" label="Issues" icon={CircleDot} />
           <SidebarNavItem to="/my-tasks" label="My Tasks" icon={ListTodo} badge={badges?.myTasks} />
           <SidebarNavItem to="/routines" label="Routines" icon={Repeat} textBadge="Beta" textBadgeTone="amber" />
-          <SidebarNavItem to="/sprints" label="Sprints" icon={Milestone} />
           <SidebarNavItem to="/pipelines" label="Pipelines" icon={GitBranch} />
           <SidebarNavItem to="/goals" label="Goals" icon={Target} />
         </SidebarSection>

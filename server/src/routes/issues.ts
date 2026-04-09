@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import multer from "multer";
 import { z } from "zod";
 import type { Db } from "@paperclipai/db";
+import { issueStateHistory } from "@paperclipai/db";
 import type { RedisClientType } from "redis";
 import {
   addIssueCommentSchema,
@@ -1208,6 +1209,23 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
       res.status(404).json({ error: "Issue not found" });
       return;
     }
+
+    // Record state history if status changed
+    if (updateFields.status && updateFields.status !== existing.status) {
+      const durationMs = existing.updatedAt
+        ? Date.now() - new Date(existing.updatedAt).getTime()
+        : null;
+      await db.insert(issueStateHistory).values({
+        issueId: id,
+        sprintId: existing.sprintId ?? null,
+        fromStatus: existing.status,
+        toStatus: updateFields.status as string,
+        changedByType: actor.actorType,
+        changedById: actor.actorId,
+        durationMs,
+      });
+    }
+
     await routinesSvc.syncRunStatusForIssue(issue.id);
 
     if (actor.runId) {

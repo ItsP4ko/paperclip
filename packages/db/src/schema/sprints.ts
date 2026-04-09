@@ -1,11 +1,11 @@
 import { pgTable, uuid, text, timestamp, date, index } from "drizzle-orm/pg-core";
-import { companies } from "./companies.js";
+import { projects } from "./projects.js";
 
 export const sprints = pgTable(
   "sprints",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
     status: text("status").notNull().default("planning"),
@@ -17,6 +17,6 @@ export const sprints = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
-    companyStatusIdx: index("sprints_company_status_idx").on(table.companyId, table.status),
+    projectStatusIdx: index("sprints_project_status_idx").on(table.projectId, table.status),
   }),
 );
