@@ -193,12 +193,24 @@ export function PipelineDetail() {
     },
   });
 
+  // If pipeline has any runs, redirect to the latest run
+  const activeRun = runs.find((r: any) => r.status === "running") ?? (runs.length > 0 ? runs[runs.length - 1] : null);
+  useEffect(() => {
+    if (activeRun && pipeline) {
+      navigate(`/pipelines/${pipelineId}/runs/${activeRun.id}`, { replace: true });
+    }
+  }, [activeRun, pipeline, pipelineId, navigate]);
+
   if (!selectedCompanyId) return null;
   if (isLoading) {
     return <div className="px-6 py-8 text-sm text-muted-foreground">Loading...</div>;
   }
   if (!pipeline) {
     return <div className="px-6 py-8 text-sm text-destructive">Pipeline not found.</div>;
+  }
+  // If redirecting to run, show loading
+  if (activeRun) {
+    return <div className="px-6 py-8 text-sm text-muted-foreground">Loading run...</div>;
   }
 
   return (
