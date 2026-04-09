@@ -31,6 +31,9 @@ const createPipelineStepSchema = z.object({
   dependsOn:      z.array(z.string()).optional(),
   position:       z.number().optional(),
   config:         z.record(z.unknown()).optional(),
+  positionX:      z.number().optional(),
+  positionY:      z.number().optional(),
+  stepType:       z.enum(["action", "if_else"]).optional(),
 });
 
 const updatePipelineStepSchema = createPipelineStepSchema.partial();
@@ -39,6 +42,14 @@ const createPipelineFromIssuesSchema = z.object({
   name:        z.string().min(1),
   description: z.string().optional(),
   issueIds:    z.array(z.string()).min(1),
+});
+
+const batchPositionsSchema = z.object({
+  positions: z.array(z.object({
+    stepId: z.string(),
+    positionX: z.number(),
+    positionY: z.number(),
+  })).min(1),
 });
 
 const triggerPipelineRunSchema = z.object({
@@ -125,7 +136,7 @@ export function pipelineRoutes(db: Db, redisClient?: RedisClientType) {
     const companyId = req.params.companyId as string;
     const pipelineId = req.params.pipelineId as string;
     assertCompanyAccess(req, companyId);
-    const { name, agentId, assigneeType, assigneeUserId, issueId, dependsOn, position, config } = req.body;
+    const { name, agentId, assigneeType, assigneeUserId, issueId, dependsOn, position, config, positionX, positionY, stepType } = req.body;
     const step = await svc.createStep(companyId, pipelineId, {
       name,
       agentId,
@@ -135,6 +146,9 @@ export function pipelineRoutes(db: Db, redisClient?: RedisClientType) {
       dependsOn,
       position,
       config,
+      positionX,
+      positionY,
+      stepType,
     });
     if (!step) throw notFound("Pipeline not found");
     await redisClient?.del(`paperclip:pipeline:detail:${pipelineId}`).catch(() => null);
@@ -150,7 +164,7 @@ export function pipelineRoutes(db: Db, redisClient?: RedisClientType) {
       const pipelineId = req.params.pipelineId as string;
       const stepId = req.params.stepId as string;
       assertCompanyAccess(req, companyId);
-      const { name, agentId, assigneeType, assigneeUserId, issueId, dependsOn, position, config } = req.body;
+      const { name, agentId, assigneeType, assigneeUserId, issueId, dependsOn, position, config, positionX, positionY, stepType } = req.body;
       const step = await svc.updateStep(companyId, pipelineId, stepId, {
         name,
         agentId,
@@ -160,6 +174,9 @@ export function pipelineRoutes(db: Db, redisClient?: RedisClientType) {
         dependsOn,
         position,
         config,
+        positionX,
+        positionY,
+        stepType,
       });
       if (!step) throw notFound("Step not found");
       await redisClient?.del(`paperclip:pipeline:detail:${pipelineId}`).catch(() => null);
@@ -178,6 +195,21 @@ export function pipelineRoutes(db: Db, redisClient?: RedisClientType) {
       await svc.deleteStep(companyId, pipelineId, stepId);
       await redisClient?.del(`paperclip:pipeline:detail:${pipelineId}`).catch(() => null);
       res.status(204).send();
+    },
+  );
+
+  // Batch update step positions
+  router.patch(
+    "/companies/:companyId/pipelines/:pipelineId/steps/positions",
+    validate(batchPositionsSchema),
+    async (req, res) => {
+      const companyId = req.params.companyId as string;
+      const pipelineId = req.params.pipelineId as string;
+      assertCompanyAccess(req, companyId);
+      const { positions } = req.body;
+      await svc.batchUpdatePositions(companyId, pipelineId, positions);
+      await redisClient?.del(`paperclip:pipeline:detail:${pipelineId}`).catch(() => null);
+      res.json({ updated: positions.length });
     },
   );
 
