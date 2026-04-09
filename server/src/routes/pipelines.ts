@@ -1,10 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import type { Db } from "@paperclipai/db";
+import type { RedisClientType } from "redis";
 import { notFound } from "../errors.js";
 import { assertCompanyAccess } from "./authz.js";
 import { pipelineService } from "../services/pipelines.js";
 import { validate } from "../middleware/validate.js";
+
+const PIPELINE_DETAIL_TTL = 300;
+const PIPELINE_RUN_TTL = 300;
 
 const createPipelineSchema = z.object({
   name:        z.string().min(1),
@@ -19,21 +23,30 @@ const updatePipelineSchema = z.object({
 });
 
 const createPipelineStepSchema = z.object({
-  name:      z.string().min(1),
-  agentId:   z.string().optional(),
-  dependsOn: z.array(z.string()).optional(),
-  position:  z.number().optional(),
-  config:    z.record(z.unknown()).optional(),
+  name:           z.string().min(1),
+  agentId:        z.string().optional(),
+  assigneeType:   z.enum(["agent", "user"]).optional(),
+  assigneeUserId: z.string().optional(),
+  issueId:        z.string().optional(),
+  dependsOn:      z.array(z.string()).optional(),
+  position:       z.number().optional(),
+  config:         z.record(z.unknown()).optional(),
 });
 
 const updatePipelineStepSchema = createPipelineStepSchema.partial();
+
+const createPipelineFromIssuesSchema = z.object({
+  name:        z.string().min(1),
+  description: z.string().optional(),
+  issueIds:    z.array(z.string()).min(1),
+});
 
 const triggerPipelineRunSchema = z.object({
   projectId:   z.string().optional(),
   triggeredBy: z.string().optional(),
 });
 
-export function pipelineRoutes(db: Db) {
+export function pipelineRoutes(db: Db, redisClient?: RedisClientType) {
   const router = Router();
   const svc = pipelineService(db);
 
@@ -54,13 +67,34 @@ export function pipelineRoutes(db: Db) {
     res.status(201).json(pipeline);
   });
 
+  // Create pipeline from issues (MUST be before /:pipelineId routes)
+  router.post("/companies/:companyId/pipelines/from-issues", validate(createPipelineFromIssuesSchema), async (req, res) => {
+    const companyId = req.params.companyId as string;
+    assertCompanyAccess(req, companyId);
+    const { name, description, issueIds } = req.body;
+    const pipeline = await svc.createFromIssues(companyId, { name, description, issueIds });
+    res.status(201).json(pipeline);
+  });
+
   // Get pipeline detail (with steps)
   router.get("/companies/:companyId/pipelines/:pipelineId", async (req, res) => {
     const companyId = req.params.companyId as string;
     const pipelineId = req.params.pipelineId as string;
     assertCompanyAccess(req, companyId);
+
+    const cacheKey = `paperclip:pipeline:detail:${pipelineId}`;
+    if (redisClient?.isReady) {
+      const cached = await redisClient.get(cacheKey).catch(() => null);
+      if (cached) { res.json(JSON.parse(cached)); return; }
+    }
+
     const pipeline = await svc.getById(companyId, pipelineId);
     if (!pipeline) throw notFound("Pipeline not found");
+
+    if (redisClient?.isReady) {
+      await redisClient.set(cacheKey, JSON.stringify(pipeline), { EX: PIPELINE_DETAIL_TTL }).catch(() => null);
+    }
+
     res.json(pipeline);
   });
 
@@ -72,6 +106,7 @@ export function pipelineRoutes(db: Db) {
     const { name, description, status } = req.body;
     const pipeline = await svc.update(companyId, pipelineId, { name, description, status });
     if (!pipeline) throw notFound("Pipeline not found");
+    await redisClient?.del(`paperclip:pipeline:detail:${pipelineId}`).catch(() => null);
     res.json(pipeline);
   });
 
@@ -81,6 +116,7 @@ export function pipelineRoutes(db: Db) {
     const pipelineId = req.params.pipelineId as string;
     assertCompanyAccess(req, companyId);
     await svc.delete(companyId, pipelineId);
+    await redisClient?.del(`paperclip:pipeline:detail:${pipelineId}`).catch(() => null);
     res.status(204).send();
   });
 
@@ -89,15 +125,19 @@ export function pipelineRoutes(db: Db) {
     const companyId = req.params.companyId as string;
     const pipelineId = req.params.pipelineId as string;
     assertCompanyAccess(req, companyId);
-    const { name, agentId, dependsOn, position, config } = req.body;
+    const { name, agentId, assigneeType, assigneeUserId, issueId, dependsOn, position, config } = req.body;
     const step = await svc.createStep(companyId, pipelineId, {
       name,
       agentId,
+      assigneeType,
+      assigneeUserId,
+      issueId,
       dependsOn,
       position,
       config,
     });
     if (!step) throw notFound("Pipeline not found");
+    await redisClient?.del(`paperclip:pipeline:detail:${pipelineId}`).catch(() => null);
     res.status(201).json(step);
   });
 
@@ -110,15 +150,19 @@ export function pipelineRoutes(db: Db) {
       const pipelineId = req.params.pipelineId as string;
       const stepId = req.params.stepId as string;
       assertCompanyAccess(req, companyId);
-      const { name, agentId, dependsOn, position, config } = req.body;
+      const { name, agentId, assigneeType, assigneeUserId, issueId, dependsOn, position, config } = req.body;
       const step = await svc.updateStep(companyId, pipelineId, stepId, {
         name,
         agentId,
+        assigneeType,
+        assigneeUserId,
+        issueId,
         dependsOn,
         position,
         config,
       });
       if (!step) throw notFound("Step not found");
+      await redisClient?.del(`paperclip:pipeline:detail:${pipelineId}`).catch(() => null);
       res.json(step);
     },
   );
@@ -132,6 +176,7 @@ export function pipelineRoutes(db: Db) {
       const stepId = req.params.stepId as string;
       assertCompanyAccess(req, companyId);
       await svc.deleteStep(companyId, pipelineId, stepId);
+      await redisClient?.del(`paperclip:pipeline:detail:${pipelineId}`).catch(() => null);
       res.status(204).send();
     },
   );
@@ -165,8 +210,22 @@ export function pipelineRoutes(db: Db) {
     const companyId = req.params.companyId as string;
     const runId = req.params.runId as string;
     assertCompanyAccess(req, companyId);
+
+    const cacheKey = `paperclip:pipeline:run:${runId}`;
+    if (redisClient?.isReady) {
+      const cached = await redisClient.get(cacheKey).catch(() => null);
+      if (cached) { res.json(JSON.parse(cached)); return; }
+    }
+
     const run = await svc.getRunById(companyId, runId);
     if (!run) throw notFound("Run not found");
+
+    if (redisClient?.isReady) {
+      const isRunning = run.status === "running" || run.status === "pending";
+      const ttl = isRunning ? 5 : PIPELINE_RUN_TTL;
+      await redisClient.set(cacheKey, JSON.stringify(run), { EX: ttl }).catch(() => null);
+    }
+
     res.json(run);
   });
 
