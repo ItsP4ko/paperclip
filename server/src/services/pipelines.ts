@@ -447,9 +447,12 @@ export function pipelineService(db: Db) {
         }
       }
 
+      const { stepType, ...rest } = data;
+      const setData: Record<string, unknown> = { ...rest, updatedAt: new Date() };
+      if (stepType !== undefined && stepType !== null) setData.stepType = stepType;
       const [step] = await db
         .update(pipelineSteps)
-        .set({ ...data, updatedAt: new Date() })
+        .set(setData)
         .where(
           and(eq(pipelineSteps.id, stepId), eq(pipelineSteps.pipelineId, pipelineId)),
         )
