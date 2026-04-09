@@ -61,6 +61,8 @@
     {"idx": 56,"version": "7","when": 1775710000000,"tag": "0056_agent_md","breakpoints": true},
     {"idx": 57,"version": "7","when": 1775720000000,"tag": "0057_project_ai_context","breakpoints": true},
     {"idx": 58,"version": "7","when": 1775800000000,"tag": "0058_performance_indexes","breakpoints": true},
-    {"idx": 59,"version": "7","when": 1775810000000,"tag": "0059_sprints","breakpoints": true}
+    {"idx": 59,"version": "7","when": 1775810000000,"tag": "0059_sprints","breakpoints": true},
+    {"idx": 60,"version": "7","when": 1775820000000,"tag": "0060_pipeline_assignee_issues","breakpoints": true},
+    {"idx": 61,"version": "7","when": 1775830000000,"tag": "0061_fix_owner_role_downgrade","breakpoints": true}
   ]
 }
