@@ -234,7 +234,7 @@ async function executeJob(
 }
 
 // ---------------------------------------------------------------------------
-// Poll loop
+// SSE push loop
 // ---------------------------------------------------------------------------
 
 interface RunnerStartOptions {
@@ -245,55 +245,98 @@ interface RunnerStartOptions {
   apiBase?: string;
   apiKey?: string;
   json?: boolean;
-  pollInterval?: string;
   concurrency?: string;
   verbose?: boolean;
 }
 
 async function runnerStart(opts: RunnerStartOptions): Promise<void> {
-  const pollIntervalMs = Math.max(500, Number(opts.pollInterval ?? "3000") || 3000);
   const maxConcurrency = Math.max(1, Number(opts.concurrency ?? "4") || 4);
-
   const ctx = resolveCommandContext(opts);
   const api = ctx.api;
 
-  console.log(pc.bold(`[runner] Local runner starting — polling every ${pollIntervalMs}ms`));
+  console.log(pc.bold("[runner] Local runner starting — SSE push mode"));
   console.log(pc.dim(`[runner] API base: ${(api as { apiBase?: string }).apiBase ?? "(inferred)"}`));
   console.log(pc.dim(`[runner] Max concurrency: ${maxConcurrency}`));
   console.log(pc.dim("[runner] Press Ctrl+C to stop\n"));
 
   const inFlight = new Set<string>();
+  let stopped = false;
 
   const shutdown = () => {
+    stopped = true;
     console.log(pc.yellow("\n[runner] Shutting down..."));
     process.exit(0);
   };
   process.once("SIGINT", shutdown);
   process.once("SIGTERM", shutdown);
 
-  while (true) {
+  const processJobs = (jobs: RunnerJob[]) => {
+    const pending = Array.isArray(jobs) ? jobs.filter((j) => !inFlight.has(j.id)) : [];
+    const available = maxConcurrency - inFlight.size;
+    const batch = pending.slice(0, Math.max(0, available));
+    for (const job of batch) {
+      inFlight.add(job.id);
+      void executeJob(api, job, Boolean(opts.verbose))
+        .catch((err) => {
+          console.error(pc.red(`[runner] Unhandled error for run ${job.id}: ${err instanceof Error ? err.message : String(err)}`));
+        })
+        .finally(() => {
+          inFlight.delete(job.id);
+        });
+    }
+  };
+
+  let backoffMs = 1_000;
+
+  while (!stopped) {
     try {
-      const jobs = await api.get<RunnerJob[]>("/api/runner/jobs");
-      const pending = Array.isArray(jobs) ? jobs.filter((j) => !inFlight.has(j.id)) : [];
-
-      const available = maxConcurrency - inFlight.size;
-      const batch = pending.slice(0, Math.max(0, available));
-
-      for (const job of batch) {
-        inFlight.add(job.id);
-        void executeJob(api, job, Boolean(opts.verbose))
-          .catch((err) => {
-            console.error(pc.red(`[runner] Unhandled error for run ${job.id}: ${err instanceof Error ? err.message : String(err)}`));
-          })
-          .finally(() => {
-            inFlight.delete(job.id);
-          });
+      const apiBase = (api as { apiBase?: string }).apiBase ?? "";
+      const url = `${apiBase}/api/runner/jobs/stream`;
+      const headers: Record<string, string> = { accept: "text/event-stream" };
+      const apiKey = (api as { apiKey?: string }).apiKey;
+      if (apiKey) {
+        headers.authorization = `Bearer ${apiKey}`;
       }
+
+      const response = await fetch(url, { headers });
+      if (!response.ok || !response.body) {
+        throw new Error(`SSE connect failed: ${response.status}`);
+      }
+
+      backoffMs = 1_000; // reset on successful connect
+      console.log(pc.dim("[runner] SSE stream connected"));
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+        if (stopped) break;
+        buffer += decoder.decode(chunk, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const jobs = JSON.parse(line.slice(6)) as RunnerJob[];
+              processJobs(jobs);
+            } catch {
+              // malformed data — skip
+            }
+          }
+        }
+      }
+
+      console.log(pc.yellow("[runner] SSE stream closed, reconnecting..."));
     } catch (err) {
-      console.error(pc.yellow(`[runner] Poll error: ${err instanceof Error ? err.message : String(err)}`));
+      if (stopped) break;
+      console.error(pc.yellow(`[runner] SSE error (reconnecting in ${backoffMs}ms): ${err instanceof Error ? err.message : String(err)}`));
     }
 
-    await delay(pollIntervalMs);
+    if (!stopped) {
+      await delay(backoffMs);
+      backoffMs = Math.min(backoffMs * 2, 30_000);
+    }
   }
 }
 
@@ -307,8 +350,7 @@ export function registerRunnerCommands(program: Command): void {
   addCommonClientOptions(
     runner
       .command("start")
-      .description("Start the local runner and poll for pending jobs")
-      .option("--poll-interval <ms>", "Poll interval in milliseconds", "3000")
+      .description("Start the local runner and listen for pending jobs via SSE")
       .option("--concurrency <n>", "Max number of concurrent runs", "4")
       .option("--verbose", "Print extra debug output")
       .action(async (opts: RunnerStartOptions) => {

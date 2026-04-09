@@ -2143,6 +2143,11 @@ export function heartbeatService(db: Db) {
     const runtimeConfEarly = parseObject(agent.runtimeConfig);
     if (runtimeConfEarly.executionTarget === "local_runner") {
       await setRunStatus(run.id, "pending_local", {});
+      publishLiveEvent({
+        companyId: run.companyId,
+        type: "runner.jobs.pending",
+        payload: { runId: run.id },
+      });
       logger.info({ runId: run.id, agentId: agent.id }, "[heartbeat] deferred to local runner");
       activeRunExecutions.delete(run.id);
       return;
