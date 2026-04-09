@@ -3,7 +3,7 @@ import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from "@xyf
 import { Plus } from "lucide-react";
 
 export const AddStepEdge = memo(function AddStepEdge(props: EdgeProps) {
-  const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition } = props;
+  const { id, source, target, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data } = props;
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition,
   });
@@ -18,6 +18,10 @@ export const AddStepEdge = memo(function AddStepEdge(props: EdgeProps) {
             position: "absolute",
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             pointerEvents: "all",
+          }}
+          onClick={() => {
+            const edgeData = data as { onAddStep?: (sourceId: string, targetId: string) => void } | undefined;
+            edgeData?.onAddStep?.(source, target);
           }}
         >
           <Plus className="h-3 w-3" />

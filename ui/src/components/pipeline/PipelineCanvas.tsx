@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
   ReactFlow,
   Background,
@@ -11,6 +11,7 @@ import {
   type OnNodeDrag,
   type OnConnect,
   type OnNodesDelete,
+  type OnConnectEnd,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { PipelineStep } from "../../api/pipelines";
@@ -37,18 +38,27 @@ interface PipelineCanvasProps {
   onDeleteStep: (stepId: string) => void;
   onSelectStep: (stepId: string | null) => void;
   onAddStep: (type: "action" | "if_else") => void;
+  onAddStepBetween: (sourceId: string, targetId: string) => void;
+  onAddStepFromNode: (sourceNodeId: string) => void;
   onAutoLayout: (positions: Array<{ stepId: string; positionX: number; positionY: number }>) => void;
 }
 
 export function PipelineCanvas({
   steps, agentNames, memberNames,
-  onUpdateStepPosition, onUpdateStepDeps, onDeleteStep, onSelectStep, onAddStep, onAutoLayout,
+  onUpdateStepPosition, onUpdateStepDeps, onDeleteStep, onSelectStep, onAddStep, onAddStepBetween, onAddStepFromNode, onAutoLayout,
 }: PipelineCanvasProps) {
+  const connectingNodeId = useRef<string | null>(null);
   const rawNodes = useMemo(
     () => stepsToNodes(steps, agentNames, memberNames, (id) => onSelectStep(id), onDeleteStep),
     [steps, agentNames, memberNames, onSelectStep, onDeleteStep],
   );
-  const rawEdges = useMemo(() => stepsToEdges(steps), [steps]);
+  const rawEdges = useMemo(() => {
+    const edges = stepsToEdges(steps);
+    return edges.map(e => ({
+      ...e,
+      data: { onAddStep: (sourceId: string, targetId: string) => onAddStepBetween(sourceId, targetId) },
+    }));
+  }, [steps, onAddStepBetween]);
   const layoutNodes = useAutoLayout(rawNodes, rawEdges);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
@@ -62,8 +72,16 @@ export function PipelineCanvas({
     [onUpdateStepPosition],
   );
 
+  const onConnectStart = useCallback(
+    (_event: MouseEvent | TouchEvent, params: { nodeId: string | null }) => {
+      connectingNodeId.current = params.nodeId;
+    },
+    [],
+  );
+
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
+      connectingNodeId.current = null;
       if (!connection.target) return;
       const targetStep = steps.find((s) => s.id === connection.target);
       if (targetStep) {
@@ -73,6 +91,19 @@ export function PipelineCanvas({
       setEdges((eds) => addEdge({ ...connection, type: "addStep" }, eds));
     },
     [steps, onUpdateStepDeps, setEdges],
+  );
+
+  const onConnectEnd: OnConnectEnd = useCallback(
+    (event) => {
+      if (!connectingNodeId.current) return;
+      // Check if the connection was dropped on a node (target exists on the event)
+      const targetIsPane = (event.target as HTMLElement)?.classList?.contains("react-flow__pane");
+      if (targetIsPane) {
+        onAddStepFromNode(connectingNodeId.current);
+      }
+      connectingNodeId.current = null;
+    },
+    [onAddStepFromNode],
   );
 
   const onNodesDelete: OnNodesDelete = useCallback(
@@ -102,7 +133,9 @@ export function PipelineCanvas({
       <ReactFlow
         nodes={nodes} edges={edges}
         onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-        onNodeDragStop={onNodeDragStop} onConnect={onConnect} onNodesDelete={onNodesDelete}
+        onNodeDragStop={onNodeDragStop}
+        onConnectStart={onConnectStart} onConnect={onConnect} onConnectEnd={onConnectEnd}
+        onNodesDelete={onNodesDelete}
         onNodeClick={(_e, node) => onSelectStep(node.id)}
         onPaneClick={() => onSelectStep(null)}
         nodeTypes={nodeTypes} edgeTypes={edgeTypes}
