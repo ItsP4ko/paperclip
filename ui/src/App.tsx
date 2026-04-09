@@ -64,9 +64,6 @@ const CliAuthPage = lazy(() => import("./pages/CliAuth").then((m) => ({ default:
 const InviteLandingPage = lazy(() => import("./pages/InviteLanding").then((m) => ({ default: m.InviteLandingPage })));
 const NotFoundPage = lazy(() => import("./pages/NotFound").then((m) => ({ default: m.NotFoundPage })));
 const DownloadPage = lazy(() => import("./pages/Download").then((m) => ({ default: m.DownloadPage })));
-const Sprints = lazy(() => import("./pages/Sprints").then((m) => ({ default: m.Sprints })));
-const SprintPlanning = lazy(() => import("./pages/SprintPlanning").then((m) => ({ default: m.SprintPlanning })));
-const SprintMetrics = lazy(() => import("./pages/SprintMetrics").then((m) => ({ default: m.SprintMetrics })));
 
 
 function TauriGuard() {
@@ -206,9 +203,9 @@ function boardRoutes() {
       <Route path="audit" element={<S><AuditLog /></S>} />
       <Route path="knowledge" element={<S><KnowledgeBase /></S>} />
       <Route path="cost-recommendations" element={<S><CostRecommendations /></S>} />
-      <Route path="sprints" element={<S><Sprints /></S>} />
-      <Route path="sprints/:sprintId/plan" element={<S><SprintPlanning /></S>} />
-      <Route path="sprints/:sprintId/metrics" element={<S><SprintMetrics /></S>} />
+      <Route path="projects/:projectId/sprints" element={<S><ProjectDetail /></S>} />
+      <Route path="projects/:projectId/sprints/:sprintId/board" element={<S><ProjectDetail /></S>} />
+      <Route path="projects/:projectId/sprints/metrics" element={<S><ProjectDetail /></S>} />
       <Route path="pipelines" element={<S><Pipelines /></S>} />
       <Route path="pipelines/:pipelineId" element={<S><PipelineDetail /></S>} />
       <Route path="pipelines/:pipelineId/runs/:runId" element={<S><PipelineRunDetail /></S>} />

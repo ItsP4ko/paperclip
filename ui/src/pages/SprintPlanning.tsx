@@ -1,313 +1,186 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, X, Zap, CheckCircle2, AlertTriangle } from "lucide-react";
-import { useCompany } from "../context/CompanyContext";
-import { useBreadcrumbs } from "../context/BreadcrumbContext";
-import { queryKeys } from "../lib/queryKeys";
+import { Plus, Search, X, Play } from "lucide-react";
+import { useState } from "react";
 import { sprintsApi } from "../api/sprints";
 import { issuesApi } from "../api/issues";
-import type { Issue, Sprint } from "@paperclipai/shared";
+import { queryKeys } from "../lib/queryKeys";
+import { useCompany } from "../context/CompanyContext";
+import type { Sprint, Issue } from "@paperclipai/shared";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "../components/StatusBadge";
-import { PriorityIcon } from "../components/PriorityIcon";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-function IssueCard({
-  issue,
-  action,
-  onAction,
-  loading,
-}: {
-  issue: Issue;
-  action: "add" | "remove";
-  onAction: () => void;
-  loading: boolean;
-}) {
+interface Props {
+  sprint: Sprint | null;
+  projectId: string;
+  onActivated: () => void;
+  onCreateNew: () => void;
+}
+
+function priorityBadge(priority: string | null) {
+  if (!priority) return null;
+  const map: Record<string, string> = { critical: "text-destructive", high: "text-orange-500", medium: "text-yellow-500", low: "text-muted-foreground" };
+  return <span className={cn("text-xs font-medium capitalize", map[priority] ?? "text-muted-foreground")}>{priority}</span>;
+}
+
+function IssueCard({ issue, action, onAction }: { issue: Issue; action: "add" | "remove"; onAction: () => void }) {
   return (
-    <div className="flex items-start gap-2 p-3 border border-border rounded-md bg-card hover:bg-accent/30 transition-colors">
-      <div className="flex items-center gap-1 mt-0.5 shrink-0">
-        <PriorityIcon priority={issue.priority} />
-      </div>
+    <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card hover:bg-muted/40 transition-colors group">
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium leading-snug line-clamp-2">{issue.title}</p>
-        <div className="flex items-center gap-1.5 mt-1">
-          {issue.identifier && (
-            <span className="text-xs font-mono text-muted-foreground">{issue.identifier}</span>
-          )}
-          <StatusBadge status={issue.status} />
+        <p className="text-sm text-foreground truncate">{issue.title}</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          {priorityBadge(issue.priority)}
+          {issue.identifier && <span className="text-xs text-muted-foreground font-mono">{issue.identifier}</span>}
         </div>
       </div>
       <Button
-        variant="ghost"
-        size="icon-sm"
-        className={cn("shrink-0 mt-0.5", action === "add" ? "text-blue-400 hover:text-blue-300" : "text-muted-foreground hover:text-destructive")}
+        size="icon"
+        variant={action === "add" ? "outline" : "ghost"}
+        className={cn("h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity", action === "remove" && "text-muted-foreground hover:text-destructive")}
         onClick={onAction}
-        disabled={loading}
       >
-        {action === "add" ? <Plus className="h-4 w-4" /> : <X className="h-4 w-4" />}
+        {action === "add" ? <Plus className="h-3 w-3" /> : <X className="h-3 w-3" />}
       </Button>
     </div>
   );
 }
 
-export function SprintPlanning() {
-  const { sprintId } = useParams<{ sprintId: string }>();
-  const { selectedCompanyId } = useCompany();
-  const { setBreadcrumbs } = useBreadcrumbs();
-  const navigate = useNavigate();
+export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: Props) {
   const queryClient = useQueryClient();
-  const [loadingIssueId, setLoadingIssueId] = useState<string | null>(null);
-  const [showComplete, setShowComplete] = useState(false);
-  const [spillStrategy, setSpillStrategy] = useState<"backlog" | "next_sprint">("backlog");
-  const [nextSprintId, setNextSprintId] = useState<string>("");
+  const [search, setSearch] = useState("");
+  const { selectedCompanyId: companyId } = useCompany();
 
-  const { data: sprint } = useQuery({
-    queryKey: queryKeys.sprints.detail(sprintId!),
-    queryFn: () => sprintsApi.get(sprintId!),
-    enabled: !!sprintId,
+  const { data: backlog = [], isLoading: backlogLoading } = useQuery({
+    queryKey: queryKeys.sprints.backlog(projectId),
+    queryFn: () => issuesApi.list(companyId!, { projectId, noSprint: true }),
+    enabled: !!projectId && !!companyId,
   });
 
-  const { data: sprintIssues = [] } = useQuery({
-    queryKey: queryKeys.sprints.issues(sprintId!, selectedCompanyId!),
-    queryFn: () => issuesApi.list(selectedCompanyId!, { sprintId: sprintId! }),
-    enabled: !!sprintId && !!selectedCompanyId,
+  const { data: sprintIssues = [], isLoading: sprintLoading } = useQuery({
+    queryKey: queryKeys.sprints.issues(sprint?.id ?? ""),
+    queryFn: () => issuesApi.list(companyId!, { projectId, sprintId: sprint?.id }),
+    enabled: !!sprint?.id && !!companyId,
   });
 
-  const { data: backlogIssues = [] } = useQuery({
-    queryKey: queryKeys.sprints.backlog(selectedCompanyId!),
-    queryFn: () => issuesApi.list(selectedCompanyId!, { noSprint: true }),
-    enabled: !!selectedCompanyId,
-  });
-
-  const { data: allSprints = [] } = useQuery({
-    queryKey: queryKeys.sprints.list(selectedCompanyId!),
-    queryFn: () => sprintsApi.list(selectedCompanyId!),
-    enabled: !!selectedCompanyId,
-  });
-
-  useEffect(() => {
-    setBreadcrumbs([
-      { label: "Sprints", href: "/sprints" },
-      { label: sprint?.name ?? "Planning" },
-    ]);
-  }, [setBreadcrumbs, sprint]);
-
-  function invalidate() {
-    queryClient.invalidateQueries({ queryKey: queryKeys.sprints.issues(sprintId!, selectedCompanyId!) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.sprints.backlog(selectedCompanyId!) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.sprints.list(selectedCompanyId!) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.sprints.active(selectedCompanyId!) });
-  }
-
-  async function handleAdd(issueId: string) {
-    setLoadingIssueId(issueId);
-    try { await sprintsApi.addIssue(sprintId!, issueId); invalidate(); }
-    finally { setLoadingIssueId(null); }
-  }
-
-  async function handleRemove(issueId: string) {
-    setLoadingIssueId(issueId);
-    try { await sprintsApi.removeIssue(sprintId!, issueId); invalidate(); }
-    finally { setLoadingIssueId(null); }
-  }
-
-  const activateMutation = useMutation({
-    mutationFn: () => sprintsApi.activate(sprintId!),
+  const addIssue = useMutation({
+    mutationFn: (issueId: string) => sprintsApi.addIssue(sprint!.id, issueId),
     onSuccess: () => {
-      invalidate();
-      navigate("/issues");
+      queryClient.invalidateQueries({ queryKey: queryKeys.sprints.backlog(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sprints.issues(sprint!.id) });
     },
   });
 
-  const completeMutation = useMutation({
-    mutationFn: () =>
-      sprintsApi.complete(sprintId!, {
-        spillStrategy,
-        nextSprintId: spillStrategy === "next_sprint" && nextSprintId ? nextSprintId : undefined,
-      }),
+  const removeIssue = useMutation({
+    mutationFn: (issueId: string) => sprintsApi.removeIssue(sprint!.id, issueId),
     onSuccess: () => {
-      setShowComplete(false);
-      invalidate();
-      navigate(`/sprints/${sprintId!}/metrics`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.sprints.backlog(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sprints.issues(sprint!.id) });
     },
   });
 
-  const planningOptions = allSprints.filter((s) => s.status === "planning" && s.id !== sprintId);
-  const isActive = sprint?.status === "active";
-  const isPlanning = sprint?.status === "planning";
+  const activate = useMutation({
+    mutationFn: () => sprintsApi.activate(sprint!.id),
+    onSuccess: () => onActivated(),
+  });
+
+  const filteredBacklog = backlog.filter((i) =>
+    !search || i.title.toLowerCase().includes(search.toLowerCase()) || (i.identifier ?? "").toLowerCase().includes(search.toLowerCase()),
+  );
+
+  if (!sprint) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+        <Button variant="outline" onClick={onCreateNew}>Crear sprint</Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+    <div className="flex flex-col h-full min-h-0">
+      {/* Sprint header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div>
-          <h1 className="text-xl font-bold">{sprint?.name ?? "Sprint"}</h1>
-          {sprint?.startDate && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {sprint.startDate} → {sprint.endDate ?? "?"}
-            </p>
-          )}
+          <h2 className="font-display font-semibold text-foreground">{sprint.name}</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {sprint.startDate && sprint.endDate ? `${sprint.startDate} → ${sprint.endDate} · ` : ""}
+            {sprintIssues.length} tareas asignadas
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          {isPlanning && (
-            <Button
-              size="sm"
-              onClick={() => activateMutation.mutate()}
-              disabled={activateMutation.isPending || sprintIssues.length === 0}
-              className="bg-green-600 hover:bg-green-500 text-white"
-            >
-              <Zap className="h-4 w-4 mr-1" />
-              Inicializar Sprint
-            </Button>
-          )}
-          {isActive && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowComplete(true)}
-              className="border-orange-500/40 text-orange-400 hover:bg-orange-500/10"
-            >
-              <CheckCircle2 className="h-4 w-4 mr-1" />
-              Finalizar Sprint
-            </Button>
-          )}
-          {!isPlanning && !isActive && (
-            <Button size="sm" variant="outline" onClick={() => navigate(`/sprints/${sprintId!}/metrics`)}>
-              Ver Métricas
-            </Button>
-          )}
-        </div>
+        <Button
+          size="sm"
+          onClick={() => activate.mutate()}
+          disabled={sprintIssues.length === 0 || activate.isPending}
+        >
+          <Play className="h-3.5 w-3.5 mr-1.5" />
+          {activate.isPending ? "Activando..." : "Activar Sprint"}
+        </Button>
       </div>
 
-      {/* Two-column planning board */}
-      <div className="flex flex-1 min-h-0 divide-x divide-border">
+      {/* Two panels */}
+      <div className="flex-1 min-h-0 grid grid-cols-2 divide-x divide-border">
         {/* Backlog */}
-        <div className="flex flex-col w-1/2 min-h-0">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30 shrink-0">
-            <span className="text-sm font-semibold">Backlog</span>
-            <Badge variant="secondary" className="text-xs">{backlogIssues.length}</Badge>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            {backlogIssues.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-8">Sin issues en backlog</p>
-            )}
-            {backlogIssues.map((issue) => (
-              <IssueCard
-                key={issue.id}
-                issue={issue}
-                action="add"
-                onAction={() => handleAdd(issue.id)}
-                loading={loadingIssueId === issue.id}
+        <div className="flex flex-col min-h-0">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Backlog</span>
+            <Badge variant="secondary" className="text-xs">{backlog.length}</Badge>
+            <div className="flex-1" />
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar..."
+                className="h-6 pl-6 text-xs w-28"
               />
-            ))}
+            </div>
           </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-1">
+              {backlogLoading
+                ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)
+                : filteredBacklog.map((issue) => (
+                    <IssueCard
+                      key={issue.id}
+                      issue={issue}
+                      action="add"
+                      onAction={() => addIssue.mutate(issue.id)}
+                    />
+                  ))}
+              {!backlogLoading && filteredBacklog.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-6">Sin tareas en el backlog</p>
+              )}
+            </div>
+          </ScrollArea>
         </div>
 
-        {/* Sprint */}
-        <div className="flex flex-col w-1/2 min-h-0">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30 shrink-0">
-            <span className="text-sm font-semibold">{sprint?.name ?? "Sprint"}</span>
+        {/* Sprint tasks */}
+        <div className="flex flex-col min-h-0">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{sprint.name}</span>
             <Badge variant="secondary" className="text-xs">{sprintIssues.length}</Badge>
-            {isActive && (
-              <Badge className="text-xs bg-green-500/15 text-green-400 border border-green-500/20">Activo</Badge>
-            )}
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            {sprintIssues.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                {isPlanning ? "Arrastrá issues del backlog →" : "No hay issues en este sprint"}
-              </p>
-            )}
-            {sprintIssues.map((issue) => (
-              <IssueCard
-                key={issue.id}
-                issue={issue}
-                action="remove"
-                onAction={() => handleRemove(issue.id)}
-                loading={loadingIssueId === issue.id}
-              />
-            ))}
-          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-1">
+              {sprintLoading
+                ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)
+                : sprintIssues.map((issue) => (
+                    <IssueCard
+                      key={issue.id}
+                      issue={issue}
+                      action="remove"
+                      onAction={() => removeIssue.mutate(issue.id)}
+                    />
+                  ))}
+              {!sprintLoading && sprintIssues.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-6">Agregá tareas del backlog</p>
+              )}
+            </div>
+          </ScrollArea>
         </div>
       </div>
-
-      {/* Complete Sprint Dialog */}
-      <Dialog open={showComplete} onOpenChange={setShowComplete}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-400" />
-              Finalizar Sprint
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            {(() => {
-              const incomplete = sprintIssues.filter((i) => i.status !== "done" && i.status !== "cancelled");
-              return incomplete.length > 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Hay <span className="text-foreground font-medium">{incomplete.length} issues incompletas</span>.
-                  ¿Qué hacemos con ellas?
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">Todas las issues están completadas. </p>
-              );
-            })()}
-            <div className="space-y-2">
-              <label className="text-xs text-muted-foreground">Issues incompletas</label>
-              <Select value={spillStrategy} onValueChange={(v) => setSpillStrategy(v as "backlog" | "next_sprint")}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="backlog">Mover al backlog</SelectItem>
-                  <SelectItem value="next_sprint">Mover al próximo sprint</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {spillStrategy === "next_sprint" && (
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">Próximo sprint</label>
-                <Select value={nextSprintId} onValueChange={setNextSprintId}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Seleccionar sprint..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {planningOptions.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowComplete(false)}>Cancelar</Button>
-            <Button
-              onClick={() => completeMutation.mutate()}
-              disabled={completeMutation.isPending || (spillStrategy === "next_sprint" && !nextSprintId)}
-              className="bg-orange-600 hover:bg-orange-500 text-white"
-            >
-              Finalizar Sprint
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
