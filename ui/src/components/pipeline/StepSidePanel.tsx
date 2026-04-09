@@ -124,7 +124,7 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
             <label className="text-xs text-muted-foreground">Linked issue</label>
             <select value={issueId} onChange={(e) => setIssueId(e.target.value)} className="w-full text-sm bg-background border border-border rounded px-2 py-1.5 outline-none">
               <option value="">None</option>
-              {issues.map((i) => <option key={i.id} value={i.id}>{i.identifier ? `${i.identifier} - ` : ""}{i.title}</option>)}
+              {issues.filter((i: any) => !i.status || i.status === "backlog" || i.status === "todo").map((i) => <option key={i.id} value={i.id}>{i.identifier ? `${i.identifier} - ` : ""}{i.title}</option>)}
             </select>
           </div>
         </>
