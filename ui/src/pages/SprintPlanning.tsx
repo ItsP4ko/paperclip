@@ -55,7 +55,7 @@ function IssueCardContent({ issue }: { issue: Issue }) {
   );
 }
 
-function DraggableIssueCard({ issue, isDragging }: { issue: Issue; isDragging?: boolean }) {
+function DraggableIssueCard({ issue, isDragging }: { issue: Issue; isDragging: boolean }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: issue.id });
   const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
 
@@ -66,7 +66,7 @@ function DraggableIssueCard({ issue, isDragging }: { issue: Issue; isDragging?: 
       {...listeners}
       {...attributes}
       className={cn(
-        "flex-1 min-w-0 px-3 py-2 rounded-md border border-border bg-card transition-colors cursor-grab select-none",
+        "px-3 py-2 rounded-md border border-border bg-card transition-colors cursor-grab select-none",
         isDragging ? "opacity-40" : "hover:bg-muted/40 hover:border-primary/30",
       )}
     >
@@ -75,14 +75,26 @@ function DraggableIssueCard({ issue, isDragging }: { issue: Issue; isDragging?: 
   );
 }
 
-function DroppableZone({ id, children, isOver }: { id: string; children: React.ReactNode; isOver: boolean }) {
+// Droppable panel — wraps the entire column so ScrollArea doesn't block detection
+function DroppablePanel({
+  id,
+  isOver,
+  className,
+  children,
+}: {
+  id: string;
+  isOver: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
   const { setNodeRef } = useDroppable({ id });
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "flex-1 p-2 space-y-1 transition-colors rounded-md min-h-[60px]",
-        isOver && "bg-primary/5 ring-1 ring-primary/20 ring-inset",
+        "flex flex-col min-h-0 transition-colors",
+        isOver && "bg-primary/5",
+        className,
       )}
     >
       {children}
@@ -132,12 +144,12 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
     onSuccess: () => onActivated(),
   });
 
-  const allIssues = [...backlog, ...sprintIssues];
-  const isInBacklog = (id: string) => backlog.some((i) => i.id === id);
-  const isInSprint = (id: string) => sprintIssues.some((i) => i.id === id);
+  const backlogIds = new Set(backlog.map((i) => i.id));
+  const sprintIds = new Set(sprintIssues.map((i) => i.id));
 
   function handleDragStart({ active }: DragStartEvent) {
-    setActiveIssue(allIssues.find((i) => i.id === active.id) ?? null);
+    const all = [...backlog, ...sprintIssues];
+    setActiveIssue(all.find((i) => i.id === active.id) ?? null);
   }
 
   function handleDragOver({ over }: { over: { id: string | number } | null }) {
@@ -152,9 +164,9 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
     const issueId = String(active.id);
     const target = String(over.id);
 
-    if (target === "sprint" && isInBacklog(issueId)) {
+    if (target === "sprint" && backlogIds.has(issueId)) {
       addIssue.mutate(issueId);
-    } else if (target === "backlog" && isInSprint(issueId)) {
+    } else if (target === "backlog" && sprintIds.has(issueId)) {
       removeIssue.mutate(issueId);
     }
   }
@@ -175,7 +187,7 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
       <div className="flex flex-col h-full min-h-0">
         {/* Sprint header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
           <div>
             <h2 className="font-display font-semibold text-foreground">{sprint.name}</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -183,21 +195,17 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
               {sprintIssues.length} tareas asignadas
             </p>
           </div>
-          <Button
-            size="sm"
-            onClick={() => activate.mutate()}
-            disabled={sprintIssues.length === 0 || activate.isPending}
-          >
+          <Button size="sm" onClick={() => activate.mutate()} disabled={sprintIssues.length === 0 || activate.isPending}>
             <Play className="h-3.5 w-3.5 mr-1.5" />
             {activate.isPending ? "Activando..." : "Activar Sprint"}
           </Button>
         </div>
 
-        {/* Two panels */}
+        {/* Two droppable panels */}
         <div className="flex-1 min-h-0 grid grid-cols-2 divide-x divide-border overflow-hidden">
-          {/* Backlog */}
-          <div className="flex flex-col min-h-0">
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+          {/* Backlog panel — droppable covers header + list */}
+          <DroppablePanel id="backlog" isOver={overId === "backlog"}>
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Backlog</span>
               <Badge variant="secondary" className="text-xs">{backlog.length}</Badge>
               <div className="flex-1" />
@@ -212,7 +220,7 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
               </div>
             </div>
             <ScrollArea className="flex-1">
-              <DroppableZone id="backlog" isOver={overId === "backlog"}>
+              <div className="p-2 space-y-1">
                 {backlogLoading
                   ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)
                   : filteredBacklog.map((issue) => (
@@ -221,18 +229,18 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
                 {!backlogLoading && filteredBacklog.length === 0 && (
                   <p className="text-xs text-muted-foreground text-center py-6">Sin tareas en el backlog</p>
                 )}
-              </DroppableZone>
+              </div>
             </ScrollArea>
-          </div>
+          </DroppablePanel>
 
-          {/* Sprint tasks */}
-          <div className="flex flex-col min-h-0">
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+          {/* Sprint panel — droppable covers header + list */}
+          <DroppablePanel id="sprint" isOver={overId === "sprint"}>
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{sprint.name}</span>
               <Badge variant="secondary" className="text-xs">{sprintIssues.length}</Badge>
             </div>
             <ScrollArea className="flex-1">
-              <DroppableZone id="sprint" isOver={overId === "sprint"}>
+              <div className="p-2 space-y-1">
                 {sprintLoading
                   ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)
                   : sprintIssues.map((issue) => (
@@ -241,9 +249,9 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
                 {!sprintLoading && sprintIssues.length === 0 && (
                   <p className="text-xs text-muted-foreground text-center py-6">Arrastrá tareas del backlog</p>
                 )}
-              </DroppableZone>
+              </div>
             </ScrollArea>
-          </div>
+          </DroppablePanel>
         </div>
       </div>
 

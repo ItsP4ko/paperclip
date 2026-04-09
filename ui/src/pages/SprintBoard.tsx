@@ -66,7 +66,6 @@ function IssueCardContent({ issue }: { issue: Issue }) {
 function DraggableCard({ issue, isDragging }: { issue: Issue; isDragging: boolean }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: issue.id });
   const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
-
   return (
     <div
       ref={setNodeRef}
@@ -83,15 +82,21 @@ function DraggableCard({ issue, isDragging }: { issue: Issue; isDragging: boolea
   );
 }
 
-function DroppableColumn({ colId, isOver, children }: { colId: string; isOver: boolean; children: React.ReactNode }) {
+// Droppable wraps the full column div (outside ScrollArea) so detection works
+function DroppableColumn({
+  colId,
+  isOver,
+  children,
+}: {
+  colId: string;
+  isOver: boolean;
+  children: React.ReactNode;
+}) {
   const { setNodeRef } = useDroppable({ id: colId });
   return (
     <div
       ref={setNodeRef}
-      className={cn(
-        "flex-1 p-2 space-y-1.5 transition-colors rounded-sm min-h-[80px]",
-        isOver && "bg-primary/5 ring-1 ring-primary/20 ring-inset",
-      )}
+      className={cn("flex flex-col min-h-0 transition-colors", isOver && "bg-primary/5")}
     >
       {children}
     </div>
@@ -142,20 +147,18 @@ export function SprintBoard({ sprint, projectId, onClosed }: Props) {
     setActiveIssue(null);
     setOverId(null);
     if (!over) return;
-
     const issueId = String(active.id);
     const toStatus = String(over.id);
     const issue = issues.find((i) => i.id === issueId);
     if (!issue || issue.status === toStatus) return;
-
     updateStatus.mutate({ issueId, status: toStatus });
   }
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
       <div className="flex flex-col h-full min-h-0">
-        {/* Sprint header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
           <div className="flex items-center gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -181,16 +184,16 @@ export function SprintBoard({ sprint, projectId, onClosed }: Props) {
           </Button>
         </div>
 
-        {/* Board */}
+        {/* Board — droppable columns sit outside ScrollArea */}
         <div className="flex-1 min-h-0 grid grid-cols-4 divide-x divide-border overflow-hidden">
           {BOARD_COLUMNS.map((col) => (
-            <div key={col.id} className="flex flex-col min-h-0">
+            <DroppableColumn key={col.id} colId={col.id} isOver={overId === col.id}>
               <div className="px-3 py-2 border-b border-border flex items-center gap-1.5 shrink-0">
                 <span className={cn("text-xs font-semibold uppercase tracking-wide", col.color)}>{col.label}</span>
                 <span className="text-xs text-muted-foreground">{byStatus[col.id].length}</span>
               </div>
               <ScrollArea className="flex-1">
-                <DroppableColumn colId={col.id} isOver={overId === col.id}>
+                <div className="p-2 space-y-1.5">
                   {isLoading
                     ? Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-md" />)
                     : byStatus[col.id].map((issue) => (
@@ -201,9 +204,9 @@ export function SprintBoard({ sprint, projectId, onClosed }: Props) {
                       vacío
                     </div>
                   )}
-                </DroppableColumn>
+                </div>
               </ScrollArea>
-            </div>
+            </DroppableColumn>
           ))}
         </div>
 
