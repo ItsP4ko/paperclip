@@ -388,7 +388,7 @@ export function PipelineDetail() {
                 className="w-full text-sm bg-background border border-border rounded px-2 py-1.5 outline-none"
               >
                 <option value="">No linked issue</option>
-                {companyIssues.map((issue: { id: string; identifier?: string; title: string }) => (
+                {companyIssues.map((issue: { id: string; identifier?: string | null; title: string }) => (
                   <option key={issue.id} value={issue.id}>
                     {issue.identifier ? `${issue.identifier} - ` : ""}{issue.title}
                   </option>
