@@ -7,6 +7,7 @@ import { logger } from "../middleware/logger.js";
 import { heartbeatService } from "../services/index.js";
 import { assertBoard } from "./authz.js";
 import { forbidden } from "../errors.js";
+import { subscribeCompanyLiveEvents, subscribeGlobalLiveEvents } from "../services/live-events.js";
 
 const logSchema = z.object({
   stream: z.enum(["stdout", "stderr"]),
@@ -91,6 +92,69 @@ export function runnerRoutes(db: Db) {
     const result = req.body as z.infer<typeof completeSchema>;
     const finalizedRun = await heartbeat.completeLocalRun(runId, result);
     res.json({ run: finalizedRun });
+  });
+
+  /**
+   * GET /runner/jobs/stream
+   * SSE endpoint — pushes full pending_local job list whenever a new run.jobs.pending event fires.
+   * Replaces the polling loop in the local runner CLI.
+   */
+  router.get("/runner/jobs/stream", async (req, res) => {
+    assertBoard(req);
+    const isAdmin = !!(req.actor.isInstanceAdmin || req.actor.source === "local_implicit");
+    const companyIds = await resolveCompanyIds(req.actor.companyIds, isAdmin);
+
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no",
+    });
+    res.flushHeaders();
+    res.write(":ok\n\n");
+
+    // Helper: fetch and push current pending jobs
+    const pushJobs = async () => {
+      if (!res.writable) return;
+      try {
+        const jobs = await heartbeat.listPendingLocalRuns(companyIds);
+        res.write(`data: ${JSON.stringify(jobs)}\n\n`);
+      } catch {
+        // best-effort — don't crash the SSE connection on a transient DB error
+      }
+    };
+
+    // Send current jobs immediately on connect (so runner picks up any that arrived before connecting)
+    await pushJobs();
+
+    // Keepalive every 30s to prevent proxy/LB timeouts
+    const keepaliveInterval = setInterval(() => {
+      if (res.writable) res.write(":keepalive\n\n");
+    }, 30_000);
+
+    const unsubs: Array<() => void> = [];
+
+    const handleEvent = async (event: { type: string }) => {
+      if (event.type !== "runner.jobs.pending") return;
+      await pushJobs();
+    };
+
+    if (isAdmin && companyIds.length === 0) {
+      // Instance admin with no explicit companies — subscribe to global events
+      unsubs.push(subscribeGlobalLiveEvents(handleEvent as Parameters<typeof subscribeGlobalLiveEvents>[0]));
+    } else {
+      for (const cid of companyIds) {
+        unsubs.push(subscribeCompanyLiveEvents(cid, handleEvent as Parameters<typeof subscribeCompanyLiveEvents>[0]));
+      }
+    }
+
+    const cleanup = () => {
+      clearInterval(keepaliveInterval);
+      for (const unsub of unsubs) unsub();
+    };
+
+    req.on("close", cleanup);
+    res.on("error", cleanup);
   });
 
   return router;
