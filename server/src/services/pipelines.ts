@@ -600,7 +600,7 @@ export function pipelineService(db: Db) {
             eq(pipelineRunSteps.status, "running"),
           ),
         );
-      if (!runStep) return runStep?.pipelineRunId ?? null;
+      if (!runStep) return null;
 
       await db
         .update(pipelineRunSteps)
