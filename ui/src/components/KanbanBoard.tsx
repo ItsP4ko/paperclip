@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { Link } from "@/lib/router";
 import {
   DndContext,
@@ -100,7 +100,7 @@ function KanbanColumn({
 
 /* ── Draggable Card ── */
 
-function KanbanCard({
+const KanbanCard = memo(function KanbanCard({
   issue,
   agents,
   isLive,
@@ -176,7 +176,7 @@ function KanbanCard({
       </Link>
     </div>
   );
-}
+});
 
 /* ── Main Board ── */
 

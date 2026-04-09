@@ -59,6 +59,7 @@
     {"idx": 54,"version": "7","when": 1775660000000,"tag": "0054_remote_control_enabled","breakpoints": true},
     {"idx": 55,"version": "7","when": 1775700000000,"tag": "0055_project_documents","breakpoints": true},
     {"idx": 56,"version": "7","when": 1775710000000,"tag": "0056_agent_md","breakpoints": true},
-    {"idx": 57,"version": "7","when": 1775720000000,"tag": "0057_project_ai_context","breakpoints": true}
+    {"idx": 57,"version": "7","when": 1775720000000,"tag": "0057_project_ai_context","breakpoints": true},
+    {"idx": 58,"version": "7","when": 1775800000000,"tag": "0058_performance_indexes","breakpoints": true}
   ]
 }

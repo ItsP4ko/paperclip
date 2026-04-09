@@ -227,7 +227,13 @@ export function geminiAnalysisRoutes(db: Db, storage: StorageService) {
     const issueId = req.params.id as string;
 
     const issue = await db
-      .select()
+      .select({
+        id: issues.id,
+        title: issues.title,
+        description: issues.description,
+        companyId: issues.companyId,
+        projectId: issues.projectId,
+      })
       .from(issues)
       .where(eq(issues.id, issueId))
       .then((rows) => rows[0] ?? null);
@@ -239,7 +245,7 @@ export function geminiAnalysisRoutes(db: Db, storage: StorageService) {
     assertCompanyAccess(req, issue.companyId);
 
     const project = issue.projectId
-      ? await db.select().from(projects).where(eq(projects.id, issue.projectId)).then((r) => r[0] ?? null)
+      ? await db.select({ id: projects.id, aiContext: projects.aiContext }).from(projects).where(eq(projects.id, issue.projectId)).then((r) => r[0] ?? null)
       : null;
 
     // Fetch project documents and extract text for context
@@ -255,23 +261,26 @@ export function geminiAnalysisRoutes(db: Db, storage: StorageService) {
           })
           .from(projectDocuments)
           .innerJoin(assets, eq(projectDocuments.assetId, assets.id))
-          .where(eq(projectDocuments.projectId, issue.projectId));
+          .where(eq(projectDocuments.projectId, issue.projectId))
+          .limit(50);
 
-        const textParts: string[] = [];
-        for (const doc of docs) {
-          try {
-            const obj = await storage.getObject(issue.companyId, doc.objectKey);
-            const chunks: Buffer[] = [];
-            for await (const chunk of obj.stream) chunks.push(Buffer.from(chunk as Uint8Array));
-            const buf = Buffer.concat(chunks);
-            const text = await extractTextFromBuffer(buf, doc.contentType ?? "");
-            if (text.trim()) {
-              textParts.push(`--- ${doc.originalFilename ?? doc.assetId} ---\n${text.slice(0, 4000)}`);
+        const textParts = (await Promise.all(
+          docs.map(async (doc) => {
+            try {
+              const obj = await storage.getObject(issue.companyId, doc.objectKey);
+              const chunks: Buffer[] = [];
+              for await (const chunk of obj.stream) chunks.push(Buffer.from(chunk as Uint8Array));
+              const buf = Buffer.concat(chunks);
+              const text = await extractTextFromBuffer(buf, doc.contentType ?? "");
+              if (text.trim()) {
+                return `--- ${doc.originalFilename ?? doc.assetId} ---\n${text.slice(0, 4000)}`;
+              }
+            } catch {
+              // skip unreadable doc
             }
-          } catch {
-            // skip unreadable doc
-          }
-        }
+            return null;
+          }),
+        )).filter((part): part is string => part !== null);
         if (textParts.length > 0) docsContext = textParts.join("\n\n");
       } catch {
         // non-fatal: proceed without docs context

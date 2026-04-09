@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@/lib/router";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardApi } from "../api/dashboard";
@@ -164,7 +164,7 @@ export function Dashboard() {
     staleTime: 2 * 60 * 1000,
   });
 
-  const recentIssues = issues ? getRecentIssues(issues) : [];
+  const recentIssues = useMemo(() => (issues ? getRecentIssues(issues) : []), [issues]);
   const recentActivity = activity ?? [];
 
   useEffect(() => {
@@ -242,10 +242,13 @@ export function Dashboard() {
     return map;
   }, [issues]);
 
-  const agentName = (id: string | null) => {
-    if (!id || !agents) return null;
-    return agents.find((a) => a.id === id)?.name ?? null;
-  };
+  const agentName = useCallback(
+    (id: string | null) => {
+      if (!id || !agents) return null;
+      return agents.find((a) => a.id === id)?.name ?? null;
+    },
+    [agents],
+  );
 
   if (!selectedCompanyId) {
     if (companies.length === 0) {
