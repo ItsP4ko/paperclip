@@ -109,7 +109,16 @@ export type {
   IssueLabel,
 } from "./issue.js";
 export type { Goal } from "./goal.js";
-export type { Sprint, SprintIssueHistoryEntry, SprintIssueTiming, SprintMetrics } from "./sprint.js";
+export type {
+  Sprint,
+  SprintIssueHistoryEntry,
+  IssueStateHistoryEntry,
+  SprintIssueTiming,
+  SprintMetrics,
+  SprintSpillSummary,
+  UserSprintActivity,
+  ProjectSprintMetrics,
+} from "./sprint.js";
 export type { Approval, ApprovalComment } from "./approval.js";
 export type {
   BudgetPolicy,
