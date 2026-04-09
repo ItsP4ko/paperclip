@@ -133,6 +133,14 @@ export const queryKeys = {
     list: (companyId: string, status?: string) =>
       ["cost-recommendations", companyId, status ?? "all"] as const,
   },
+  sprints: {
+    list: (companyId: string) => ["sprints", companyId] as const,
+    active: (companyId: string) => ["sprints", companyId, "active"] as const,
+    detail: (id: string) => ["sprints", "detail", id] as const,
+    metrics: (id: string) => ["sprints", "metrics", id] as const,
+    issues: (sprintId: string, companyId: string) => ["issues", companyId, "sprint", sprintId] as const,
+    backlog: (companyId: string) => ["issues", companyId, "no-sprint"] as const,
+  },
   pipelines: {
     list: (companyId: string) => ["pipelines", companyId] as const,
     detail: (companyId: string, pipelineId: string) =>

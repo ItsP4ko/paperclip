@@ -198,6 +198,9 @@ export const PROJECT_COLORS = [
   "#3b82f6", // blue
 ] as const;
 
+export const SPRINT_STATUSES = ["planning", "active", "completed", "cancelled"] as const;
+export type SprintStatus = (typeof SPRINT_STATUSES)[number];
+
 export const APPROVAL_TYPES = ["hire_agent", "approve_ceo_strategy", "budget_override_required"] as const;
 export type ApprovalType = (typeof APPROVAL_TYPES)[number];
 
@@ -522,6 +525,7 @@ export const PLUGIN_RESERVED_COMPANY_ROUTE_SEGMENTS = [
   "inbox",
   "design-guide",
   "tests",
+  "sprints",
 ] as const;
 export type PluginReservedCompanyRouteSegment =
   (typeof PLUGIN_RESERVED_COMPANY_ROUTE_SEGMENTS)[number];

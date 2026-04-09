@@ -17,6 +17,7 @@ import { companies } from "./companies.js";
 import { heartbeatRuns } from "./heartbeat_runs.js";
 import { projectWorkspaces } from "./project_workspaces.js";
 import { executionWorkspaces } from "./execution_workspaces.js";
+import { sprints } from "./sprints.js";
 
 export const issues = pgTable(
   "issues",
@@ -55,6 +56,7 @@ export const issues = pgTable(
     completedAt: timestamp("completed_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    sprintId: uuid("sprint_id").references(() => sprints.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -75,6 +77,7 @@ export const issues = pgTable(
     originIdx: index("issues_company_origin_idx").on(table.companyId, table.originKind, table.originId),
     projectWorkspaceIdx: index("issues_company_project_workspace_idx").on(table.companyId, table.projectWorkspaceId),
     executionWorkspaceIdx: index("issues_company_execution_workspace_idx").on(table.companyId, table.executionWorkspaceId),
+    sprintIdx: index("issues_company_sprint_idx").on(table.companyId, table.sprintId),
     identifierIdx: uniqueIndex("issues_identifier_idx").on(table.identifier),
     openRoutineExecutionIdx: uniqueIndex("issues_open_routine_execution_uq")
       .on(table.companyId, table.originKind, table.originId)

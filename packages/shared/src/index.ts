@@ -83,6 +83,7 @@ export {
   type IssueOriginKind,
   type GoalLevel,
   type GoalStatus,
+  type SprintStatus,
   type ProjectStatus,
   type RoutineStatus,
   type RoutineConcurrencyPolicy,
@@ -339,6 +340,10 @@ export type {
   PluginWebhookDeliveryRecord,
   QuotaWindow,
   ProviderQuotaResult,
+  Sprint,
+  SprintIssueHistoryEntry,
+  SprintIssueTiming,
+  SprintMetrics,
 } from "./types/index.js";
 
 export {
@@ -454,6 +459,14 @@ export {
   updateGoalSchema,
   type CreateGoal,
   type UpdateGoal,
+  createSprintSchema,
+  updateSprintSchema,
+  completeSprintSchema,
+  addIssueToSprintSchema,
+  type CreateSprint,
+  type UpdateSprint,
+  type CompleteSprint,
+  type AddIssueToSprint,
   createApprovalSchema,
   upsertBudgetPolicySchema,
   resolveBudgetIncidentSchema,

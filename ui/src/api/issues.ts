@@ -36,6 +36,8 @@ export const issuesApi = {
       originId?: string;
       includeRoutineExecutions?: boolean;
       q?: string;
+      sprintId?: string;
+      noSprint?: boolean;
     },
   ) => {
     const params = new URLSearchParams();
@@ -53,6 +55,8 @@ export const issuesApi = {
     if (filters?.originId) params.set("originId", filters.originId);
     if (filters?.includeRoutineExecutions) params.set("includeRoutineExecutions", "true");
     if (filters?.q) params.set("q", filters.q);
+    if (filters?.sprintId) params.set("sprintId", filters.sprintId);
+    if (filters?.noSprint) params.set("noSprint", "true");
     const qs = params.toString();
     return api.get<Issue[]>(`/companies/${companyId}/issues${qs ? `?${qs}` : ""}`);
   },

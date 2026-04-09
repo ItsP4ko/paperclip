@@ -348,6 +348,8 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
       originId: req.query.originId as string | undefined,
       includeRoutineExecutions:
         req.query.includeRoutineExecutions === "true" || req.query.includeRoutineExecutions === "1",
+      sprintId: req.query.sprintId as string | undefined,
+      noSprint: req.query.noSprint === "true" || req.query.noSprint === "1",
       q: req.query.q as string | undefined,
     };
 
