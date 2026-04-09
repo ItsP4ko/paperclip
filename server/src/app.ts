@@ -37,6 +37,7 @@ import { auditRoutes } from "./routes/audit.js";
 import { knowledgeRoutes } from "./routes/knowledge.js";
 import { costRecommendationRoutes } from "./routes/cost-recommendations.js";
 import { pipelineRoutes } from "./routes/pipelines.js";
+import { sprintRoutes } from "./routes/sprints.js";
 import { runnerRoutes } from "./routes/runner.js";
 import { geminiAnalysisRoutes } from "./routes/gemini-analysis.js";
 import { pluginRoutes } from "./routes/plugins.js";
@@ -263,6 +264,7 @@ export async function createApp(
   api.use(knowledgeRoutes(db));
   api.use(costRecommendationRoutes(db));
   api.use(pipelineRoutes(db));
+  api.use(sprintRoutes(db));
   api.use(runnerRoutes(db));
   api.use(geminiAnalysisRoutes(db, opts.storageService));
   api.use(remoteControlRoutes(db));
