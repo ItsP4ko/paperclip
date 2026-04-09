@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ReactFlow,
   Background,
@@ -64,8 +64,16 @@ export function PipelineCanvas({
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rawEdges);
 
-  // Sync when steps change
-  useMemo(() => { setNodes(layoutNodes); setEdges(rawEdges); }, [layoutNodes, rawEdges, setNodes, setEdges]);
+  // Only sync from server when steps actually change (add/delete/edit), not on every render
+  const prevStepIdsRef = useRef<string>("");
+  useEffect(() => {
+    const stepKey = steps.map(s => `${s.id}:${s.name}:${s.stepType}:${s.assigneeType}`).join("|");
+    if (stepKey !== prevStepIdsRef.current) {
+      prevStepIdsRef.current = stepKey;
+      setNodes(layoutNodes);
+      setEdges(rawEdges);
+    }
+  }, [layoutNodes, rawEdges, setNodes, setEdges, steps]);
 
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_event, node) => { onUpdateStepPosition(node.id, node.position.x, node.position.y); },
