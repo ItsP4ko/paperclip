@@ -28,7 +28,12 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (id.includes("/react-dom/") || id.includes("/react/") || id.includes("/react-router")) {
+            if (
+              id.includes("/react-dom/") ||
+              id.includes("/react/") ||
+              id.includes("/react-router") ||
+              id.includes("@radix-ui/")
+            ) {
               return "vendor-react";
             }
             if (id.includes("@tanstack/react-query")) {
@@ -36,9 +41,6 @@ export default defineConfig({
             }
             if (id.includes("@dnd-kit/")) {
               return "vendor-dnd";
-            }
-            if (id.includes("@radix-ui/")) {
-              return "vendor-radix";
             }
             if (id.includes("lucide-react")) {
               return "vendor-icons";
