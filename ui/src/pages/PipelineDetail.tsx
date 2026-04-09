@@ -273,7 +273,22 @@ export function PipelineDetail() {
             <Button
               size="sm"
               disabled={runMutation.isPending}
-              onClick={() => runMutation.mutate()}
+              onClick={() => {
+                // Validate all steps are connected (except first)
+                const steps = pipeline.steps;
+                if (steps.length > 1) {
+                  const disconnected = steps.filter((s, i) => i > 0 && s.dependsOn.length === 0);
+                  if (disconnected.length > 0) {
+                    alert(`All steps must be connected. Disconnected: ${disconnected.map(s => s.name).join(", ")}`);
+                    return;
+                  }
+                }
+                if (steps.length === 0) {
+                  alert("Add at least one step before running.");
+                  return;
+                }
+                runMutation.mutate();
+              }}
             >
               <Play className="h-3.5 w-3.5 mr-1.5" />
               Run
