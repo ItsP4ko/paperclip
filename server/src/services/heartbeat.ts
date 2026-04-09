@@ -35,6 +35,7 @@ import { budgetService, type BudgetEnforcementScope } from "./budgets.js";
 import { secretService } from "./secrets.js";
 import { resolveDefaultAgentWorkspaceDir, resolveManagedProjectWorkspaceDir } from "../home-paths.js";
 import { summarizeHeartbeatRunResultJson } from "./heartbeat-run-summary.js";
+import { brainService as createBrainService } from "./brain.js";
 import {
   buildWorkspaceReadyComment,
   cleanupExecutionWorkspaceArtifacts,
@@ -4279,6 +4280,27 @@ export function heartbeatService(db: Db) {
       const agent = await getAgent(run.agentId);
       if (agent) await finalizeAgentStatus(agent.id, outcome);
       activeRunExecutions.delete(runId);
+
+      // Company Brain: async knowledge extraction (fire-and-forget)
+      if (outcome === "succeeded" && finalizedRun) {
+        const brain = createBrainService(db);
+        const runForBrain = {
+          id: finalizedRun.id,
+          companyId: finalizedRun.companyId,
+          agentId: finalizedRun.agentId,
+          agentName: agent?.name,
+          agentRole: agent?.role,
+          stdoutExcerpt: finalizedRun.stdoutExcerpt,
+          resultJson: finalizedRun.resultJson as Record<string, unknown> | null,
+          contextSnapshot: finalizedRun.contextSnapshot as Record<string, unknown> | null,
+          startedAt: finalizedRun.startedAt,
+          finishedAt: finalizedRun.finishedAt,
+          usageJson: finalizedRun.usageJson as Record<string, unknown> | null,
+        };
+        // Don't await — run in background to not block the response
+        brain.maybeExtract(runForBrain).catch(() => {});
+      }
+
       return finalizedRun;
     },
 
