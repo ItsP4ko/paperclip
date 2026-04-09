@@ -269,7 +269,7 @@ export function pipelineRoutes(db: Db, redisClient?: RedisClientType) {
       const runId = req.params.runId as string;
       const runStepId = req.params.runStepId as string;
       assertCompanyAccess(req, companyId);
-      const userId = (req as any).user?.id ?? (req as any).session?.userId;
+      const userId = (req as any).actor?.userId;
       if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
       const result = await svc.completeRunStep(companyId, runId, runStepId, userId);
       if (!result) { res.status(404).json({ error: "Step not found or not assignable" }); return; }
