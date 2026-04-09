@@ -35,7 +35,6 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
   const [agentId, setAgentId] = useState(step.agentId ?? "");
   const [assigneeUserId, setAssigneeUserId] = useState(step.assigneeUserId ?? "");
   const [issueId, setIssueId] = useState(step.issueId ?? "");
-  const [dependsOn, setDependsOn] = useState<string[]>(step.dependsOn);
   const [branches, setBranches] = useState<BranchForm[]>(() => {
     const config = step.config as { branches?: BranchForm[] };
     return config.branches ?? [
@@ -50,7 +49,6 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
     setAgentId(step.agentId ?? "");
     setAssigneeUserId(step.assigneeUserId ?? "");
     setIssueId(step.issueId ?? "");
-    setDependsOn(step.dependsOn);
     const config = step.config as { branches?: BranchForm[] };
     setBranches(config.branches ?? [
       { id: "branch-yes", label: "Yes", condition: { field: "status", operator: "eq", value: "done" }, nextStepIds: [] },
@@ -59,7 +57,7 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
   }, [step]);
 
   function handleSave() {
-    const data: Record<string, unknown> = { name, dependsOn };
+    const data: Record<string, unknown> = { name };
     if (step.stepType === "action") {
       data.assigneeType = assigneeType || undefined;
       data.agentId = assigneeType === "agent" ? agentId || null : null;
@@ -168,20 +166,6 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {otherSteps.length > 0 && (
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Depends on</label>
-          <div className="flex flex-wrap gap-1">
-            {otherSteps.map((s) => (
-              <button key={s.id} onClick={() => setDependsOn((prev) => prev.includes(s.id) ? prev.filter((d) => d !== s.id) : [...prev, s.id])}
-                className={`text-xs px-2 py-0.5 rounded border transition-colors ${dependsOn.includes(s.id) ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:bg-accent"}`}>
-                {s.name}
-              </button>
-            ))}
-          </div>
         </div>
       )}
 

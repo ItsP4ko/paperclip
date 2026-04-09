@@ -72,18 +72,21 @@ export function PipelineDetail() {
   );
 
   const addStepMutation = useMutation({
-    mutationFn: (type: "action" | "if_else") =>
-      pipelinesApi.createStep(selectedCompanyId!, pipelineId!, {
+    mutationFn: (type: "action" | "if_else") => {
+      const lastStep = pipeline?.steps[pipeline.steps.length - 1];
+      return pipelinesApi.createStep(selectedCompanyId!, pipelineId!, {
         name: type === "action" ? "New Action" : "New Condition",
         stepType: type,
         position: (pipeline?.steps.length ?? 0),
+        dependsOn: lastStep ? [lastStep.id] : [],
         config: type === "if_else" ? {
           branches: [
             { id: "branch-yes", label: "Yes", condition: { field: "status", operator: "eq", value: "done" }, nextStepIds: [] },
             { id: "branch-no", label: "No", condition: null, nextStepIds: [] },
           ],
         } : {},
-      }),
+      });
+    },
     onSuccess: (step) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(selectedCompanyId!, pipelineId!) });
       setSelectedStepId(step.id);

@@ -140,6 +140,7 @@ export function PipelineCanvas({
         onPaneClick={() => onSelectStep(null)}
         nodeTypes={nodeTypes} edgeTypes={edgeTypes}
         fitView fitViewOptions={{ padding: 0.2 }}
+        snapToGrid={true} snapGrid={[20, 20]}
         deleteKeyCode="Delete" className="bg-background"
       >
         <Background gap={20} size={1} className="!bg-muted/30" />

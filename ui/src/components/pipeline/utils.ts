@@ -49,6 +49,8 @@ export function stepsToEdges(steps: PipelineStep[]): Edge[] {
         target: step.id,
         sourceHandle,
         type: "addStep",
+        animated: true,
+        style: { stroke: 'hsl(var(--border))' },
       });
     }
   }
