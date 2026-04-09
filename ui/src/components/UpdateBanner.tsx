@@ -6,20 +6,26 @@ function isTauriEnv() {
 
 export function UpdateBanner() {
   const [version, setVersion] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
     if (!isTauriEnv()) return;
-    let unlisten: (() => void) | undefined;
+    const cleanups: (() => void)[] = [];
     import("@tauri-apps/api/event").then(({ listen }) => {
       listen<{ version: string }>("update-available", (e) => {
+        setError(null);
         setVersion(e.payload.version);
-      }).then((fn) => { unlisten = fn; });
+      }).then((fn) => { cleanups.push(fn); });
+
+      listen<{ error: string }>("update-error", (e) => {
+        setError(e.payload.error);
+      }).then((fn) => { cleanups.push(fn); });
     });
-    return () => { unlisten?.(); };
+    return () => { cleanups.forEach((fn) => fn()); };
   }, []);
 
-  if (!version) return null;
+  if (!version && !error) return null;
 
   async function handleInstall() {
     setInstalling(true);
@@ -29,6 +35,22 @@ export function UpdateBanner() {
     } catch {
       setInstalling(false);
     }
+  }
+
+  if (error) {
+    return (
+      <div className="shrink-0 flex items-center gap-2 bg-destructive/10 border-b border-destructive/20 px-4 py-1.5 text-xs">
+        <span className="text-destructive">
+          Error al buscar actualizaciones: {error}
+        </span>
+        <button
+          onClick={() => setError(null)}
+          className="text-destructive/60 font-medium hover:underline ml-auto"
+        >
+          Cerrar
+        </button>
+      </div>
+    );
   }
 
   return (
