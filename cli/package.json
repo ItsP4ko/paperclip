@@ -1,6 +1,6 @@
 {
   "name": "relaycontrol",
-  "version": "0.6.0",
+  "version": "0.6.3",
   "description": "Relay Control CLI \u2014 orchestrate AI agent teams to run a business",
   "type": "module",
   "bin": {
