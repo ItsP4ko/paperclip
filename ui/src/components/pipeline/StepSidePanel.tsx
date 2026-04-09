@@ -59,9 +59,18 @@ export function StepSidePanel({ step, allSteps, agents, members, issues, onSave,
   function handleSave() {
     const data: Record<string, unknown> = { name };
     if (step.stepType === "action") {
-      data.assigneeType = assigneeType || undefined;
-      data.agentId = assigneeType === "agent" ? agentId || null : null;
-      data.assigneeUserId = assigneeType === "user" ? assigneeUserId || null : null;
+      if (assigneeType === "agent") {
+        data.assigneeType = "agent";
+        data.agentId = agentId || null;
+        data.assigneeUserId = null;
+      } else if (assigneeType === "user") {
+        data.assigneeType = "user";
+        data.assigneeUserId = assigneeUserId || null;
+        data.agentId = null;
+      } else {
+        data.agentId = null;
+        data.assigneeUserId = null;
+      }
       data.issueId = issueId || null;
     } else {
       data.config = { branches };
