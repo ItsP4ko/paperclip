@@ -134,17 +134,15 @@ export function runnerRoutes(db: Db) {
 
     const unsubs: Array<() => void> = [];
 
-    const handleEvent = async (event: { type: string }) => {
-      if (event.type !== "runner.jobs.pending") return;
-      await pushJobs();
+    const handleEvent = (event: { type: string }) => {
+      if (event.type === "runner.jobs.pending") void pushJobs();
     };
 
     if (isAdmin && companyIds.length === 0) {
-      // Instance admin with no explicit companies — subscribe to global events
-      unsubs.push(subscribeGlobalLiveEvents(handleEvent as Parameters<typeof subscribeGlobalLiveEvents>[0]));
+      unsubs.push(subscribeGlobalLiveEvents(handleEvent));
     } else {
       for (const cid of companyIds) {
-        unsubs.push(subscribeCompanyLiveEvents(cid, handleEvent as Parameters<typeof subscribeCompanyLiveEvents>[0]));
+        unsubs.push(subscribeCompanyLiveEvents(cid, handleEvent));
       }
     }
 
