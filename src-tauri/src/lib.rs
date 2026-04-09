@@ -386,11 +386,33 @@ fn spawn_runner(handle: tauri::AppHandle) {
 
 fn check_for_updates(handle: tauri::AppHandle) {
     tauri::async_runtime::spawn(async move {
-        if let Ok(updater) = handle.updater() {
-            if let Ok(Some(update)) = updater.check().await {
+        let updater = match handle.updater() {
+            Ok(u) => u,
+            Err(e) => {
+                eprintln!("[updater] failed to create updater: {e}");
+                let _ = handle.emit(
+                    "update-error",
+                    serde_json::json!({ "error": e.to_string() }),
+                );
+                return;
+            }
+        };
+
+        match updater.check().await {
+            Ok(Some(update)) => {
                 let _ = handle.emit(
                     "update-available",
                     serde_json::json!({ "version": update.version }),
+                );
+            }
+            Ok(None) => {
+                eprintln!("[updater] app is up to date");
+            }
+            Err(e) => {
+                eprintln!("[updater] check failed: {e}");
+                let _ = handle.emit(
+                    "update-error",
+                    serde_json::json!({ "error": e.to_string() }),
                 );
             }
         }
