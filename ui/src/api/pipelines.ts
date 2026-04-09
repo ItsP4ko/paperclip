@@ -16,6 +16,9 @@ export interface PipelineStep {
   pipelineId: string;
   name: string;
   agentId: string | null;
+  assigneeType: "agent" | "user" | null;
+  assigneeUserId: string | null;
+  issueId: string | null;
   dependsOn: string[];
   config: Record<string, unknown>;
   position: number;
@@ -51,6 +54,8 @@ export interface PipelineRunStep {
   error: string | null;
   stepName: string;
   agentId: string | null;
+  assigneeType: "agent" | "user" | null;
+  assigneeUserId: string | null;
   dependsOn: string[];
   position: number;
   createdAt: string;
@@ -80,12 +85,20 @@ export const pipelinesApi = {
   delete: (companyId: string, pipelineId: string) =>
     api.delete<void>(`/companies/${companyId}/pipelines/${pipelineId}`),
 
+  createFromIssues: (
+    companyId: string,
+    data: { name: string; description?: string; issueIds: string[] },
+  ) => api.post<PipelineWithSteps>(`/companies/${companyId}/pipelines/from-issues`, data),
+
   createStep: (
     companyId: string,
     pipelineId: string,
     data: {
       name: string;
       agentId?: string | null;
+      assigneeType?: "agent" | "user";
+      assigneeUserId?: string | null;
+      issueId?: string | null;
       dependsOn?: string[];
       position?: number;
       config?: Record<string, unknown>;
