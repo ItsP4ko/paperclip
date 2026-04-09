@@ -1,10 +1,10 @@
 import type { Request, Response, NextFunction } from "express";
 import crypto from "node:crypto";
 
-const SESSION_COOKIE = "rc_session";
+export const SESSION_COOKIE = "rc_session";
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-function parseCookies(header: string | undefined): Record<string, string> {
+export function parseCookies(header: string | undefined): Record<string, string> {
   if (!header) return {};
   return Object.fromEntries(
     header.split(";").map((part) => {
@@ -21,7 +21,7 @@ function makeSessionValue(pin: string): string {
   return `${ts}.${sig}`;
 }
 
-function validateSession(value: string, pin: string): boolean {
+export function validatePinSession(value: string, pin: string): boolean {
   try {
     const dot = value.indexOf(".");
     if (dot === -1) return false;
@@ -47,7 +47,7 @@ export function createRemotePinAuthMiddleware(
     if (req.path === "/api/remote-pin-auth") return next();
 
     const cookies = parseCookies(req.headers.cookie);
-    if (validateSession(cookies[SESSION_COOKIE] ?? "", pin)) return next();
+    if (validatePinSession(cookies[SESSION_COOKIE] ?? "", pin)) return next();
 
     // API calls from unauthenticated clients get 401
     if (req.path.startsWith("/api/")) {
