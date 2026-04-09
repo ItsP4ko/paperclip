@@ -61,46 +61,59 @@ export function costRecommendationService(db: Db) {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      // --- Fetch all agents for this company ---
-      const allAgents = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.companyId, companyId));
+      // --- Fetch agents, costs, models, and run metrics in parallel ---
+      const [allAgents, costRows, modelRows, runRows] = await Promise.all([
+        db
+          .select()
+          .from(agents)
+          .where(eq(agents.companyId, companyId)),
+        db
+          .select({
+            agentId: costEvents.agentId,
+            totalCostCents: sql<number>`coalesce(sum(${costEvents.costCents}), 0)::int`,
+          })
+          .from(costEvents)
+          .where(
+            and(
+              eq(costEvents.companyId, companyId),
+              gte(costEvents.occurredAt, thirtyDaysAgo),
+            ),
+          )
+          .groupBy(costEvents.agentId),
+        db
+          .select({
+            agentId: costEvents.agentId,
+            model: costEvents.model,
+            modelCost: sql<number>`sum(${costEvents.costCents})::int`,
+          })
+          .from(costEvents)
+          .where(
+            and(
+              eq(costEvents.companyId, companyId),
+              gte(costEvents.occurredAt, thirtyDaysAgo),
+            ),
+          )
+          .groupBy(costEvents.agentId, costEvents.model),
+        db
+          .select({
+            agentId: heartbeatRuns.agentId,
+            totalRuns: sql<number>`count(*)::int`,
+            succeededRuns: sql<number>`count(*) filter (where ${heartbeatRuns.status} = 'succeeded')::int`,
+            failedRuns: sql<number>`count(*) filter (where ${heartbeatRuns.status} = 'failed')::int`,
+          })
+          .from(heartbeatRuns)
+          .where(
+            and(
+              eq(heartbeatRuns.companyId, companyId),
+              gte(heartbeatRuns.startedAt, thirtyDaysAgo),
+            ),
+          )
+          .groupBy(heartbeatRuns.agentId),
+      ]);
 
       if (allAgents.length === 0) return 0;
 
-      // --- Per-agent total cost in last 30 days ---
-      const costRows = await db
-        .select({
-          agentId: costEvents.agentId,
-          totalCostCents: sql<number>`coalesce(sum(${costEvents.costCents}), 0)::int`,
-        })
-        .from(costEvents)
-        .where(
-          and(
-            eq(costEvents.companyId, companyId),
-            gte(costEvents.occurredAt, thirtyDaysAgo),
-          ),
-        )
-        .groupBy(costEvents.agentId);
-
       const costByAgent = new Map(costRows.map((r) => [r.agentId, r.totalCostCents]));
-
-      // --- Top model per agent by cost in last 30 days ---
-      const modelRows = await db
-        .select({
-          agentId: costEvents.agentId,
-          model: costEvents.model,
-          modelCost: sql<number>`sum(${costEvents.costCents})::int`,
-        })
-        .from(costEvents)
-        .where(
-          and(
-            eq(costEvents.companyId, companyId),
-            gte(costEvents.occurredAt, thirtyDaysAgo),
-          ),
-        )
-        .groupBy(costEvents.agentId, costEvents.model);
 
       const topModelByAgent = new Map<string, { model: string; modelCost: number }>();
       for (const row of modelRows) {
@@ -109,23 +122,6 @@ export function costRecommendationService(db: Db) {
           topModelByAgent.set(row.agentId, { model: row.model, modelCost: row.modelCost });
         }
       }
-
-      // --- Per-agent run metrics in last 30 days ---
-      const runRows = await db
-        .select({
-          agentId: heartbeatRuns.agentId,
-          totalRuns: sql<number>`count(*)::int`,
-          succeededRuns: sql<number>`count(*) filter (where ${heartbeatRuns.status} = 'succeeded')::int`,
-          failedRuns: sql<number>`count(*) filter (where ${heartbeatRuns.status} = 'failed')::int`,
-        })
-        .from(heartbeatRuns)
-        .where(
-          and(
-            eq(heartbeatRuns.companyId, companyId),
-            gte(heartbeatRuns.startedAt, thirtyDaysAgo),
-          ),
-        )
-        .groupBy(heartbeatRuns.agentId);
 
       const runsByAgent = new Map(runRows.map((r) => [r.agentId, r]));
 

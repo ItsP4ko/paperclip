@@ -93,6 +93,35 @@ function headersFromIncomingMessage(req: IncomingMessage): Headers {
   return headers;
 }
 
+async function resolveUserBoardContext(
+  db: Db,
+  userId: string,
+  companyId: string,
+): Promise<UpgradeContext | null> {
+  const [roleRow, memberships] = await Promise.all([
+    db
+      .select({ id: instanceUserRoles.id })
+      .from(instanceUserRoles)
+      .where(and(eq(instanceUserRoles.userId, userId), eq(instanceUserRoles.role, "instance_admin")))
+      .then((rows) => rows[0] ?? null),
+    db
+      .select({ companyId: companyMemberships.companyId })
+      .from(companyMemberships)
+      .where(
+        and(
+          eq(companyMemberships.principalType, "user"),
+          eq(companyMemberships.principalId, userId),
+          eq(companyMemberships.status, "active"),
+        ),
+      ),
+  ]);
+
+  const hasCompanyMembership = memberships.some((row) => row.companyId === companyId);
+  if (!roleRow && !hasCompanyMembership) return null;
+
+  return { companyId, actorType: "board", actorId: userId };
+}
+
 export async function authorizeUpgrade(
   db: Db,
   req: IncomingMessage,
@@ -125,32 +154,7 @@ export async function authorizeUpgrade(
     const userId = session?.user?.id;
     if (!userId) return null;
 
-    const [roleRow, memberships] = await Promise.all([
-      db
-        .select({ id: instanceUserRoles.id })
-        .from(instanceUserRoles)
-        .where(and(eq(instanceUserRoles.userId, userId), eq(instanceUserRoles.role, "instance_admin")))
-        .then((rows) => rows[0] ?? null),
-      db
-        .select({ companyId: companyMemberships.companyId })
-        .from(companyMemberships)
-        .where(
-          and(
-            eq(companyMemberships.principalType, "user"),
-            eq(companyMemberships.principalId, userId),
-            eq(companyMemberships.status, "active"),
-          ),
-        ),
-    ]);
-
-    const hasCompanyMembership = memberships.some((row) => row.companyId === companyId);
-    if (!roleRow && !hasCompanyMembership) return null;
-
-    return {
-      companyId,
-      actorType: "board",
-      actorId: userId,
-    };
+    return resolveUserBoardContext(db, userId, companyId);
   }
 
   const tokenHash = hashToken(token);
@@ -176,32 +180,7 @@ export async function authorizeUpgrade(
       const userId = session?.user?.id;
       if (!userId) return null;
 
-      const [roleRow, memberships] = await Promise.all([
-        db
-          .select({ id: instanceUserRoles.id })
-          .from(instanceUserRoles)
-          .where(and(eq(instanceUserRoles.userId, userId), eq(instanceUserRoles.role, "instance_admin")))
-          .then((rows) => rows[0] ?? null),
-        db
-          .select({ companyId: companyMemberships.companyId })
-          .from(companyMemberships)
-          .where(
-            and(
-              eq(companyMemberships.principalType, "user"),
-              eq(companyMemberships.principalId, userId),
-              eq(companyMemberships.status, "active"),
-            ),
-          ),
-      ]);
-
-      const hasCompanyMembership = memberships.some((row) => row.companyId === companyId);
-      if (!roleRow && !hasCompanyMembership) return null;
-
-      return {
-        companyId,
-        actorType: "board" as const,
-        actorId: userId,
-      };
+      return resolveUserBoardContext(db, userId, companyId);
     }
     return null;
   }
