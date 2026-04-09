@@ -1627,13 +1627,26 @@ function AgentMdSection({ agent, companyId }: { agent: Agent; companyId?: string
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isPending, isFetching } = useQuery({
     queryKey: queryKeys.agents.agentMd(agent.id),
     queryFn: () => agentsApi.getAgentMd(agent.id, companyId),
   });
 
   const [localContent, setLocalContent] = useState<string | null>(null);
+
+  // Reset local state when switching agents so previous agent's content doesn't bleed through
+  useEffect(() => {
+    setLocalContent(null);
+    setSaveState("idle");
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+  }, [agent.id]);
+
   const content = localContent ?? data?.content ?? "";
+  // Show loading when: no data yet (isPending), or background refetch with no content yet
+  const showLoading = isPending || (isFetching && !data?.content?.trim() && localContent === null);
 
   const handleChange = (value: string) => {
     if (!isOwner) return;
@@ -1664,7 +1677,7 @@ function AgentMdSection({ agent, companyId }: { agent: Agent; companyId?: string
         Stored in the shared DB. Injected by the local runner instead of the on-disk AGENTS.md.{" "}
         {!isOwner && "Read-only — contact an owner to edit."}
       </p>
-      {isLoading ? (
+      {showLoading ? (
         <div className="text-xs text-muted-foreground">Loading…</div>
       ) : (
         <textarea
