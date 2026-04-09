@@ -854,18 +854,6 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
       return;
     }
     const readState = await svc.markRead(issue.companyId, issue.id, req.actor.userId, new Date());
-    const actor = getActorInfo(req);
-    await logActivity(db, {
-      companyId: issue.companyId,
-      actorType: actor.actorType,
-      actorId: actor.actorId,
-      agentId: actor.agentId,
-      runId: actor.runId,
-      action: "issue.read_marked",
-      entityType: "issue",
-      entityId: issue.id,
-      details: { userId: req.actor.userId, lastReadAt: readState.lastReadAt },
-    });
     res.json(readState);
   });
 
@@ -886,18 +874,6 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
       return;
     }
     const removed = await svc.markUnread(issue.companyId, issue.id, req.actor.userId);
-    const actor = getActorInfo(req);
-    await logActivity(db, {
-      companyId: issue.companyId,
-      actorType: actor.actorType,
-      actorId: actor.actorId,
-      agentId: actor.agentId,
-      runId: actor.runId,
-      action: "issue.read_unmarked",
-      entityType: "issue",
-      entityId: issue.id,
-      details: { userId: req.actor.userId },
-    });
     res.json({ id: issue.id, removed });
   });
 
