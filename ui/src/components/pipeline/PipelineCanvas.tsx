@@ -113,8 +113,19 @@ export function PipelineCanvas({
 
   const handleAutoLayout = useCallback(() => {
     const reLayout = computeFullLayout(nodes, edges);
-    setNodes(reLayout);
-    onAutoLayout(reLayout.map((n) => ({ stepId: n.id, positionX: n.position.x, positionY: n.position.y })));
+    // Animate nodes to new positions
+    setNodes(reLayout.map(n => ({
+      ...n,
+      style: { ...n.style, transition: "all 0.5s ease" },
+    })));
+    // Remove transition style after animation completes
+    setTimeout(() => {
+      setNodes(prev => prev.map(n => ({
+        ...n,
+        style: { ...n.style, transition: undefined },
+      })));
+    }, 600);
+    onAutoLayout(reLayout.map(n => ({ stepId: n.id, positionX: n.position.x, positionY: n.position.y })));
   }, [nodes, edges, setNodes, onAutoLayout]);
 
   return (
