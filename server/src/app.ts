@@ -213,7 +213,7 @@ export async function createApp(
       user: {
         id: req.actor.userId,
         email: null,
-        name: req.actor.source === "local_implicit" ? "Local Board" : null,
+        name: req.actor.source === "local_implicit" || req.actor.source === "remote_pin" ? "Local Board" : null,
       },
     });
   });
