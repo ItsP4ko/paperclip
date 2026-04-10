@@ -88,10 +88,13 @@ export function useReadInboxItems() {
 export function useInboxBadge(companyId: string | null | undefined) {
   const { dismissed } = useDismissedInboxItems();
 
+  const BADGE_STALE_TIME = 60_000;
+
   const { data: approvals = [] } = useQuery({
     queryKey: queryKeys.approvals.list(companyId!),
     queryFn: () => approvalsApi.list(companyId!),
     enabled: !!companyId,
+    staleTime: BADGE_STALE_TIME,
   });
 
   const { data: joinRequests = [] } = useQuery({
@@ -108,12 +111,14 @@ export function useInboxBadge(companyId: string | null | undefined) {
     },
     enabled: !!companyId,
     retry: false,
+    staleTime: BADGE_STALE_TIME,
   });
 
   const { data: dashboard } = useQuery({
     queryKey: queryKeys.dashboard(companyId!),
     queryFn: () => dashboardApi.summary(companyId!),
     enabled: !!companyId,
+    staleTime: BADGE_STALE_TIME,
   });
 
   const { data: mineIssuesRaw = [] } = useQuery({
@@ -125,6 +130,7 @@ export function useInboxBadge(companyId: string | null | undefined) {
         status: INBOX_ISSUE_STATUSES,
       }),
     enabled: !!companyId,
+    staleTime: BADGE_STALE_TIME,
   });
 
   const mineIssues = useMemo(() => getRecentTouchedIssues(mineIssuesRaw), [mineIssuesRaw]);
@@ -133,6 +139,7 @@ export function useInboxBadge(companyId: string | null | undefined) {
     queryKey: queryKeys.heartbeats(companyId!),
     queryFn: () => heartbeatsApi.list(companyId!),
     enabled: !!companyId,
+    staleTime: BADGE_STALE_TIME,
   });
 
   return useMemo(

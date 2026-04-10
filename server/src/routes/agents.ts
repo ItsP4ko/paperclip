@@ -74,7 +74,7 @@ import {
   resolveDefaultAgentInstructionsBundleRole,
 } from "../services/default-agent-instructions.js";
 
-export function agentRoutes(db: Db) {
+export function agentRoutes(db: Db, redisClient?: import("redis").RedisClientType) {
   const DEFAULT_INSTRUCTIONS_PATH_KEYS: Record<string, string> = {
     claude_local: "instructionsFilePath",
     codex_local: "instructionsFilePath",
@@ -963,13 +963,29 @@ export function agentRoutes(db: Db) {
   router.get("/companies/:companyId/agents", async (req, res) => {
     const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
-    const result = await svc.list(companyId);
+
     const canReadConfigs = await actorCanReadConfigurationsForCompany(req, companyId);
-    if (canReadConfigs || req.actor.type === "board") {
-      res.json(result);
-      return;
+    const isFullView = canReadConfigs || req.actor.type === "board";
+    const cacheKey = `agents-list:${companyId}:${isFullView ? "full" : "redacted"}`;
+
+    if (redisClient?.isReady) {
+      const cached = await redisClient.get(cacheKey).catch(() => null);
+      if (cached) {
+        res.json(JSON.parse(cached));
+        return;
+      }
     }
-    res.json(result.map((agent) => redactForRestrictedAgentView(agent)));
+
+    const result = await svc.list(companyId);
+    const payload = isFullView ? result : result.map((agent) => redactForRestrictedAgentView(agent));
+
+    if (redisClient?.isReady) {
+      await redisClient
+        .set(cacheKey, JSON.stringify(payload), { EX: 30 })
+        .catch(() => {});
+    }
+
+    res.json(payload);
   });
 
   router.get("/instance/scheduler-heartbeats", async (req, res) => {
@@ -2362,6 +2378,43 @@ export function agentRoutes(db: Db) {
     res.json(run);
   });
 
+  // ── Interactive session routes ──────────────────────────────────────
+
+  const sendMessageSchema = z.object({ message: z.string().min(1).max(100_000) });
+
+  router.post("/heartbeat-runs/:runId/message", validate(sendMessageSchema), async (req, res) => {
+    assertBoard(req);
+    const runId = req.params.runId as string;
+    const run = await heartbeat.getRun(runId);
+    if (!run) { res.status(404).json({ error: "Run not found" }); return; }
+    assertCompanyAccess(req, run.companyId);
+    const { message } = req.body as z.infer<typeof sendMessageSchema>;
+    const result = await heartbeat.sendRunMessage(runId, message);
+    res.json(result);
+  });
+
+  router.post("/heartbeat-runs/:runId/session/close", async (req, res) => {
+    assertBoard(req);
+    const runId = req.params.runId as string;
+    const run = await heartbeat.getRun(runId);
+    if (!run) { res.status(404).json({ error: "Run not found" }); return; }
+    assertCompanyAccess(req, run.companyId);
+    const updated = await heartbeat.closeRunSession(runId);
+    res.json(updated);
+  });
+
+  router.get("/heartbeat-runs/:runId/turns", async (req, res) => {
+    assertBoard(req);
+    const runId = req.params.runId as string;
+    const run = await heartbeat.getRun(runId);
+    if (!run) { res.status(404).json({ error: "Run not found" }); return; }
+    assertCompanyAccess(req, run.companyId);
+    const turns = await heartbeat.getRunTurns(runId);
+    res.json(turns);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────
+
   router.get("/heartbeat-runs/:runId/events", validateQuery(heartbeatEventsQuerySchema), async (req, res) => {
     const runId = req.params.runId as string;
     const run = await heartbeat.getRun(runId);
@@ -2454,14 +2507,17 @@ export function agentRoutes(db: Db) {
         agentId: heartbeatRuns.agentId,
         agentName: agentsTable.name,
         adapterType: agentsTable.adapterType,
+        sessionStatus: heartbeatRuns.sessionStatus,
+        sessionIdAfter: heartbeatRuns.sessionIdAfter,
       })
       .from(heartbeatRuns)
       .innerJoin(agentsTable, eq(heartbeatRuns.agentId, agentsTable.id))
       .where(
         and(
           eq(heartbeatRuns.companyId, issue.companyId),
-          inArray(heartbeatRuns.status, ["queued", "running"]),
           sql`${heartbeatRuns.contextSnapshot} ->> 'issueId' = ${issue.id}`,
+          // Show active runs + idle sessions (waiting for user input)
+          sql`(${heartbeatRuns.status} IN ('queued', 'running', 'pending_local') OR ${heartbeatRuns.sessionStatus} = 'idle')`,
         ),
       )
       .orderBy(desc(heartbeatRuns.createdAt));

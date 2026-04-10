@@ -835,40 +835,47 @@ export function issueService(db: Db) {
         )
         .limit(filters?.limit ?? 500)
         .offset(filters?.offset ?? 0);
-      const withLabels = await withIssueLabels(db, rows);
-      const runMap = await activeRunMapForIssues(db, withLabels);
+      const [withLabels, runMap] = await Promise.all([
+        withIssueLabels(db, rows),
+        activeRunMapForIssues(db, rows as any),
+      ]);
       const withRuns = withActiveRuns(withLabels, runMap);
       if (withRuns.length === 0) {
         return withRuns;
       }
 
       const issueIds = withRuns.map((row) => row.id);
-      const [statsRows, readRows, lastActivityRows] = await Promise.all([
-        contextUserId
-          ? db
-            .select({
-              issueId: issueComments.issueId,
-              myLastCommentAt: sql<Date | null>`
-                MAX(CASE WHEN ${issueComments.authorUserId} = ${contextUserId} THEN ${issueComments.createdAt} END)
-              `,
-              lastExternalCommentAt: sql<Date | null>`
-                MAX(
-                  CASE
-                    WHEN ${issueComments.authorUserId} IS NULL OR ${issueComments.authorUserId} <> ${contextUserId}
-                    THEN ${issueComments.createdAt}
-                  END
-                )
-              `,
-            })
-            .from(issueComments)
-            .where(
-              and(
-                eq(issueComments.companyId, companyId),
-                inArray(issueComments.issueId, issueIds),
-              ),
-            )
-            .groupBy(issueComments.issueId)
-          : Promise.resolve([]),
+
+      // Single merged query for all comment stats (user-specific + global latest)
+      const commentSelect: Record<string, any> = {
+        issueId: issueComments.issueId,
+        latestCommentAt: sql<Date | null>`MAX(${issueComments.createdAt})`,
+      };
+      if (contextUserId) {
+        commentSelect.myLastCommentAt = sql<Date | null>`
+          MAX(CASE WHEN ${issueComments.authorUserId} = ${contextUserId} THEN ${issueComments.createdAt} END)
+        `;
+        commentSelect.lastExternalCommentAt = sql<Date | null>`
+          MAX(
+            CASE
+              WHEN ${issueComments.authorUserId} IS NULL OR ${issueComments.authorUserId} <> ${contextUserId}
+              THEN ${issueComments.createdAt}
+            END
+          )
+        `;
+      }
+
+      const [commentRows, readRows, logRows] = await Promise.all([
+        db
+          .select(commentSelect)
+          .from(issueComments)
+          .where(
+            and(
+              eq(issueComments.companyId, companyId),
+              inArray(issueComments.issueId, issueIds),
+            ),
+          )
+          .groupBy(issueComments.issueId),
         contextUserId
           ? db
             .select({
@@ -884,64 +891,50 @@ export function issueService(db: Db) {
               ),
             )
           : Promise.resolve([]),
-        Promise.all([
-          db
-            .select({
-              issueId: issueComments.issueId,
-              latestCommentAt: sql<Date | null>`MAX(${issueComments.createdAt})`,
-            })
-            .from(issueComments)
-            .where(
-              and(
-                eq(issueComments.companyId, companyId),
-                inArray(issueComments.issueId, issueIds),
-              ),
-            )
-            .groupBy(issueComments.issueId),
-          db
-            .select({
-              issueId: activityLog.entityId,
-              latestLogAt: sql<Date | null>`MAX(${activityLog.createdAt})`,
-            })
-            .from(activityLog)
-            .where(
-              and(
-                eq(activityLog.companyId, companyId),
-                eq(activityLog.entityType, "issue"),
-                inArray(activityLog.entityId, issueIds),
-                sql`${activityLog.action} NOT IN (${sql.join(
-                  ISSUE_LOCAL_INBOX_ACTIVITY_ACTIONS.map((action) => sql`${action}`),
-                  sql`, `,
-                )})`,
-              ),
-            )
-            .groupBy(activityLog.entityId),
-        ]).then(([commentRows, logRows]) => {
-          const byIssueId = new Map<string, IssueLastActivityStat>();
-          for (const row of commentRows) {
-            byIssueId.set(row.issueId, {
-              issueId: row.issueId,
-              latestCommentAt: row.latestCommentAt,
-              latestLogAt: null,
-            });
-          }
-          for (const row of logRows) {
-            const existing = byIssueId.get(row.issueId);
-            if (existing) existing.latestLogAt = row.latestLogAt;
-            else {
-              byIssueId.set(row.issueId, {
-                issueId: row.issueId,
-                latestCommentAt: null,
-                latestLogAt: row.latestLogAt,
-              });
-            }
-          }
-          return [...byIssueId.values()];
-        }),
+        db
+          .select({
+            issueId: activityLog.entityId,
+            latestLogAt: sql<Date | null>`MAX(${activityLog.createdAt})`,
+          })
+          .from(activityLog)
+          .where(
+            and(
+              eq(activityLog.companyId, companyId),
+              eq(activityLog.entityType, "issue"),
+              inArray(activityLog.entityId, issueIds),
+              sql`${activityLog.action} NOT IN (${sql.join(
+                ISSUE_LOCAL_INBOX_ACTIVITY_ACTIONS.map((action) => sql`${action}`),
+                sql`, `,
+              )})`,
+            ),
+          )
+          .groupBy(activityLog.entityId),
       ]);
-      const statsByIssueId = new Map(statsRows.map((row) => [row.issueId, row]));
-      const lastActivityByIssueId = new Map(lastActivityRows.map((row) => [row.issueId, row]));
 
+      const statsByIssueId = new Map(
+        commentRows
+          .filter((row: any) => row.myLastCommentAt || row.lastExternalCommentAt)
+          .map((row: any) => [row.issueId, row]),
+      );
+      const lastActivityByIssueId = new Map<string, IssueLastActivityStat>();
+      for (const row of commentRows as any[]) {
+        lastActivityByIssueId.set(row.issueId, {
+          issueId: row.issueId,
+          latestCommentAt: row.latestCommentAt,
+          latestLogAt: null,
+        });
+      }
+      for (const row of logRows) {
+        const existing = lastActivityByIssueId.get(row.issueId);
+        if (existing) existing.latestLogAt = row.latestLogAt;
+        else {
+          lastActivityByIssueId.set(row.issueId, {
+            issueId: row.issueId,
+            latestCommentAt: null,
+            latestLogAt: row.latestLogAt,
+          });
+        }
+      }
       if (!contextUserId) {
         return withRuns.map((row) => {
           const activity = lastActivityByIssueId.get(row.id);

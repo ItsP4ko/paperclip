@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import type { TranscriptEntry } from "../../adapters";
 import { MarkdownBody } from "../MarkdownBody";
 import { cn, formatTokens } from "../../lib/utils";
@@ -579,7 +579,7 @@ export function normalizeTranscript(entries: TranscriptEntry[], streaming: boole
   return groupToolBlocks(groupCommandBlocks(blocks));
 }
 
-function TranscriptMessageBlock({
+const TranscriptMessageBlock = memo(function TranscriptMessageBlock({
   block,
   density,
 }: {
@@ -616,9 +616,9 @@ function TranscriptMessageBlock({
       )}
     </div>
   );
-}
+});
 
-function TranscriptThinkingBlock({
+const TranscriptThinkingBlock = memo(function TranscriptThinkingBlock({
   block,
   density,
   className,
@@ -638,7 +638,7 @@ function TranscriptThinkingBlock({
       {block.text}
     </MarkdownBody>
   );
-}
+});
 
 function TranscriptToolCard({
   block,

@@ -41,6 +41,7 @@ import { PluginSlotOutlet } from "@/plugins/slots";
 import { RunnerStatusIndicator } from "./RunnerStatusIndicator";
 import { DesktopDownloadButton } from "./DesktopDownloadButton";
 import { isTauriEnv } from "../lib/platform";
+import { usePrefetchRoute } from "../hooks/usePrefetchRoute";
 
 export function Sidebar() {
   const { openNewIssue } = useDialog();
@@ -48,6 +49,7 @@ export function Sidebar() {
   const { isMember, canManageAgents } = useMemberRole(selectedCompanyId);
   const isTauri = isTauriEnv();
   const queryClient = useQueryClient();
+  const prefetch = usePrefetchRoute();
   const { data: session } = useQuery({
     queryKey: queryKeys.auth.session,
     queryFn: () => authApi.getSession(),
@@ -117,7 +119,7 @@ export function Sidebar() {
             <SquarePen className="h-4 w-4 shrink-0" />
             <span className="truncate">New Issue</span>
           </button>
-          <SidebarNavItem to="/dashboard" label="Dashboard" icon={LayoutDashboard} liveCount={liveRunCount} />
+          <SidebarNavItem to="/dashboard" label="Dashboard" icon={LayoutDashboard} liveCount={liveRunCount} onMouseEnter={() => prefetch("/dashboard")} />
           <SidebarNavItem
             to="/inbox"
             label="Inbox"
@@ -136,11 +138,11 @@ export function Sidebar() {
         </div>
 
         <SidebarSection label="Work">
-          <SidebarNavItem to="/issues" label="Issues" icon={CircleDot} />
+          <SidebarNavItem to="/issues" label="Issues" icon={CircleDot} onMouseEnter={() => prefetch("/issues")} />
           <SidebarNavItem to="/my-tasks" label="My Tasks" icon={ListTodo} badge={badges?.myTasks} />
           <SidebarNavItem to="/routines" label="Routines" icon={Repeat} textBadge="Beta" textBadgeTone="amber" />
           <SidebarNavItem to="/pipelines" label="Pipelines" icon={GitBranch} />
-          <SidebarNavItem to="/goals" label="Goals" icon={Target} />
+          <SidebarNavItem to="/goals" label="Goals" icon={Target} onMouseEnter={() => prefetch("/goals")} />
         </SidebarSection>
 
         <SidebarProjects />

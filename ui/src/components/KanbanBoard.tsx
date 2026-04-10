@@ -50,7 +50,7 @@ interface KanbanBoardProps {
 
 /* ── Droppable Column ── */
 
-function KanbanColumn({
+const KanbanColumn = memo(function KanbanColumn({
   status,
   issues,
   agentMap,
@@ -96,7 +96,7 @@ function KanbanColumn({
       </div>
     </div>
   );
-}
+});
 
 /* ── Draggable Card ── */
 
