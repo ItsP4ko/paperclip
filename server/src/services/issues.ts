@@ -83,6 +83,8 @@ export interface IssueFilters {
   sprintId?: string;
   noSprint?: boolean;
   q?: string;
+  limit?: number;
+  offset?: number;
 }
 
 type IssueRow = typeof issues.$inferSelect;
@@ -830,7 +832,9 @@ export function issueService(db: Db) {
           asc(priorityOrder),
           desc(canonicalLastActivityAt),
           desc(issues.updatedAt),
-        );
+        )
+        .limit(filters?.limit ?? 500)
+        .offset(filters?.offset ?? 0);
       const withLabels = await withIssueLabels(db, rows);
       const runMap = await activeRunMapForIssues(db, withLabels);
       const withRuns = withActiveRuns(withLabels, runMap);
