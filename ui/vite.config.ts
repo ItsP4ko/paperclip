@@ -5,6 +5,9 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    include: ["lucide-react"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
