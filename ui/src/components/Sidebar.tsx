@@ -35,7 +35,6 @@ import { heartbeatsApi } from "../api/heartbeats";
 import { sidebarBadgesApi } from "../api/sidebarBadges";
 import { authApi } from "../api/auth";
 import { queryKeys } from "../lib/queryKeys";
-import { useInboxBadge } from "../hooks/useInboxBadge";
 import { useMemberRole } from "../hooks/useMemberRole";
 import { Button } from "@/components/ui/button";
 import { PluginSlotOutlet } from "@/plugins/slots";
@@ -60,7 +59,6 @@ export function Sidebar() {
     queryClient.clear();
     window.location.href = "/auth";
   }
-  const inboxBadge = useInboxBadge(selectedCompanyId);
   const { data: liveRuns } = useQuery({
     queryKey: queryKeys.liveRuns(selectedCompanyId!),
     queryFn: () => heartbeatsApi.liveRunsForCompany(selectedCompanyId!),
@@ -74,6 +72,7 @@ export function Sidebar() {
     queryKey: queryKeys.sidebarBadges(selectedCompanyId!),
     queryFn: () => sidebarBadgesApi.get(selectedCompanyId!),
     enabled: !!selectedCompanyId,
+    staleTime: 20_000,
   });
 
   function openSearch() {
@@ -123,9 +122,9 @@ export function Sidebar() {
             to="/inbox"
             label="Inbox"
             icon={Inbox}
-            badge={inboxBadge.inbox}
-            badgeTone={inboxBadge.failedRuns > 0 ? "danger" : "default"}
-            alert={inboxBadge.failedRuns > 0}
+            badge={badges?.inbox}
+            badgeTone={badges && badges.failedRuns > 0 ? "danger" : "default"}
+            alert={badges ? badges.failedRuns > 0 : false}
           />
           <PluginSlotOutlet
             slotTypes={["sidebar"]}
