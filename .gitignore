@@ -1,66 +1,83 @@
+# ── Dependencies ──────────────────────────────────────────────
 node_modules/
+.pnpm-store/
+
+# ── Build output ──────────────────────────────────────────────
 dist/
+*.tsbuildinfo
+server/src/**/*.js
+server/src/**/*.js.map
+server/src/**/*.d.ts
+server/src/**/*.d.ts.map
+
+# ── Environment & secrets ─────────────────────────────────────
 .env
 .env.*
 !.env.example
 *.pem
 *.p12
 *.pfx
-*.tsbuildinfo
-drizzle/meta/
-.vite/
-coverage/
-.DS_Store
 data/
+
+# ── Tooling caches ────────────────────────────────────────────
+.vite/
+.turbo/
+.vercel/
+coverage/
+drizzle/meta/
+
+# ── OS / editor ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# ── Claude Code / AI tooling ─────────────────────────────────
+.claude/
+.agents/
+
+# ── Paperclip local state ────────────────────────────────────
 .paperclip/
-.pnpm-store/
-tmp-*
-cli/tmp/
+.paperclip-local/
 .worktrees/
 
-# Scratch/seed scripts (but not scripts/ dir)
+# ── Temp files ────────────────────────────────────────────────
+tmp/
+tmp-*
+cli/tmp/
+*.tmp
+*.log
+pnpm-debug.log*
+
+# ── Scratch / seed scripts ───────────────────────────────────
 check-*.mjs
-!scripts/check-*.mjs
 new-agent*.json
 newcompany.json
 seed-*.mjs
 server/check-*.mjs
 server/seed-*.mjs
 packages/db/seed-*.mjs
-
-# npm publish build artifacts
-cli/package.dev.json
-
-# Build artifacts in src directories
-server/src/**/*.js
-server/src/**/*.js.map
-server/src/**/*.d.ts
-server/src/**/*.d.ts.map
-tmp/
 feedback-export-*
 
-# Editor / tool temp files
-*.tmp
-.vscode/
-.claude/settings.local.json
-.paperclip-local/
-/.idea/
-/.agents/
+# ── CLI publish artifacts ─────────────────────────────────────
+cli/package.dev.json
+*.tgz
 
-# Doc maintenance cursor
-.doc-review-cursor
-
-# Playwright
+# ── Testing ───────────────────────────────────────────────────
 tests/e2e/test-results/
 tests/e2e/playwright-report/
 tests/release-smoke/test-results/
 tests/release-smoke/playwright-report/
 .superset/
-.claude/worktrees/
-.vercel
 
-# Tauri build artifacts
+# ── Tauri ─────────────────────────────────────────────────────
 src-tauri/target/
 
-# Local dev scripts (personal workflows, not for repo)
+# ── Local dev scripts (personal, not for repo) ───────────────
 scripts/
+
+# ── Doc maintenance ───────────────────────────────────────────
+.doc-review-cursor
