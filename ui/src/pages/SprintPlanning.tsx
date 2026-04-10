@@ -116,15 +116,51 @@ export function SprintPlanning() {
   }
 
   async function handleAdd(issueId: string) {
+    const backlogKey = queryKeys.sprints.backlog(selectedCompanyId!);
+    const sprintKey = queryKeys.sprints.issues(sprintId!, selectedCompanyId!);
+    await queryClient.cancelQueries({ queryKey: backlogKey });
+    await queryClient.cancelQueries({ queryKey: sprintKey });
+    const prevBacklog = queryClient.getQueryData<Issue[]>(backlogKey);
+    const prevSprint = queryClient.getQueryData<Issue[]>(sprintKey);
+    const issue = prevBacklog?.find((i) => i.id === issueId);
+    if (issue) {
+      queryClient.setQueryData<Issue[]>(backlogKey, (old) => old?.filter((i) => i.id !== issueId) ?? []);
+      queryClient.setQueryData<Issue[]>(sprintKey, (old) => [...(old ?? []), issue]);
+    }
     setLoadingIssueId(issueId);
-    try { await sprintsApi.addIssue(sprintId!, issueId); invalidate(); }
-    finally { setLoadingIssueId(null); }
+    try {
+      await sprintsApi.addIssue(sprintId!, issueId);
+      invalidate();
+    } catch {
+      if (prevBacklog) queryClient.setQueryData(backlogKey, prevBacklog);
+      if (prevSprint) queryClient.setQueryData(sprintKey, prevSprint);
+    } finally {
+      setLoadingIssueId(null);
+    }
   }
 
   async function handleRemove(issueId: string) {
+    const backlogKey = queryKeys.sprints.backlog(selectedCompanyId!);
+    const sprintKey = queryKeys.sprints.issues(sprintId!, selectedCompanyId!);
+    await queryClient.cancelQueries({ queryKey: backlogKey });
+    await queryClient.cancelQueries({ queryKey: sprintKey });
+    const prevBacklog = queryClient.getQueryData<Issue[]>(backlogKey);
+    const prevSprint = queryClient.getQueryData<Issue[]>(sprintKey);
+    const issue = prevSprint?.find((i) => i.id === issueId);
+    if (issue) {
+      queryClient.setQueryData<Issue[]>(sprintKey, (old) => old?.filter((i) => i.id !== issueId) ?? []);
+      queryClient.setQueryData<Issue[]>(backlogKey, (old) => [...(old ?? []), issue]);
+    }
     setLoadingIssueId(issueId);
-    try { await sprintsApi.removeIssue(sprintId!, issueId); invalidate(); }
-    finally { setLoadingIssueId(null); }
+    try {
+      await sprintsApi.removeIssue(sprintId!, issueId);
+      invalidate();
+    } catch {
+      if (prevBacklog) queryClient.setQueryData(backlogKey, prevBacklog);
+      if (prevSprint) queryClient.setQueryData(sprintKey, prevSprint);
+    } finally {
+      setLoadingIssueId(null);
+    }
   }
 
   const activateMutation = useMutation({
