@@ -35,6 +35,7 @@ import { accessRoutes } from "./routes/access.js";
 import { analyticsRoutes } from "./routes/analytics.js";
 import { auditRoutes } from "./routes/audit.js";
 import { knowledgeRoutes } from "./routes/knowledge.js";
+import { searchRoutes } from "./routes/search.js";
 import { costRecommendationRoutes } from "./routes/cost-recommendations.js";
 import { pipelineRoutes } from "./routes/pipelines.js";
 import { sprintRoutes } from "./routes/sprints.js";
@@ -262,6 +263,7 @@ export async function createApp(
   api.use(analyticsRoutes(db));
   api.use(auditRoutes(db));
   api.use(knowledgeRoutes(db));
+  api.use(searchRoutes(db));
   api.use(costRecommendationRoutes(db));
   api.use(pipelineRoutes(db, opts.redisClient));
   api.use(sprintRoutes(db));

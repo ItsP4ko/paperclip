@@ -206,7 +206,6 @@ export function PipelineRunDetail() {
             nodeTypes={nodeTypes}
             nodesDraggable={false}
             nodesConnectable={false}
-            elementsSelectable={false}
             fitView
             fitViewOptions={{ padding: 0.2 }}
             className="bg-background"
