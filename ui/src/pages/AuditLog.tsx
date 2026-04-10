@@ -172,7 +172,7 @@ function AuditRow({ item }: { item: AuditTimelineItem }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium">{item.actorName}</span>
             <span className="text-sm text-muted-foreground">{describeAction(item)}</span>
-            {item.entityType === "issue" && item.details?.identifier && (
+            {item.entityType === "issue" && item.details?.identifier ? (
               item.action === "issue.deleted" ? (
                 <span className="text-xs font-mono font-medium text-muted-foreground">{String(item.details.identifier)}</span>
               ) : (
@@ -184,7 +184,7 @@ function AuditRow({ item }: { item: AuditTimelineItem }) {
                   {String(item.details.identifier)}
                 </Link>
               )
-            )}
+            ) : null}
             <ActionBadge action={item.action} />
           </div>
         </div>
