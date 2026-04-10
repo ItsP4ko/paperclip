@@ -209,23 +209,24 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
     assigneeAgentId: string | null;
     executionRunId?: string | null;
   }) {
-    let runToInterrupt = issue.executionRunId ? await heartbeat.getRun(issue.executionRunId) : null;
+    const [directRun, agentRun] = await Promise.all([
+      issue.executionRunId ? heartbeat.getRun(issue.executionRunId) : Promise.resolve(null),
+      issue.assigneeAgentId ? heartbeat.getActiveRunForAgent(issue.assigneeAgentId) : Promise.resolve(null),
+    ]);
 
-    if ((!runToInterrupt || runToInterrupt.status !== "running") && issue.assigneeAgentId) {
-      const activeRun = await heartbeat.getActiveRunForAgent(issue.assigneeAgentId);
+    if (directRun?.status === "running") return directRun;
+
+    if (agentRun?.status === "running") {
       const activeIssueId =
-        activeRun &&
-        activeRun.contextSnapshot &&
-        typeof activeRun.contextSnapshot === "object" &&
-        typeof (activeRun.contextSnapshot as Record<string, unknown>).issueId === "string"
-          ? ((activeRun.contextSnapshot as Record<string, unknown>).issueId as string)
+        agentRun.contextSnapshot &&
+        typeof agentRun.contextSnapshot === "object" &&
+        typeof (agentRun.contextSnapshot as Record<string, unknown>).issueId === "string"
+          ? ((agentRun.contextSnapshot as Record<string, unknown>).issueId as string)
           : null;
-      if (activeRun && activeRun.status === "running" && activeIssueId === issue.id) {
-        runToInterrupt = activeRun;
-      }
+      if (activeIssueId === issue.id) return agentRun;
     }
 
-    return runToInterrupt?.status === "running" ? runToInterrupt : null;
+    return null;
   }
 
   async function normalizeIssueIdentifier(rawId: string): Promise<string> {
