@@ -82,6 +82,25 @@ export function pipelineService(db: Db) {
       .where(eq(pipelineRuns.id, runId));
     if (!run) return;
 
+    // Pre-fetch all predecessor issues needed by if_else steps in one batch query
+    const ifElsePredIssueIds = new Set<string>();
+    for (const { step, runStep } of runStepRows) {
+      if (step.stepType !== "if_else" || runStep.status !== "pending") continue;
+      const deps = step.dependsOn ?? [];
+      if (!deps.every((depId) => completedStepIds.has(depId))) continue;
+      const completedPreds = runStepRows.filter(
+        (r) => r.runStep.status === "completed" && r.runStep.issueId && deps.includes(r.step.id),
+      );
+      const predIssueId = completedPreds[completedPreds.length - 1]?.runStep.issueId;
+      if (predIssueId) ifElsePredIssueIds.add(predIssueId);
+    }
+    const predIssueIdList = [...ifElsePredIssueIds];
+    const predIssueMap = new Map(
+      predIssueIdList.length > 0
+        ? (await db.select().from(issues).where(inArray(issues.id, predIssueIdList))).map((i) => [i.id, i])
+        : [],
+    );
+
     for (const { runStep, step } of runStepRows) {
       if (runStep.status !== "pending") continue;
 
@@ -102,7 +121,7 @@ export function pipelineService(db: Db) {
         if (completedPredecessors.length > 0) {
           const predIssueId = completedPredecessors[completedPredecessors.length - 1].runStep.issueId;
           if (predIssueId) {
-            const [predIssue] = await db.select().from(issues).where(eq(issues.id, predIssueId));
+            const predIssue = predIssueMap.get(predIssueId);
             if (predIssue) {
               context = { ...context, status: predIssue.status, priority: predIssue.priority, assigneeAgentId: predIssue.assigneeAgentId, assigneeUserId: predIssue.assigneeUserId };
             }
