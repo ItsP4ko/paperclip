@@ -239,6 +239,16 @@
   transition: max-width 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Optimistic rollback shake */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+.animate-shake {
+  animation: shake 0.3s ease-in-out;
+}
+
 /* Dashboard activity row entry motion */
 @keyframes dashboard-activity-enter {
   0% {

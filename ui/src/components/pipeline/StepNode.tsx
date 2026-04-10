@@ -4,7 +4,7 @@ import { Trash2, Pencil, CheckCircle2 } from "lucide-react";
 import type { StepNodeData } from "./utils";
 
 export const StepNode = memo(function StepNode({ data }: NodeProps) {
-  const { step, agentNames, memberNames, onEdit, onDelete, canComplete, onComplete } = data as StepNodeData & { canComplete?: boolean; onComplete?: () => void };
+  const { step, agentNames, memberNames, onEdit, onDelete, canComplete, onComplete, shake } = data as StepNodeData & { canComplete?: boolean; onComplete?: () => void; shake?: boolean };
 
   let assigneeLabel: string | null = null;
   if (step.assigneeType === "agent" && step.agentId) {
@@ -14,7 +14,7 @@ export const StepNode = memo(function StepNode({ data }: NodeProps) {
   }
 
   return (
-    <div className="group w-[280px] border border-border rounded-lg bg-card shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.03)] px-4 py-3">
+    <div className={`group w-[280px] border border-border rounded-lg bg-card shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.03)] px-4 py-3${shake ? " animate-shake" : ""}`}>
       <Handle type="target" position={Position.Top} className="!bg-border !w-2 !h-2" />
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">

@@ -20,6 +20,8 @@ import { GitBranch, Play, Plus, Trash2 } from "lucide-react";
 const STATUS_VARIANT: Record<Pipeline["status"], "default" | "secondary" | "outline"> = {
   active: "default",
   draft: "secondary",
+  running: "default",
+  completed: "outline",
   archived: "outline",
 };
 
@@ -66,7 +68,7 @@ export function Pipelines() {
       pipelinesApi.triggerRun(selectedCompanyId!, pipelineId),
     onSuccess: (run) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.runs(selectedCompanyId!) });
-      navigate(`/pipelines/${run.pipelineId}/runs/${run.id}`);
+      navigate(`/pipelines/${run.pipelineId}`);
     },
   });
 
@@ -153,18 +155,20 @@ export function Pipelines() {
                 </div>
 
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    title="Run pipeline"
-                    disabled={runMutation.isPending}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      runMutation.mutate(pipeline.id);
-                    }}
-                  >
-                    <Play className="h-3.5 w-3.5" />
-                  </Button>
+                  {pipeline.status === "draft" && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      title="Run pipeline"
+                      disabled={runMutation.isPending}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        runMutation.mutate(pipeline.id);
+                      }}
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon-sm"
