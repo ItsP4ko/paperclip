@@ -113,7 +113,25 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
 
   const addIssue = useMutation({
     mutationFn: (issueId: string) => sprintsApi.addIssue(sprint!.id, issueId),
-    onSuccess: () => {
+    onMutate: async (issueId) => {
+      const backlogKey = queryKeys.sprints.backlog(projectId);
+      const sprintKey = queryKeys.sprints.issues(sprint!.id);
+      await queryClient.cancelQueries({ queryKey: backlogKey });
+      await queryClient.cancelQueries({ queryKey: sprintKey });
+      const prevBacklog = queryClient.getQueryData<Issue[]>(backlogKey);
+      const prevSprint = queryClient.getQueryData<Issue[]>(sprintKey);
+      const issue = prevBacklog?.find((i) => i.id === issueId);
+      if (issue) {
+        queryClient.setQueryData<Issue[]>(backlogKey, (old) => old?.filter((i) => i.id !== issueId) ?? []);
+        queryClient.setQueryData<Issue[]>(sprintKey, (old) => [...(old ?? []), issue]);
+      }
+      return { prevBacklog, prevSprint };
+    },
+    onError: (_err, _issueId, ctx) => {
+      if (ctx?.prevBacklog) queryClient.setQueryData(queryKeys.sprints.backlog(projectId), ctx.prevBacklog);
+      if (ctx?.prevSprint) queryClient.setQueryData(queryKeys.sprints.issues(sprint!.id), ctx.prevSprint);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.sprints.backlog(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.sprints.issues(sprint!.id) });
     },
@@ -121,7 +139,25 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
 
   const removeIssue = useMutation({
     mutationFn: (issueId: string) => sprintsApi.removeIssue(sprint!.id, issueId),
-    onSuccess: () => {
+    onMutate: async (issueId) => {
+      const backlogKey = queryKeys.sprints.backlog(projectId);
+      const sprintKey = queryKeys.sprints.issues(sprint!.id);
+      await queryClient.cancelQueries({ queryKey: backlogKey });
+      await queryClient.cancelQueries({ queryKey: sprintKey });
+      const prevBacklog = queryClient.getQueryData<Issue[]>(backlogKey);
+      const prevSprint = queryClient.getQueryData<Issue[]>(sprintKey);
+      const issue = prevSprint?.find((i) => i.id === issueId);
+      if (issue) {
+        queryClient.setQueryData<Issue[]>(sprintKey, (old) => old?.filter((i) => i.id !== issueId) ?? []);
+        queryClient.setQueryData<Issue[]>(backlogKey, (old) => [...(old ?? []), issue]);
+      }
+      return { prevBacklog, prevSprint };
+    },
+    onError: (_err, _issueId, ctx) => {
+      if (ctx?.prevBacklog) queryClient.setQueryData(queryKeys.sprints.backlog(projectId), ctx.prevBacklog);
+      if (ctx?.prevSprint) queryClient.setQueryData(queryKeys.sprints.issues(sprint!.id), ctx.prevSprint);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.sprints.backlog(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.sprints.issues(sprint!.id) });
     },
