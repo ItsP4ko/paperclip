@@ -5,7 +5,7 @@ export interface Pipeline {
   companyId: string;
   name: string;
   description: string | null;
-  status: "draft" | "active" | "archived";
+  status: "draft" | "active" | "archived" | "running" | "completed";
   metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
