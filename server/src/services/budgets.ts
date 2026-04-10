@@ -78,6 +78,190 @@ function normalizeScopeName(scopeType: BudgetScopeType, name: string) {
   return name.trim().length > 0 ? name : scopeType;
 }
 
+async function resolveScopeRecordsBatch(
+  db: Db,
+  policies: PolicyRow[],
+): Promise<Map<string, ScopeRecord>> {
+  const map = new Map<string, ScopeRecord>();
+  const byType = { company: [] as string[], agent: [] as string[], project: [] as string[] };
+  for (const p of policies) {
+    const t = p.scopeType as keyof typeof byType;
+    if (byType[t] && !byType[t].includes(p.scopeId)) byType[t].push(p.scopeId);
+  }
+
+  const queries: Promise<void>[] = [];
+
+  if (byType.company.length > 0) {
+    queries.push(
+      db
+        .select({
+          id: companies.id,
+          companyId: companies.id,
+          name: companies.name,
+          status: companies.status,
+          pauseReason: companies.pauseReason,
+          pausedAt: companies.pausedAt,
+        })
+        .from(companies)
+        .where(inArray(companies.id, byType.company))
+        .then((rows) => {
+          for (const r of rows) {
+            map.set(r.id, {
+              companyId: r.companyId,
+              name: r.name,
+              paused: r.status === "paused" || Boolean(r.pausedAt),
+              pauseReason: (r.pauseReason as ScopeRecord["pauseReason"]) ?? null,
+            });
+          }
+        }),
+    );
+  }
+
+  if (byType.agent.length > 0) {
+    queries.push(
+      db
+        .select({
+          id: agents.id,
+          companyId: agents.companyId,
+          name: agents.name,
+          status: agents.status,
+          pauseReason: agents.pauseReason,
+        })
+        .from(agents)
+        .where(inArray(agents.id, byType.agent))
+        .then((rows) => {
+          for (const r of rows) {
+            map.set(r.id, {
+              companyId: r.companyId,
+              name: r.name,
+              paused: r.status === "paused",
+              pauseReason: (r.pauseReason as ScopeRecord["pauseReason"]) ?? null,
+            });
+          }
+        }),
+    );
+  }
+
+  if (byType.project.length > 0) {
+    queries.push(
+      db
+        .select({
+          id: projects.id,
+          companyId: projects.companyId,
+          name: projects.name,
+          pauseReason: projects.pauseReason,
+          pausedAt: projects.pausedAt,
+        })
+        .from(projects)
+        .where(inArray(projects.id, byType.project))
+        .then((rows) => {
+          for (const r of rows) {
+            map.set(r.id, {
+              companyId: r.companyId,
+              name: r.name,
+              paused: Boolean(r.pausedAt),
+              pauseReason: (r.pauseReason as ScopeRecord["pauseReason"]) ?? null,
+            });
+          }
+        }),
+    );
+  }
+
+  await Promise.all(queries);
+  return map;
+}
+
+async function computeObservedAmountsBatch(
+  db: Db,
+  policies: PolicyRow[],
+): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  const billedPolicies = policies.filter((p) => p.metric === "billed_cents");
+  if (billedPolicies.length === 0) return map;
+
+  const companyId = billedPolicies[0].companyId;
+
+  const agentIds = billedPolicies
+    .filter((p) => p.scopeType === "agent")
+    .map((p) => p.scopeId);
+  const projectIds = billedPolicies
+    .filter((p) => p.scopeType === "project")
+    .map((p) => p.scopeId);
+
+  const windowsByKind = new Map<string, { start: Date; end: Date }>();
+  for (const p of billedPolicies) {
+    if (!windowsByKind.has(p.windowKind))
+      windowsByKind.set(p.windowKind, resolveWindow(p.windowKind as BudgetWindowKind));
+  }
+
+  const subQueries: Promise<void>[] = [];
+
+  for (const [windowKind, { start, end }] of windowsByKind) {
+    const windowPolicies = billedPolicies.filter((p) => p.windowKind === windowKind);
+    const conditions = [eq(costEvents.companyId, companyId)];
+    if (windowKind === "calendar_month_utc") {
+      conditions.push(gte(costEvents.occurredAt, start));
+      conditions.push(lt(costEvents.occurredAt, end));
+    }
+
+    const hasCompanyScope = windowPolicies.some((p) => p.scopeType === "company");
+    const windowAgentIds = windowPolicies.filter((p) => p.scopeType === "agent").map((p) => p.scopeId);
+    const windowProjectIds = windowPolicies.filter((p) => p.scopeType === "project").map((p) => p.scopeId);
+
+    if (hasCompanyScope) {
+      subQueries.push(
+        db
+          .select({ total: sql<number>`coalesce(sum(${costEvents.costCents}), 0)::int` })
+          .from(costEvents)
+          .where(and(...conditions))
+          .then(([row]) => {
+            for (const p of windowPolicies.filter((p) => p.scopeType === "company"))
+              map.set(p.id, Number(row?.total ?? 0));
+          }),
+      );
+    }
+
+    if (windowAgentIds.length > 0) {
+      subQueries.push(
+        db
+          .select({
+            agentId: costEvents.agentId,
+            total: sql<number>`coalesce(sum(${costEvents.costCents}), 0)::int`,
+          })
+          .from(costEvents)
+          .where(and(...conditions, inArray(costEvents.agentId, windowAgentIds)))
+          .groupBy(costEvents.agentId)
+          .then((rows) => {
+            const totals = new Map(rows.map((r) => [r.agentId, Number(r.total)]));
+            for (const p of windowPolicies.filter((p) => p.scopeType === "agent"))
+              map.set(p.id, totals.get(p.scopeId) ?? 0);
+          }),
+      );
+    }
+
+    if (windowProjectIds.length > 0) {
+      subQueries.push(
+        db
+          .select({
+            projectId: costEvents.projectId,
+            total: sql<number>`coalesce(sum(${costEvents.costCents}), 0)::int`,
+          })
+          .from(costEvents)
+          .where(and(...conditions, inArray(costEvents.projectId, windowProjectIds)))
+          .groupBy(costEvents.projectId)
+          .then((rows) => {
+            const totals = new Map(rows.map((r) => [r.projectId, Number(r.total)]));
+            for (const p of windowPolicies.filter((p) => p.scopeType === "project"))
+              map.set(p.id, totals.get(p.scopeId) ?? 0);
+          }),
+      );
+    }
+  }
+
+  await Promise.all(subQueries);
+  return map;
+}
+
 async function resolveScopeRecord(db: Db, scopeType: BudgetScopeType, scopeId: string): Promise<ScopeRecord> {
   if (scopeType === "company") {
     const row = await db
@@ -627,7 +811,48 @@ export function budgetService(db: Db, hooks: BudgetServiceHooks = {}) {
 
     overview: async (companyId: string): Promise<BudgetOverview> => {
       const rows = await listPolicyRows(companyId);
-      const policies = await Promise.all(rows.map((row) => buildPolicySummary(row)));
+
+      const [scopeMap, amountMap] = await Promise.all([
+        resolveScopeRecordsBatch(db, rows),
+        computeObservedAmountsBatch(db, rows),
+      ]);
+
+      const policies: BudgetPolicySummary[] = rows.map((policy) => {
+        const scope = scopeMap.get(policy.scopeId);
+        const observedAmount = amountMap.get(policy.id) ?? 0;
+        const { start, end } = resolveWindow(policy.windowKind as BudgetWindowKind);
+        const amount = policy.isActive ? policy.amount : 0;
+        const utilizationPercent =
+          amount > 0 ? Number(((observedAmount / amount) * 100).toFixed(2)) : 0;
+        return {
+          policyId: policy.id,
+          companyId: policy.companyId,
+          scopeType: policy.scopeType as BudgetScopeType,
+          scopeId: policy.scopeId,
+          scopeName: normalizeScopeName(
+            policy.scopeType as BudgetScopeType,
+            scope?.name ?? policy.scopeType,
+          ),
+          metric: policy.metric as BudgetMetric,
+          windowKind: policy.windowKind as BudgetWindowKind,
+          amount,
+          observedAmount,
+          remainingAmount: amount > 0 ? Math.max(0, amount - observedAmount) : 0,
+          utilizationPercent,
+          warnPercent: policy.warnPercent,
+          hardStopEnabled: policy.hardStopEnabled,
+          notifyEnabled: policy.notifyEnabled,
+          isActive: policy.isActive,
+          status: policy.isActive
+            ? budgetStatusFromObserved(observedAmount, amount, policy.warnPercent)
+            : "ok",
+          paused: scope?.paused ?? false,
+          pauseReason: scope?.pauseReason ?? null,
+          windowStart: start,
+          windowEnd: end,
+        };
+      });
+
       const activeIncidentRows = await db
         .select()
         .from(budgetIncidents)

@@ -53,6 +53,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       }
     },
     retry: false,
+    staleTime: Infinity,
   });
   const sidebarCompanies = useMemo(
     () => companies.filter((company) => company.status !== "archived"),

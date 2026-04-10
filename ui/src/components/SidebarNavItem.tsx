@@ -15,6 +15,7 @@ interface SidebarNavItemProps {
   textBadgeTone?: "default" | "amber";
   alert?: boolean;
   liveCount?: number;
+  onMouseEnter?: () => void;
 }
 
 export function SidebarNavItem({
@@ -29,6 +30,7 @@ export function SidebarNavItem({
   textBadgeTone = "default",
   alert = false,
   liveCount,
+  onMouseEnter,
 }: SidebarNavItemProps) {
   const { isMobile, setSidebarOpen } = useSidebar();
 
@@ -37,6 +39,7 @@ export function SidebarNavItem({
       to={to}
       end={end}
       onClick={() => { if (isMobile) setSidebarOpen(false); }}
+      onMouseEnter={onMouseEnter}
       className={({ isActive }) =>
         cn(
           "flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium transition-colors",
