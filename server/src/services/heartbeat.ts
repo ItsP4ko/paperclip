@@ -1910,8 +1910,25 @@ export function heartbeatService(db: Db) {
 
     const reaped: string[] = [];
 
+    // Runs tracked in activeRunExecutions are given a longer grace period (10 min)
+    // before being reaped — this covers local-runner jobs that were claimed but
+    // never completed (runner crash, adapter hang, network disconnect).
+    const activeExecStaleMs = 10 * 60 * 1000;
+
     for (const { run, adapterType } of activeRuns) {
-      if (runningProcesses.has(run.id) || activeRunExecutions.has(run.id)) continue;
+      if (runningProcesses.has(run.id)) continue;
+
+      if (activeRunExecutions.has(run.id)) {
+        // Allow the periodic reaper to reclaim runs stuck in activeRunExecutions
+        // if they haven't been updated in activeExecStaleMs.
+        if (staleThresholdMs > 0) {
+          const refTime = run.updatedAt ? new Date(run.updatedAt).getTime() : 0;
+          if (now.getTime() - refTime < activeExecStaleMs) continue;
+        }
+        // Stale — remove from in-memory tracking so the reaper can finalize it
+        logger.warn({ runId: run.id }, "[heartbeat] removing stale run from activeRunExecutions");
+        activeRunExecutions.delete(run.id);
+      }
 
       // Apply staleness threshold to avoid false positives
       if (staleThresholdMs > 0) {
