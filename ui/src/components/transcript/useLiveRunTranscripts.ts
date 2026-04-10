@@ -146,6 +146,10 @@ export function useLiveRunTranscripts({
 
     const readRunLog = async (run: LiveRunForIssue) => {
       const offset = logOffsetByRunRef.current.get(run.id) ?? 0;
+
+      // Try persisted log file first (server-executed runs).
+      // Wrapped in its own try-catch so a 404 (local-runner runs have no
+      // logStore/logRef) doesn't prevent the events fallback from running.
       try {
         const result = await heartbeatsApi.log(run.id, offset, LOG_READ_LIMIT_BYTES);
         if (cancelled) return;
@@ -160,9 +164,14 @@ export function useLiveRunTranscripts({
           }
           return; // log data is available — no need for events fallback
         }
+      } catch {
+        // Log file not available (e.g. local-runner runs) — fall through to events.
+      }
 
-        // No log content — fall back to events API so the transcript viewer
-        // can show parsed output even when no log file was persisted.
+      // Fall back to events API so the transcript viewer can show parsed
+      // output even when no log file was persisted (local-runner runs).
+      try {
+        if (cancelled) return;
         const afterSeq = eventSeqByRunRef.current.get(run.id) ?? 0;
         const events = await heartbeatsApi.events(run.id, afterSeq, 500);
         if (cancelled || events.length === 0) return;
@@ -179,7 +188,7 @@ export function useLiveRunTranscripts({
           .filter((c) => c.chunk.trim().length > 0);
         appendChunks(run.id, eventChunks);
       } catch {
-        // Ignore log/event read errors while output is initializing.
+        // Ignore event read errors while output is initializing.
       }
     };
 
@@ -255,10 +264,19 @@ export function useLiveRunTranscripts({
         if (event.type === "heartbeat.run.event") {
           const seq = typeof payload["seq"] === "number" ? payload["seq"] : null;
           const eventType = readString(payload["eventType"]) ?? "event";
+          const payloadStream = readString(payload["stream"]);
           const messageText = readString(payload["message"]) ?? eventType;
+          // For log events from local runners, use the actual stream from
+          // the payload (stdout/stderr) instead of defaulting to "system".
+          const stream: "stdout" | "stderr" | "system" =
+            eventType === "log" && (payloadStream === "stdout" || payloadStream === "stderr")
+              ? payloadStream
+              : eventType === "error"
+                ? "stderr"
+                : "system";
           appendChunks(runId, [{
             ts: event.createdAt,
-            stream: eventType === "error" ? "stderr" : "system",
+            stream,
             chunk: messageText,
             dedupeKey: `socket:event:${runId}:${seq ?? `${eventType}:${messageText}:${event.createdAt}`}`,
           }]);
