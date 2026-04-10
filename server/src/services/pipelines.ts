@@ -225,6 +225,14 @@ export function pipelineService(db: Db) {
         .update(pipelineRuns)
         .set({ status: "completed", completedAt: new Date(), updatedAt: new Date() })
         .where(eq(pipelineRuns.id, runId));
+
+      // Mark pipeline as completed
+      if (run) {
+        await db
+          .update(pipelines)
+          .set({ status: "completed", updatedAt: new Date() })
+          .where(eq(pipelines.id, run.pipelineId));
+      }
     }
   }
 
@@ -507,6 +515,20 @@ export function pipelineService(db: Db) {
         .from(pipelineSteps)
         .where(eq(pipelineSteps.pipelineId, pipelineId))
         .orderBy(pipelineSteps.position);
+
+      if (steps.length === 0) {
+        throw new Error("Pipeline has no steps");
+      }
+      const unassigned = steps.filter(s => !s.assigneeType);
+      if (unassigned.length > 0) {
+        throw new Error(`All steps must have an assignee. Unassigned: ${unassigned.map(s => s.name).join(", ")}`);
+      }
+
+      // Mark pipeline as running
+      await db
+        .update(pipelines)
+        .set({ status: "running", updatedAt: new Date() })
+        .where(eq(pipelines.id, pipelineId));
 
       const [run] = await db
         .insert(pipelineRuns)

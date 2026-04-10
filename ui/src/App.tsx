@@ -38,7 +38,7 @@ const KnowledgeBase = lazy(() => import("./pages/KnowledgeBase").then((m) => ({ 
 const CostRecommendations = lazy(() => import("./pages/CostRecommendations").then((m) => ({ default: m.CostRecommendations })));
 const Pipelines = lazy(() => import("./pages/Pipelines").then((m) => ({ default: m.Pipelines })));
 const PipelineDetail = lazy(() => import("./pages/PipelineDetail").then((m) => ({ default: m.PipelineDetail })));
-const PipelineRunDetail = lazy(() => import("./pages/PipelineRunDetail").then((m) => ({ default: m.PipelineRunDetail })));
+
 const Inbox = lazy(() => import("./pages/Inbox").then((m) => ({ default: m.Inbox })));
 const CompanySettings = lazy(() => import("./pages/CompanySettings").then((m) => ({ default: m.CompanySettings })));
 const RemoteControl = lazy(() => import("./pages/RemoteControl").then((m) => ({ default: m.RemoteControl })));
@@ -208,7 +208,7 @@ function boardRoutes() {
       <Route path="projects/:projectId/sprints/metrics" element={<S><ProjectDetail /></S>} />
       <Route path="pipelines" element={<S><Pipelines /></S>} />
       <Route path="pipelines/:pipelineId" element={<S><PipelineDetail /></S>} />
-      <Route path="pipelines/:pipelineId/runs/:runId" element={<S><PipelineRunDetail /></S>} />
+
       <Route path="inbox" element={<InboxRootRedirect />} />
       <Route path="inbox/mine" element={<S><Inbox /></S>} />
       <Route path="inbox/recent" element={<S><Inbox /></S>} />
@@ -393,7 +393,7 @@ export function App() {
           <Route path="cost-recommendations" element={<UnprefixedBoardRedirect />} />
           <Route path="pipelines" element={<UnprefixedBoardRedirect />} />
           <Route path="pipelines/:pipelineId" element={<UnprefixedBoardRedirect />} />
-          <Route path="pipelines/:pipelineId/runs/:runId" element={<UnprefixedBoardRedirect />} />
+
           <Route path="tests/ux/runs" element={<UnprefixedBoardRedirect />} />
           <Route path="analytics" element={<UnprefixedBoardRedirect />} />
           <Route path="audit" element={<UnprefixedBoardRedirect />} />
