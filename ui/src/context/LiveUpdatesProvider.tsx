@@ -685,6 +685,12 @@ function handleLiveEvent(
     return;
   }
 
+  if (event.type === "heartbeat.run.message") {
+    // Invalidate run-related queries so the UI picks up the new turn
+    invalidateHeartbeatQueries(queryClient, expectedCompanyId, payload);
+    return;
+  }
+
   if (event.type === "agent.status") {
     queryClient.invalidateQueries({ queryKey: queryKeys.agents.list(expectedCompanyId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(expectedCompanyId) });

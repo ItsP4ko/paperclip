@@ -78,7 +78,12 @@ export function useLiveRunTranscripts({
 
   const runById = useMemo(() => new Map(runs.map((run) => [run.id, run])), [runs]);
   const activeRunIds = useMemo(
-    () => new Set(runs.filter((run) => !isTerminalStatus(run.status)).map((run) => run.id)),
+    () => new Set(runs.filter((run) => {
+      // Keep tracking runs that aren't terminal OR have an active/idle session
+      if (!isTerminalStatus(run.status)) return true;
+      const sr = run as { sessionStatus?: string | null };
+      return sr.sessionStatus === "idle" || sr.sessionStatus === "active";
+    }).map((run) => run.id)),
     [runs],
   );
   const runIdsKey = useMemo(
@@ -280,6 +285,20 @@ export function useLiveRunTranscripts({
             chunk: messageText,
             dedupeKey: `socket:event:${runId}:${seq ?? `${eventType}:${messageText}:${event.createdAt}`}`,
           }]);
+          return;
+        }
+
+        if (event.type === "heartbeat.run.message") {
+          const message = readString(payload["message"]);
+          const role = readString(payload["role"]);
+          if (message && role === "human") {
+            appendChunks(runId, [{
+              ts: event.createdAt,
+              stream: "system",
+              chunk: `[user] ${message}`,
+              dedupeKey: `socket:message:${runId}:${readString(payload["turnSeq"]) ?? event.createdAt}`,
+            }]);
+          }
           return;
         }
 

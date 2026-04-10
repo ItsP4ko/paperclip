@@ -14,6 +14,7 @@ import {
   financeEvents,
   heartbeatRunEvents,
   heartbeatRuns,
+  heartbeatRunTurns,
   issues,
   projects,
   projectMemberLocalFolders,
@@ -2018,6 +2019,37 @@ export function heartbeatService(db: Db) {
       logger.warn({ reapedCount: reaped.length, runIds: reaped }, "reaped orphaned heartbeat runs");
     }
     return { reaped: reaped.length, runIds: reaped };
+  }
+
+  /** Close idle interactive sessions that have exceeded the timeout (default 15 min). */
+  async function reapIdleSessions(idleTimeoutMs = 15 * 60 * 1000) {
+    const cutoff = new Date(Date.now() - idleTimeoutMs);
+    const idleRuns = await db
+      .select({ id: heartbeatRuns.id, companyId: heartbeatRuns.companyId, agentId: heartbeatRuns.agentId })
+      .from(heartbeatRuns)
+      .where(
+        and(
+          eq(heartbeatRuns.sessionStatus, "idle"),
+          sql`${heartbeatRuns.idleSince} < ${cutoff}`,
+        ),
+      );
+
+    for (const run of idleRuns) {
+      await db
+        .update(heartbeatRuns)
+        .set({ sessionStatus: "closed", updatedAt: new Date() })
+        .where(eq(heartbeatRuns.id, run.id));
+      publishLiveEvent({
+        companyId: run.companyId,
+        type: "heartbeat.run.status",
+        payload: { runId: run.id, agentId: run.agentId, sessionStatus: "closed" },
+      });
+    }
+
+    if (idleRuns.length > 0) {
+      logger.info({ count: idleRuns.length }, "reaped idle interactive sessions");
+    }
+    return { reaped: idleRuns.length };
   }
 
   async function resumeQueuedRuns() {
@@ -4072,6 +4104,7 @@ export function heartbeatService(db: Db) {
     reportRunActivity: clearDetachedRunWarning,
 
     reapOrphanedRuns,
+    reapIdleSessions,
 
     resumeQueuedRuns,
 
@@ -4166,7 +4199,7 @@ export function heartbeatService(db: Db) {
 
     listPendingLocalRuns: async (companyIds: string[]) => {
       if (companyIds.length === 0) return [];
-      return db
+      const rows = await db
         .select({
           id: heartbeatRuns.id,
           companyId: heartbeatRuns.companyId,
@@ -4180,6 +4213,9 @@ export function heartbeatService(db: Db) {
           agentRuntimeConfig: agents.runtimeConfig,
           agentMd: agents.agentMd,
           projectClaudeMd: projects.claudeMd,
+          // Session fields for continuation turns
+          sessionIdAfter: heartbeatRuns.sessionIdAfter,
+          sessionStatus: heartbeatRuns.sessionStatus,
         })
         .from(heartbeatRuns)
         .innerJoin(agents, eq(heartbeatRuns.agentId, agents.id))
@@ -4194,6 +4230,27 @@ export function heartbeatService(db: Db) {
           ),
         )
         .orderBy(asc(heartbeatRuns.createdAt));
+
+      // For continuation jobs, attach the human prompt from the active turn
+      const enriched = await Promise.all(
+        rows.map(async (row) => {
+          if (row.sessionStatus !== "active" || !row.sessionIdAfter) return row;
+          const activeTurn = await db
+            .select({ seq: heartbeatRunTurns.seq, prompt: heartbeatRunTurns.prompt })
+            .from(heartbeatRunTurns)
+            .where(and(eq(heartbeatRunTurns.runId, row.id), eq(heartbeatRunTurns.status, "running")))
+            .orderBy(desc(heartbeatRunTurns.seq))
+            .limit(1)
+            .then((r) => r[0] ?? null);
+          return {
+            ...row,
+            turnSeq: activeTurn?.seq ?? null,
+            resumeSessionId: row.sessionIdAfter,
+            humanPrompt: activeTurn?.prompt ?? null,
+          };
+        }),
+      );
+      return enriched;
     },
 
     claimLocalRun: async (runId: string) => {
@@ -4242,6 +4299,7 @@ export function heartbeatService(db: Db) {
         errorMessage?: string | null;
         errorCode?: string | null;
         resultJson?: Record<string, unknown> | null;
+        sessionId?: string | null;
       },
     ) => {
       const run = await getRun(runId);
@@ -4260,6 +4318,17 @@ export function heartbeatService(db: Db) {
       const status =
         outcome === "succeeded" ? "succeeded" : outcome === "timed_out" ? "timed_out" : "failed";
 
+      // If session ID provided and run succeeded, mark session as idle (interactive)
+      const sessionUpdates: Record<string, unknown> = {};
+      if (result.sessionId && outcome === "succeeded") {
+        sessionUpdates.sessionIdAfter = result.sessionId;
+        sessionUpdates.sessionStatus = "idle";
+        sessionUpdates.idleSince = new Date();
+      } else if (outcome !== "succeeded") {
+        // Failed/timed out runs close the session
+        if (run.sessionStatus) sessionUpdates.sessionStatus = "closed";
+      }
+
       const finalizedRun = await setRunStatus(runId, status, {
         finishedAt: new Date(),
         error:
@@ -4275,7 +4344,25 @@ export function heartbeatService(db: Db) {
         exitCode: result.exitCode,
         signal: result.signal,
         resultJson: result.resultJson ?? null,
+        ...sessionUpdates,
       });
+
+      // Complete the current turn (if any)
+      const activeTurn = await db
+        .select()
+        .from(heartbeatRunTurns)
+        .where(and(eq(heartbeatRunTurns.runId, runId), eq(heartbeatRunTurns.status, "running")))
+        .then((rows) => rows[0] ?? null);
+      if (activeTurn) {
+        await db
+          .update(heartbeatRunTurns)
+          .set({
+            status: outcome === "succeeded" ? "succeeded" : "failed",
+            exitCode: result.exitCode,
+            finishedAt: new Date(),
+          })
+          .where(eq(heartbeatRunTurns.id, activeTurn.id));
+      }
 
       await setWakeupStatus(run.wakeupRequestId, outcome === "succeeded" ? "completed" : status, {
         finishedAt: new Date(),
@@ -4319,6 +4406,137 @@ export function heartbeatService(db: Db) {
       }
 
       return finalizedRun;
+    },
+
+    // ── Interactive session methods ──────────────────────────────────────
+
+    sendRunMessage: async (runId: string, message: string) => {
+      const run = await getRun(runId);
+      if (!run) throw notFound("Run not found");
+
+      // Must have a session ID from a prior successful turn
+      if (!run.sessionIdAfter) {
+        throw conflict("Run has no resumable session — agent must complete at least one turn first");
+      }
+      if (run.sessionStatus === "closed") {
+        throw conflict("Session is closed");
+      }
+
+      // Check no other turn is already running
+      const activeTurn = await db
+        .select({ id: heartbeatRunTurns.id })
+        .from(heartbeatRunTurns)
+        .where(and(eq(heartbeatRunTurns.runId, runId), eq(heartbeatRunTurns.status, "running")))
+        .then((rows) => rows[0] ?? null);
+      if (activeTurn) {
+        throw conflict("Another turn is already running for this run");
+      }
+
+      // Determine next turn seq
+      const lastTurn = await db
+        .select({ seq: heartbeatRunTurns.seq })
+        .from(heartbeatRunTurns)
+        .where(eq(heartbeatRunTurns.runId, runId))
+        .orderBy(desc(heartbeatRunTurns.seq))
+        .limit(1)
+        .then((rows) => rows[0] ?? null);
+      const nextSeq = (lastTurn?.seq ?? 0) + 1;
+
+      // Create human turn
+      const [turn] = await db
+        .insert(heartbeatRunTurns)
+        .values({
+          runId,
+          companyId: run.companyId,
+          seq: nextSeq,
+          role: "human",
+          prompt: message,
+          status: "running",
+        })
+        .returning();
+
+      // Reset run to pending_local so the CLI runner picks it up
+      await db
+        .update(heartbeatRuns)
+        .set({
+          status: "pending_local",
+          sessionStatus: "active",
+          idleSince: null,
+          finishedAt: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(heartbeatRuns.id, runId));
+
+      // Log the human message as a run event
+      const seq = await nextRunEventSeq(runId);
+      await appendRunEvent(run, seq, {
+        eventType: "human_message",
+        stream: "system",
+        level: "info",
+        message,
+        payload: { turnSeq: nextSeq, role: "human" },
+      });
+
+      // Publish events so the CLI picks up the job and the UI updates
+      publishLiveEvent({
+        companyId: run.companyId,
+        type: "runner.jobs.pending",
+        payload: { runId: run.id },
+      });
+      publishLiveEvent({
+        companyId: run.companyId,
+        type: "heartbeat.run.message",
+        payload: { runId: run.id, turnSeq: nextSeq, message, role: "human" },
+      });
+      publishLiveEvent({
+        companyId: run.companyId,
+        type: "heartbeat.run.status",
+        payload: { runId: run.id, agentId: run.agentId, status: "pending_local" },
+      });
+
+      return { turnId: turn.id, seq: nextSeq };
+    },
+
+    getRunTurns: async (runId: string) => {
+      return db
+        .select()
+        .from(heartbeatRunTurns)
+        .where(eq(heartbeatRunTurns.runId, runId))
+        .orderBy(asc(heartbeatRunTurns.seq));
+    },
+
+    closeRunSession: async (runId: string) => {
+      const run = await getRun(runId);
+      if (!run) throw notFound("Run not found");
+      if (!run.sessionStatus || run.sessionStatus === "closed") {
+        throw conflict("No active session to close");
+      }
+
+      // If a turn is still running, cannot close
+      const activeTurn = await db
+        .select({ id: heartbeatRunTurns.id })
+        .from(heartbeatRunTurns)
+        .where(and(eq(heartbeatRunTurns.runId, runId), eq(heartbeatRunTurns.status, "running")))
+        .then((rows) => rows[0] ?? null);
+      if (activeTurn) {
+        throw conflict("Cannot close session while a turn is running");
+      }
+
+      await db
+        .update(heartbeatRuns)
+        .set({
+          sessionStatus: "closed",
+          updatedAt: new Date(),
+        })
+        .where(eq(heartbeatRuns.id, runId));
+
+      publishLiveEvent({
+        companyId: run.companyId,
+        type: "heartbeat.run.status",
+        payload: { runId: run.id, agentId: run.agentId, status: run.status, sessionStatus: "closed" },
+      });
+
+      return await getRun(runId);
     },
 
     deleteRunsByAgent: async (agentId: string, companyId: string): Promise<number> => {

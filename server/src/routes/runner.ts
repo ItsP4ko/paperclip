@@ -21,6 +21,7 @@ const completeSchema = z.object({
   errorMessage: z.string().nullable().optional(),
   errorCode: z.string().nullable().optional(),
   resultJson: z.record(z.unknown()).nullable().optional(),
+  sessionId: z.string().nullable().optional(),
 });
 
 export function runnerRoutes(db: Db) {

@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link } from "@/lib/router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { heartbeatsApi, type LiveRunForIssue } from "../api/heartbeats";
 import { queryKeys } from "../lib/queryKeys";
 import { formatDateTime } from "../lib/utils";
-import { ExternalLink, Square } from "lucide-react";
+import { ExternalLink, MessageSquare, Send, Square, X } from "lucide-react";
 import { Identity } from "./Identity";
 import { StatusBadge } from "./StatusBadge";
 import { RunTranscriptView } from "./transcript/RunTranscriptView";
@@ -21,12 +21,23 @@ function toIsoString(value: string | Date | null | undefined): string | null {
 }
 
 function isRunActive(status: string): boolean {
-  return status === "queued" || status === "running";
+  return status === "queued" || status === "running" || status === "pending_local";
+}
+
+function isSessionIdle(run: LiveRunForIssue): boolean {
+  return run.sessionStatus === "idle" && !!run.sessionIdAfter;
+}
+
+function isSessionInteractive(run: LiveRunForIssue): boolean {
+  return isRunActive(run.status) || isSessionIdle(run);
 }
 
 export function LiveRunWidget({ issueId, companyId }: LiveRunWidgetProps) {
   const queryClient = useQueryClient();
   const [cancellingRunIds, setCancellingRunIds] = useState(new Set<string>());
+  const [messageByRun, setMessageByRun] = useState<Record<string, string>>({});
+  const [sendingRunIds, setSendingRunIds] = useState(new Set<string>());
+  const inputRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
   const { data: liveRuns } = useQuery({
     queryKey: queryKeys.issues.liveRuns(issueId),
@@ -84,6 +95,30 @@ export function LiveRunWidget({ issueId, companyId }: LiveRunWidgetProps) {
     }
   };
 
+  const handleSendMessage = async (runId: string) => {
+    const msg = (messageByRun[runId] ?? "").trim();
+    if (!msg || sendingRunIds.has(runId)) return;
+    setSendingRunIds((prev) => new Set(prev).add(runId));
+    try {
+      await heartbeatsApi.sendMessage(runId, msg);
+      setMessageByRun((prev) => ({ ...prev, [runId]: "" }));
+      queryClient.invalidateQueries({ queryKey: queryKeys.issues.liveRuns(issueId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.issues.activeRun(issueId) });
+    } finally {
+      setSendingRunIds((prev) => {
+        const next = new Set(prev);
+        next.delete(runId);
+        return next;
+      });
+    }
+  };
+
+  const handleCloseSession = async (runId: string) => {
+    await heartbeatsApi.closeSession(runId);
+    queryClient.invalidateQueries({ queryKey: queryKeys.issues.liveRuns(issueId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.issues.activeRun(issueId) });
+  };
+
   if (runs.length === 0) return null;
 
   return (
@@ -100,6 +135,8 @@ export function LiveRunWidget({ issueId, companyId }: LiveRunWidgetProps) {
       <div className="divide-y divide-border/60">
         {runs.map((run) => {
           const isActive = isRunActive(run.status);
+          const idle = isSessionIdle(run);
+          const interactive = isSessionInteractive(run);
           const transcript = transcriptByRun.get(run.id) ?? [];
           return (
             <section key={run.id} className="px-4 py-4">
@@ -115,12 +152,27 @@ export function LiveRunWidget({ issueId, companyId }: LiveRunWidgetProps) {
                     >
                       {run.id.slice(0, 8)}
                     </Link>
-                    <StatusBadge status={run.status} />
+                    <StatusBadge status={idle ? "idle" : run.status} />
+                    {idle && (
+                      <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                        <MessageSquare className="h-3 w-3" />
+                        Session active
+                      </span>
+                    )}
                     <span>{formatDateTime(run.startedAt ?? run.createdAt)}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {idle && (
+                    <button
+                      onClick={() => handleCloseSession(run.id)}
+                      className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/[0.06] px-2.5 py-1 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-500/[0.12] dark:text-amber-300"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                      End session
+                    </button>
+                  )}
                   {isActive && (
                     <button
                       onClick={() => handleCancelRun(run.id)}
@@ -151,6 +203,33 @@ export function LiveRunWidget({ issueId, companyId }: LiveRunWidgetProps) {
                   emptyMessage={hasOutputForRun(run.id) ? "Waiting for transcript parsing..." : "Waiting for run output..."}
                 />
               </div>
+
+              {/* Interactive chat input — shown when session is idle */}
+              {idle && (
+                <div className="mt-3 flex gap-2">
+                  <textarea
+                    ref={(el) => { inputRefs.current[run.id] = el; }}
+                    value={messageByRun[run.id] ?? ""}
+                    onChange={(e) => setMessageByRun((prev) => ({ ...prev, [run.id]: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void handleSendMessage(run.id);
+                      }
+                    }}
+                    placeholder="Send a message to the agent..."
+                    rows={1}
+                    className="flex-1 resize-none rounded-lg border border-border/70 bg-background/70 px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:border-cyan-500/40 focus:outline-none focus:ring-1 focus:ring-cyan-500/20"
+                  />
+                  <button
+                    onClick={() => void handleSendMessage(run.id)}
+                    disabled={sendingRunIds.has(run.id) || !(messageByRun[run.id] ?? "").trim()}
+                    className="inline-flex items-center justify-center rounded-lg border border-cyan-500/30 bg-cyan-500/[0.08] px-3 py-2 text-cyan-700 transition-colors hover:bg-cyan-500/[0.15] dark:text-cyan-300 disabled:opacity-40"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </section>
           );
         })}
