@@ -353,6 +353,14 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
       sprintId: req.query.sprintId as string | undefined,
       noSprint: req.query.noSprint === "true" || req.query.noSprint === "1",
       q: req.query.q as string | undefined,
+      limit: (() => {
+        const v = Number(req.query.limit);
+        return Number.isFinite(v) && v > 0 ? Math.min(Math.floor(v), 2000) : undefined;
+      })(),
+      offset: (() => {
+        const v = Number(req.query.offset);
+        return Number.isFinite(v) && v >= 0 ? Math.floor(v) : undefined;
+      })(),
     };
 
     const listCacheKey = `issues-list:${companyId}:${JSON.stringify(Object.entries(listParams).sort())}`;
