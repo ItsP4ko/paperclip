@@ -116,8 +116,16 @@ function applyFilters(issues: Issue[], state: IssueViewState, currentUserId?: st
 }
 
 function sortIssues(issues: Issue[], state: IssueViewState): Issue[] {
-  const sorted = [...issues];
   const dir = state.sortDir === "asc" ? 1 : -1;
+
+  if (state.sortField === "created" || state.sortField === "updated") {
+    const field = state.sortField === "created" ? "createdAt" : "updatedAt";
+    const keyed = issues.map((i) => ({ i, t: new Date(i[field as keyof Issue] as string).getTime() }));
+    keyed.sort((a, b) => dir * (a.t - b.t));
+    return keyed.map((k) => k.i);
+  }
+
+  const sorted = [...issues];
   sorted.sort((a, b) => {
     switch (state.sortField) {
       case "status":
@@ -126,10 +134,6 @@ function sortIssues(issues: Issue[], state: IssueViewState): Issue[] {
         return dir * (priorityOrder.indexOf(a.priority) - priorityOrder.indexOf(b.priority));
       case "title":
         return dir * a.title.localeCompare(b.title);
-      case "created":
-        return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-      case "updated":
-        return dir * (new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime());
       default:
         return 0;
     }
@@ -350,10 +354,14 @@ export const IssuesList = memo(function IssuesList({
     placeholderData: (previousData) => previousData,
   });
 
-  const agentName = useCallback((id: string | null) => {
-    if (!id || !agents) return null;
-    return agents.find((a) => a.id === id)?.name ?? null;
-  }, [agents]);
+  const agentMap = useMemo(
+    () => new Map((agents ?? []).map((a) => [a.id, a.name])),
+    [agents],
+  );
+  const agentName = useCallback(
+    (id: string | null) => (id ? (agentMap.get(id) ?? null) : null),
+    [agentMap],
+  );
 
   const filtered = useMemo(() => {
     const sourceIssues = normalizedIssueSearch.length > 0 ? searchedIssues : issues;

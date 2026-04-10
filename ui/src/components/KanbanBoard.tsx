@@ -53,12 +53,12 @@ interface KanbanBoardProps {
 function KanbanColumn({
   status,
   issues,
-  agents,
+  agentMap,
   liveIssueIds,
 }: {
   status: string;
   issues: Issue[];
-  agents?: Agent[];
+  agentMap?: Map<string, string>;
   liveIssueIds?: Set<string>;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
@@ -88,7 +88,7 @@ function KanbanColumn({
             <KanbanCard
               key={issue.id}
               issue={issue}
-              agents={agents}
+              agentMap={agentMap}
               isLive={liveIssueIds?.has(issue.id)}
             />
           ))}
@@ -102,12 +102,12 @@ function KanbanColumn({
 
 const KanbanCard = memo(function KanbanCard({
   issue,
-  agents,
+  agentMap,
   isLive,
   isOverlay,
 }: {
   issue: Issue;
-  agents?: Agent[];
+  agentMap?: Map<string, string>;
   isLive?: boolean;
   isOverlay?: boolean;
 }) {
@@ -125,10 +125,7 @@ const KanbanCard = memo(function KanbanCard({
     transition,
   };
 
-  const agentName = (id: string | null) => {
-    if (!id || !agents) return null;
-    return agents.find((a) => a.id === id)?.name ?? null;
-  };
+  const agentName = (id: string | null) => (id && agentMap ? (agentMap.get(id) ?? null) : null);
 
   return (
     <div
@@ -190,6 +187,11 @@ export function KanbanBoard({
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const agentMap = useMemo(
+    () => new Map((agents ?? []).map((a) => [a.id, a.name])),
+    [agents],
   );
 
   const columnIssues = useMemo(() => {
@@ -259,14 +261,14 @@ export function KanbanBoard({
             key={status}
             status={status}
             issues={columnIssues[status] ?? []}
-            agents={agents}
+            agentMap={agentMap}
             liveIssueIds={liveIssueIds}
           />
         ))}
       </div>
       <DragOverlay>
         {activeIssue ? (
-          <KanbanCard issue={activeIssue} agents={agents} isOverlay />
+          <KanbanCard issue={activeIssue} agentMap={agentMap} isOverlay />
         ) : null}
       </DragOverlay>
     </DndContext>
