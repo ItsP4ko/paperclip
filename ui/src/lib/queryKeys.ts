@@ -129,6 +129,9 @@ export const queryKeys = {
     injections: (companyId: string, runId: string) =>
       ["knowledge", "injections", companyId, runId] as const,
   },
+  search: {
+    query: (companyId: string, q: string) => ["search", companyId, q] as const,
+  },
   costRecommendations: {
     list: (companyId: string, status?: string) =>
       ["cost-recommendations", companyId, status ?? "all"] as const,

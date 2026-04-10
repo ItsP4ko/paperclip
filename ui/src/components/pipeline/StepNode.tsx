@@ -28,18 +28,22 @@ export const StepNode = memo(function StepNode({ data }: NodeProps) {
             </span>
           )}
         </div>
-        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-0.5">
           {canComplete && onComplete && (
-            <button onClick={(e) => { e.stopPropagation(); onComplete(); }} className="p-1 rounded hover:bg-green-500/20" title="Mark as complete">
-              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+            <button onClick={(e) => { e.stopPropagation(); onComplete(); }} className="p-1.5 rounded-md bg-green-500/10 hover:bg-green-500/20" title="Mark as complete">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
             </button>
           )}
-          <button onClick={(e) => { e.stopPropagation(); onEdit(step.id); }} className="p-1 rounded hover:bg-accent">
-            <Pencil className="h-3 w-3 text-muted-foreground" />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete(step.id); }} className="p-1 rounded hover:bg-accent">
-            <Trash2 className="h-3 w-3 text-destructive" />
-          </button>
+          {!canComplete && (
+            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={(e) => { e.stopPropagation(); onEdit(step.id); }} className="p-1 rounded hover:bg-accent">
+                <Pencil className="h-3 w-3 text-muted-foreground" />
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); onDelete(step.id); }} className="p-1 rounded hover:bg-accent">
+                <Trash2 className="h-3 w-3 text-destructive" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
       <Handle type="source" position={Position.Bottom} className="!bg-border !w-2 !h-2" />

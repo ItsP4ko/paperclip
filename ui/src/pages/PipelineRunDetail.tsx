@@ -123,7 +123,7 @@ export function PipelineRunDetail() {
                 ? "opacity-40"
                 : "",
     }));
-  }, [run, agentNames, memberNames, noop]);
+  }, [run, agentNames, memberNames, noop, currentUserId, completeStepMutation]);
 
   const runEdges: Edge[] = useMemo(() => {
     if (!run) return [];
@@ -168,7 +168,7 @@ export function PipelineRunDetail() {
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={() => navigate(`/pipelines/${pipelineId}`)}
+          onClick={() => navigate(`/pipelines`)}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -206,7 +206,6 @@ export function PipelineRunDetail() {
             nodeTypes={nodeTypes}
             nodesDraggable={false}
             nodesConnectable={false}
-            elementsSelectable={false}
             fitView
             fitViewOptions={{ padding: 0.2 }}
             className="bg-background"

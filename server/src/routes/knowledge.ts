@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
+import { and, eq } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
+import { heartbeatRuns, agents } from "@paperclipai/db";
 import { knowledgeService } from "../services/knowledge.js";
+import { brainService } from "../services/brain.js";
 import { assertCompanyAccess } from "./authz.js";
 import { notFound } from "../errors.js";
 import { validate, validateQuery } from "../middleware/validate.js";
@@ -156,6 +159,50 @@ export function knowledgeRoutes(db: Db) {
 
     const injections = await knowledge.getInjectionsForRun(req.params.runId as string);
     res.json(injections);
+  });
+
+  // Manual knowledge extraction from a run
+  router.post("/companies/:companyId/knowledge/extract-from-run/:runId", async (req, res) => {
+    assertCompanyAccess(req, req.params.companyId!);
+
+    const brain = brainService(db);
+    const companyId = req.params.companyId!;
+    const runId = req.params.runId!;
+
+    // Fetch the run
+    const [run] = await db
+      .select()
+      .from(heartbeatRuns)
+      .where(and(eq(heartbeatRuns.id, runId), eq(heartbeatRuns.companyId, companyId)))
+      .limit(1);
+
+    if (!run) {
+      res.status(404).json({ error: "Run not found" });
+      return;
+    }
+
+    // Fetch agent info
+    const [agent] = await db
+      .select({ name: agents.name, role: agents.role })
+      .from(agents)
+      .where(eq(agents.id, run.agentId))
+      .limit(1);
+
+    const result = await brain.forceExtract({
+      id: run.id,
+      companyId: run.companyId,
+      agentId: run.agentId,
+      agentName: agent?.name,
+      agentRole: agent?.role,
+      stdoutExcerpt: run.stdoutExcerpt,
+      resultJson: run.resultJson as Record<string, unknown> | null,
+      contextSnapshot: run.contextSnapshot as Record<string, unknown> | null,
+      startedAt: run.startedAt,
+      finishedAt: run.finishedAt,
+      usageJson: run.usageJson as Record<string, unknown> | null,
+    });
+
+    res.json(result);
   });
 
   return router;

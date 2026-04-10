@@ -62,7 +62,7 @@ export function PipelineCanvas({
         onUnlink: (sourceId: string, targetId: string) => onUnlinkSteps(sourceId, targetId),
       },
     }));
-  }, [steps, onAddStepBetween]);
+  }, [steps, onAddStepBetween, onUnlinkSteps]);
   const layoutNodes = useAutoLayout(rawNodes, rawEdges);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
@@ -71,7 +71,7 @@ export function PipelineCanvas({
   // Only sync from server when steps actually change (add/delete/edit), not on every render
   const prevStepIdsRef = useRef<string>("");
   useEffect(() => {
-    const stepKey = steps.map(s => `${s.id}:${s.name}:${s.stepType}:${s.assigneeType}`).join("|");
+    const stepKey = steps.map(s => `${s.id}:${s.name}:${s.stepType}:${s.assigneeType}:${s.dependsOn.join(",")}`).join("|");
     if (stepKey !== prevStepIdsRef.current) {
       prevStepIdsRef.current = stepKey;
       setNodes(layoutNodes);
