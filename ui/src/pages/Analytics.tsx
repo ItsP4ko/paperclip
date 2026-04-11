@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useAnimateIn } from "@/hooks/useAnimateIn";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -64,6 +65,7 @@ function last30Days() {
 }
 
 export function Analytics() {
+  const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const queryClient = useQueryClient();
@@ -151,7 +153,7 @@ export function Analytics() {
   }
 
   return (
-    <div className="p-6 space-y-8 max-w-7xl">
+    <div ref={animateRef} className="p-6 space-y-8 max-w-7xl">
       <div>
         <h1 className="text-xl font-semibold">Analytics</h1>
         <p className="text-sm text-muted-foreground mt-1">Last 30 days</p>

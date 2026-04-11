@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import { gsap, useGSAP } from "@/lib/gsap";
+import { useCallback, useRef } from "react";
+import { gsap } from "@/lib/gsap";
 import { presets } from "@/lib/animations";
 
 type PresetName = keyof typeof presets;
@@ -9,12 +9,11 @@ interface UseAnimateInOptions {
   preset?: PresetName | gsap.TweenVars;
   /** Delay before animation starts (seconds) */
   delay?: number;
-  /** Only animate once (default true) */
-  once?: boolean;
 }
 
 /**
  * Animate an element into view when it mounts.
+ * Uses a callback ref so it works with conditional rendering (loading states).
  *
  * Usage:
  *   const { scope } = useAnimateIn({ preset: "fadeUp" });
@@ -25,31 +24,30 @@ interface UseAnimateInOptions {
  *   return <div ref={scope}><Card /><Card /><Card /></div>;
  */
 export function useAnimateIn(opts: UseAnimateInOptions = {}) {
-  const scope = useRef<HTMLDivElement>(null);
+  const animated = useRef(false);
+  const optsRef = useRef(opts);
+  optsRef.current = opts;
 
-  useGSAP(
-    () => {
-      if (!scope.current) return;
+  const scope = useCallback((node: HTMLDivElement | null) => {
+    if (!node || animated.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-      // respect prefers-reduced-motion
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    animated.current = true;
 
-      const vars =
-        typeof opts.preset === "string"
-          ? { ...presets[opts.preset] }
-          : opts.preset ?? { ...presets.fadeUp };
+    const o = optsRef.current;
+    const vars =
+      typeof o.preset === "string"
+        ? { ...presets[o.preset] }
+        : o.preset ?? { ...presets.fadeUp };
 
-      if (opts.delay) (vars as gsap.TweenVars).delay = opts.delay;
+    if (o.delay) (vars as gsap.TweenVars).delay = o.delay;
 
-      // If the preset has stagger, animate direct children; otherwise animate the scope itself
-      if ("stagger" in vars) {
-        gsap.from(scope.current.children, vars);
-      } else {
-        gsap.from(scope.current, vars);
-      }
-    },
-    { scope, dependencies: [] }
-  );
+    if ("stagger" in vars) {
+      gsap.from(node.children, vars);
+    } else {
+      gsap.from(node, vars);
+    }
+  }, []);
 
   return { scope };
 }

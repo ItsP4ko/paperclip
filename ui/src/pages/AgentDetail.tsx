@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useAnimateIn } from "@/hooks/useAnimateIn";
 import { useParams, useNavigate, Link, Navigate, useBeforeUnload } from "@/lib/router";
 import { getWsHost } from "@/lib/api-base";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -525,6 +526,7 @@ function WorkspaceOperationsSection({
 }
 
 export function AgentDetail() {
+  const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
   const { companyPrefix, agentId, tab: urlTab, runId: urlRunId } = useParams<{
     companyPrefix?: string;
     agentId: string;
@@ -823,7 +825,7 @@ export function AgentDetail() {
   const showConfigActionBar = (activeView === "configuration" || activeView === "instructions") && (configDirty || configSaving);
 
   return (
-    <div className={cn("space-y-6", isMobile && showConfigActionBar && "pb-24")}>
+    <div ref={animateRef} className={cn("space-y-6", isMobile && showConfigActionBar && "pb-24")}>
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">

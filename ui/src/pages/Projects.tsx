@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { useAnimateIn } from "@/hooks/useAnimateIn";
 import { useQuery } from "@tanstack/react-query";
 import { projectsApi } from "../api/projects";
 import { useCompany } from "../context/CompanyContext";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Hexagon, Plus } from "lucide-react";
 
 export function Projects() {
+  const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
   const { selectedCompanyId } = useCompany();
   const { openNewProject } = useDialog();
   const { setBreadcrumbs } = useBreadcrumbs();
@@ -41,7 +43,7 @@ export function Projects() {
   }
 
   return (
-    <div className="space-y-4">
+    <div ref={animateRef} className="space-y-4">
       <div className="flex items-center justify-end">
         <Button size="sm" variant="outline" onClick={openNewProject}>
           <Plus className="h-4 w-4 mr-1" />

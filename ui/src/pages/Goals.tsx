@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useAnimateIn } from "@/hooks/useAnimateIn";
 import { useQuery } from "@tanstack/react-query";
 import { goalsApi } from "../api/goals";
 import { useCompany } from "../context/CompanyContext";
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Target, Plus } from "lucide-react";
 
 export function Goals() {
+  const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
   const { selectedCompanyId } = useCompany();
   const { openNewGoal } = useDialog();
   const { setBreadcrumbs } = useBreadcrumbs();
@@ -35,7 +37,7 @@ export function Goals() {
   }
 
   return (
-    <div className="space-y-4">
+    <div ref={animateRef} className="space-y-4">
       {error && <p className="text-sm text-destructive">{error.message}</p>}
 
       {goals && goals.length === 0 && (
