@@ -66,6 +66,8 @@
     {"idx": 61,"version": "7","when": 1775830000000,"tag": "0061_fix_owner_role_downgrade","breakpoints": true},
     {"idx": 62,"version": "7","when": 1775840000000,"tag": "0062_pipeline_react_flow","breakpoints": true},
     {"idx": 63,"version": "7","when": 1775850000000,"tag": "0063_sprints_per_project","breakpoints": true},
-    {"idx": 64,"version": "7","when": 1775860000000,"tag": "0064_global_search","breakpoints": true}
+    {"idx": 64,"version": "7","when": 1775860000000,"tag": "0064_global_search","breakpoints": true},
+    {"idx": 65,"version": "7","when": 1775870000000,"tag": "0065_activity_log_perf_index","breakpoints": true},
+    {"idx": 66,"version": "7","when": 1775880000000,"tag": "0066_interactive_run_sessions","breakpoints": true}
   ]
 }
