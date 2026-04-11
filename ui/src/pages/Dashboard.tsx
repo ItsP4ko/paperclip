@@ -11,7 +11,7 @@ import { useCompany } from "../context/CompanyContext";
 import { useDialog } from "../context/DialogContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { queryKeys } from "../lib/queryKeys";
-import { gsap, useGSAP } from "../lib/gsap";
+import { gsap } from "../lib/gsap";
 import { MetricCard } from "../components/MetricCard";
 import { EmptyState } from "../components/EmptyState";
 import { StatusIcon } from "../components/StatusIcon";
@@ -251,15 +251,16 @@ export function Dashboard() {
     [agents],
   );
 
-  // --- GSAP entrance animation ---
-  const contentRef = useRef<HTMLDivElement>(null);
-  useGSAP(() => {
-    if (!contentRef.current) return;
+  // --- GSAP entrance animation (callback ref for conditional rendering) ---
+  const dashAnimated = useRef(false);
+  const contentRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node || dashAnimated.current) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    dashAnimated.current = true;
     const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
-    const metrics = contentRef.current.querySelector("[data-animate='metrics']");
-    const charts = contentRef.current.querySelector("[data-animate='charts']");
-    const bottom = contentRef.current.querySelector("[data-animate='bottom']");
+    const metrics = node.querySelector("[data-animate='metrics']");
+    const charts = node.querySelector("[data-animate='charts']");
+    const bottom = node.querySelector("[data-animate='bottom']");
     if (metrics?.children.length) {
       tl.from(metrics.children, { y: 20, opacity: 0, stagger: 0.06, duration: 0.4 });
     }
@@ -269,7 +270,7 @@ export function Dashboard() {
     if (bottom?.children.length) {
       tl.from(bottom.children, { y: 20, opacity: 0, stagger: 0.08, duration: 0.5 }, "-=0.15");
     }
-  }, { scope: contentRef, dependencies: [!!data] });
+  }, []);
 
   if (!selectedCompanyId) {
     if (companies.length === 0) {
