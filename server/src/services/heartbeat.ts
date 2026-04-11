@@ -2189,9 +2189,16 @@ export function heartbeatService(db: Db) {
       return;
     }
 
-    // Early exit for local_runner agents — defer before any server-side workspace setup
+    // Early exit for local_runner agents — defer before any server-side workspace setup.
+    // All local adapters (those with a local CLI) are forced to the local runner
+    // regardless of the per-agent toggle — the server has no CLI installed.
     const runtimeConfEarly = parseObject(agent.runtimeConfig);
-    if (runtimeConfEarly.executionTarget === "local_runner") {
+    const LOCAL_ADAPTER_TYPES = new Set([
+      "claude_local", "codex_local", "gemini_local",
+      "opencode_local", "pi_local", "cursor", "hermes_local",
+    ]);
+    const forceLocal = LOCAL_ADAPTER_TYPES.has(agent.adapterType);
+    if (forceLocal || runtimeConfEarly.executionTarget === "local_runner") {
       await setRunStatus(run.id, "pending_local", {});
       publishLiveEvent({
         companyId: run.companyId,
