@@ -1,9 +1,31 @@
 use std::fs::OpenOptions;
+use std::io::Write as IoWrite;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 
 use tauri::{Emitter, Manager, State};
 use tauri_plugin_updater::UpdaterExt;
+
+/// Append a timestamped line to `updater.log` inside the app log dir.
+fn updater_log(handle: &tauri::AppHandle, msg: &str) {
+    let log_dir = handle
+        .path()
+        .app_log_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
+    let _ = std::fs::create_dir_all(&log_dir);
+    if let Ok(mut f) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log_dir.join("updater.log"))
+    {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let secs = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let _ = writeln!(f, "[{secs}] {msg}");
+    }
+}
 
 const API_BASE_URL: &str = "https://paperclip-paperclip-api.qiwa34.easypanel.host";
 
@@ -384,12 +406,15 @@ fn spawn_runner(handle: tauri::AppHandle) {
 }
 
 fn check_for_updates(handle: tauri::AppHandle) {
+    let h = handle.clone();
     tauri::async_runtime::spawn(async move {
-        let updater = match handle.updater() {
+        updater_log(&h, "starting update check...");
+
+        let updater = match h.updater() {
             Ok(u) => u,
             Err(e) => {
-                eprintln!("[updater] failed to create updater: {e}");
-                let _ = handle.emit(
+                updater_log(&h, &format!("failed to create updater: {e}"));
+                let _ = h.emit(
                     "update-error",
                     serde_json::json!({ "error": e.to_string() }),
                 );
@@ -397,24 +422,25 @@ fn check_for_updates(handle: tauri::AppHandle) {
             }
         };
 
+        updater_log(&h, "updater created, checking for updates...");
+
         match updater.check().await {
             Ok(Some(update)) => {
                 let version = update.version.clone();
-                eprintln!("[updater] update available: v{version}, auto-installing...");
-                let _ = handle.emit(
+                updater_log(&h, &format!("update available: v{version}, auto-installing..."));
+                let _ = h.emit(
                     "update-installing",
                     serde_json::json!({ "version": version }),
                 );
 
                 match update.download_and_install(|_, _| {}, || {}).await {
                     Ok(_) => {
-                        eprintln!("[updater] update installed, restarting...");
-                        handle.restart();
+                        updater_log(&h, "update installed, restarting...");
+                        h.restart();
                     }
                     Err(e) => {
-                        eprintln!("[updater] auto-install failed: {e}");
-                        // Fall back to manual mode — let the user retry
-                        let _ = handle.emit(
+                        updater_log(&h, &format!("auto-install failed: {e}"));
+                        let _ = h.emit(
                             "update-available",
                             serde_json::json!({ "version": version }),
                         );
@@ -422,11 +448,11 @@ fn check_for_updates(handle: tauri::AppHandle) {
                 }
             }
             Ok(None) => {
-                eprintln!("[updater] app is up to date");
+                updater_log(&h, "app is up to date");
             }
             Err(e) => {
-                eprintln!("[updater] check failed: {e}");
-                let _ = handle.emit(
+                updater_log(&h, &format!("check failed: {e}"));
+                let _ = h.emit(
                     "update-error",
                     serde_json::json!({ "error": e.to_string() }),
                 );
