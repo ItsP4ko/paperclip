@@ -1,4 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAnimateIn } from "@/hooks/useAnimateIn";
 import { Link, useLocation, useNavigate } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { INBOX_MINE_ISSUE_STATUS_FILTER } from "@paperclipai/shared";
@@ -786,6 +787,7 @@ function JoinRequestInboxRow({
 }
 
 export function Inbox() {
+  const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const navigate = useNavigate();
@@ -1627,7 +1629,7 @@ export function Inbox() {
     .map((issue) => issue.id);
   const canMarkAllRead = unreadIssueIds.length > 0;
   return (
-    <div className="space-y-6">
+    <div ref={animateRef} className="space-y-6">
       <div className="flex items-center justify-between gap-2">
         <Tabs value={tab} onValueChange={(value) => navigate(`/inbox/${value}`)}>
           <PageTabBar

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAnimateIn } from "@/hooks/useAnimateIn";
 import { useNavigate, useLocation } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { approvalsApi } from "../api/approvals";
@@ -16,6 +17,7 @@ import { PageSkeleton } from "../components/PageSkeleton";
 type StatusFilter = "pending" | "all";
 
 export function Approvals() {
+  const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const queryClient = useQueryClient();
@@ -83,7 +85,7 @@ export function Approvals() {
   }
 
   return (
-    <div className="space-y-4">
+    <div ref={animateRef} className="space-y-4">
       <div className="flex items-center justify-between">
         <Tabs value={statusFilter} onValueChange={(v) => navigate(`/approvals/${v}`)}>
           <PageTabBar items={[

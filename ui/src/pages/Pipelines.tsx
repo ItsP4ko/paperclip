@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAnimateIn } from "@/hooks/useAnimateIn";
 import { useNavigate } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCompany } from "../context/CompanyContext";
@@ -26,6 +27,7 @@ const STATUS_VARIANT: Record<Pipeline["status"], "default" | "secondary" | "outl
 };
 
 export function Pipelines() {
+  const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
   const { selectedCompanyId } = useCompany();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -80,7 +82,7 @@ export function Pipelines() {
   if (!selectedCompanyId) return null;
 
   return (
-    <div className="flex flex-col h-full">
+    <div ref={animateRef} className="flex flex-col h-full">
       <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <GitBranch className="h-5 w-5 text-muted-foreground" />

@@ -1,4 +1,5 @@
 import { ChangeEvent, useEffect, useState } from "react";
+import { useAnimateIn } from "@/hooks/useAnimateIn";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DEFAULT_FEEDBACK_DATA_SHARING_TERMS_VERSION } from "@paperclipai/shared";
 import { useCompany } from "../context/CompanyContext";
@@ -27,6 +28,7 @@ type AgentSnippetInput = {
 const FEEDBACK_TERMS_URL = import.meta.env.VITE_FEEDBACK_TERMS_URL?.trim() || "https://paperclip.ing/tos";
 
 export function CompanySettings() {
+  const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
   const {
     companies,
     selectedCompany,
@@ -294,7 +296,7 @@ export function CompanySettings() {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div ref={animateRef} className="max-w-2xl space-y-6">
       <div className="flex items-center gap-2">
         <Settings className="h-5 w-5 text-muted-foreground" />
         <h1 className="text-lg font-semibold">Company Settings</h1>
