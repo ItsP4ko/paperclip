@@ -61,6 +61,7 @@ interface ClaimResponse {
     adapterType: string;
     adapterConfig: Record<string, unknown>;
   } | null;
+  authToken?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -204,6 +205,7 @@ async function executeJob(
     config: adapterConfig,
     context,
     onLog,
+    authToken: claimed.authToken ?? undefined,
   };
 
   let result: AdapterExecutionResult;
