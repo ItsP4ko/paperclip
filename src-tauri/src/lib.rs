@@ -329,9 +329,8 @@ fn deactivate_remote_control(
     Ok(())
 }
 
-/// Check for update and, if found, notify the frontend via the
-/// `update-available` event. Re-checks on `install_update` command
-/// to avoid storing the Update object across threads.
+/// Manual install_update command kept as fallback in case auto-update
+/// fails and the frontend needs to retry.
 #[tauri::command]
 async fn install_update(app: tauri::AppHandle) -> Result<(), String> {
     let update = app
@@ -400,10 +399,27 @@ fn check_for_updates(handle: tauri::AppHandle) {
 
         match updater.check().await {
             Ok(Some(update)) => {
+                let version = update.version.clone();
+                eprintln!("[updater] update available: v{version}, auto-installing...");
                 let _ = handle.emit(
-                    "update-available",
-                    serde_json::json!({ "version": update.version }),
+                    "update-installing",
+                    serde_json::json!({ "version": version }),
                 );
+
+                match update.download_and_install(|_, _| {}, || {}).await {
+                    Ok(_) => {
+                        eprintln!("[updater] update installed, restarting...");
+                        handle.restart();
+                    }
+                    Err(e) => {
+                        eprintln!("[updater] auto-install failed: {e}");
+                        // Fall back to manual mode — let the user retry
+                        let _ = handle.emit(
+                            "update-available",
+                            serde_json::json!({ "version": version }),
+                        );
+                    }
+                }
             }
             Ok(None) => {
                 eprintln!("[updater] app is up to date");

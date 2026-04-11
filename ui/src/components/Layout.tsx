@@ -26,6 +26,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useCompanyPageMemory } from "../hooks/useCompanyPageMemory";
 import { healthApi } from "../api/health";
+import { useTauriVersion } from "../hooks/useTauriVersion";
 import { instanceSettingsApi } from "../api/instanceSettings";
 import { shouldSyncCompanySelectionFromRoute } from "../lib/company-selection";
 import {
@@ -62,6 +63,7 @@ export function Layout() {
     setSelectedCompanyId,
   } = useCompany();
   const { theme, toggleTheme } = useTheme();
+  const tauriVersion = useTauriVersion();
   const { companyPrefix } = useParams<{ companyPrefix: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -321,12 +323,12 @@ export function Layout() {
                   <BookOpen className="h-4 w-4 shrink-0" />
                   <span className="truncate">Documentation</span>
                 </a>
-                {health?.version && (
+                {(tauriVersion || health?.version) && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="px-2 text-xs text-muted-foreground shrink-0 cursor-default">v</span>
+                      <span className="px-2 text-xs text-muted-foreground shrink-0 cursor-default">v{tauriVersion ?? health?.version}</span>
                     </TooltipTrigger>
-                    <TooltipContent>v{health.version}</TooltipContent>
+                    <TooltipContent>{tauriVersion ? `App v${tauriVersion}` : `Server v${health?.version}`}</TooltipContent>
                   </Tooltip>
                 )}
                 <Button variant="ghost" size="icon-sm" className="text-muted-foreground shrink-0" asChild>
@@ -379,12 +381,12 @@ export function Layout() {
                   <BookOpen className="h-4 w-4 shrink-0" />
                   <span className="truncate">Documentation</span>
                 </a>
-                {health?.version && (
+                {(tauriVersion || health?.version) && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="px-2 text-xs text-muted-foreground shrink-0 cursor-default">v</span>
+                      <span className="px-2 text-xs text-muted-foreground shrink-0 cursor-default">v{tauriVersion ?? health?.version}</span>
                     </TooltipTrigger>
-                    <TooltipContent>v{health.version}</TooltipContent>
+                    <TooltipContent>{tauriVersion ? `App v${tauriVersion}` : `Server v${health?.version}`}</TooltipContent>
                   </Tooltip>
                 )}
                 <Button variant="ghost" size="icon-sm" className="text-muted-foreground shrink-0" asChild>
