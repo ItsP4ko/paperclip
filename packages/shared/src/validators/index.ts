@@ -311,3 +311,16 @@ export {
   type SetPluginState,
   type ListPluginState,
 } from "./plugin.js";
+
+export {
+  createGroupSchema,
+  updateGroupSchema,
+  addGroupMembersSchema,
+  updateGroupMemberRoleSchema,
+  addGroupProjectsSchema,
+  type CreateGroup,
+  type UpdateGroup,
+  type AddGroupMembers,
+  type UpdateGroupMemberRole,
+  type AddGroupProjects,
+} from "./group.js";
