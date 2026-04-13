@@ -68,3 +68,6 @@ export { pipelines, pipelineSteps, pipelineRuns, pipelineRunSteps } from "./pipe
 export { sprints } from "./sprints.js";
 export { sprintIssueHistory } from "./sprint_issue_history.js";
 export { issueStateHistory } from "./issue_state_history.js";
+export { groups } from "./groups.js";
+export { groupMemberships } from "./group_memberships.js";
+export { groupProjects } from "./group_projects.js";
