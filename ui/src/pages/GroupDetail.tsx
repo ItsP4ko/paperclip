@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useParams } from "@/lib/router";
+import { useParams, useNavigate } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Trash2, UserPlus, FolderPlus, Shield, User } from "lucide-react";
+import { Trash2, UserPlus, FolderPlus, Shield, User, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -27,10 +28,15 @@ export function GroupDetail() {
   const { isOwner } = useMemberRole(selectedCompanyId);
   const queryClient = useQueryClient();
 
+  const navigate = useNavigate();
+
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [addProjectOpen, setAddProjectOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
 
   const detailKey = queryKeys.groups.detail(selectedCompanyId!, groupId!);
 
@@ -90,6 +96,24 @@ export function GroupDetail() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: detailKey }),
   });
 
+  const updateGroup = useMutation({
+    mutationFn: (data: { name?: string; description?: string | null }) =>
+      groupsApi.update(selectedCompanyId!, groupId!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: detailKey });
+      queryClient.invalidateQueries({ queryKey: queryKeys.groups.list(selectedCompanyId!) });
+      setEditing(false);
+    },
+  });
+
+  const deleteGroup = useMutation({
+    mutationFn: () => groupsApi.remove(selectedCompanyId!, groupId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.groups.list(selectedCompanyId!) });
+      navigate("/groups");
+    },
+  });
+
   const canManage = isOwner;
 
   if (isLoading) return <PageSkeleton />;
@@ -104,10 +128,62 @@ export function GroupDetail() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold">{group.name}</h1>
-        {group.description && (
-          <p className="text-sm text-muted-foreground mt-1">{group.description}</p>
+      <div className="flex items-start justify-between">
+        {editing ? (
+          <div className="space-y-2 flex-1 mr-4">
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="text-lg font-semibold h-8"
+              autoFocus
+            />
+            <Input
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              placeholder="Description (optional)"
+              className="text-sm h-7"
+            />
+            <div className="flex gap-1">
+              <Button
+                size="xs"
+                disabled={!editName.trim() || updateGroup.isPending}
+                onClick={() => updateGroup.mutate({ name: editName.trim(), description: editDescription.trim() || null })}
+              >
+                <Check className="h-3.5 w-3.5 mr-1" /> Save
+              </Button>
+              <Button size="xs" variant="ghost" onClick={() => setEditing(false)}>
+                <X className="h-3.5 w-3.5 mr-1" /> Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold">{group.name}</h1>
+            {group.description && (
+              <p className="text-sm text-muted-foreground mt-1">{group.description}</p>
+            )}
+          </div>
+        )}
+        {canManage && !editing && (
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() => { setEditName(group.name); setEditDescription(group.description ?? ""); setEditing(true); }}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            {isOwner && (
+              <Button
+                size="xs"
+                variant="ghost"
+                className="text-destructive"
+                onClick={() => { if (confirm("Delete this group? This cannot be undone.")) deleteGroup.mutate(); }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
