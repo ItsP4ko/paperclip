@@ -46,6 +46,10 @@ interface RunnerJob {
   createdAt: string;
   agentMd?: string | null;
   projectClaudeMd?: string | null;
+  // Interactive session fields (continuation turns)
+  turnSeq?: number | null;
+  resumeSessionId?: string | null;
+  humanPrompt?: string | null;
 }
 
 interface ClaimResponse {
@@ -57,6 +61,7 @@ interface ClaimResponse {
     adapterType: string;
     adapterConfig: Record<string, unknown>;
   } | null;
+  authToken?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -166,6 +171,22 @@ async function executeJob(
       .catch(() => undefined); // best-effort; don't crash on transient errors
   };
 
+  // For continuation turns, inject resume session into runtime and override prompt
+  const isContinuation = !!(job.turnSeq && job.resumeSessionId);
+  const runtimeSessionId = isContinuation ? job.resumeSessionId! : null;
+  const runtimeSessionParams = runtimeSessionId
+    ? { sessionId: runtimeSessionId, cwd: String(adapterConfig.cwd || workspacePath) }
+    : null;
+
+  if (isContinuation && job.humanPrompt) {
+    // Override the context prompt with the user's message for this turn
+    context.prompt = job.humanPrompt;
+    context.isInteractiveTurn = true;
+    if (verbose) {
+      console.log(pc.dim(`[runner] Continuation turn ${job.turnSeq} — resuming session ${runtimeSessionId}`));
+    }
+  }
+
   const ctx: AdapterExecutionContext = {
     runId,
     agent: {
@@ -176,14 +197,15 @@ async function executeJob(
       adapterConfig,
     },
     runtime: {
-      sessionId: null,
-      sessionParams: null,
-      sessionDisplayId: null,
+      sessionId: runtimeSessionId,
+      sessionParams: runtimeSessionParams,
+      sessionDisplayId: runtimeSessionId,
       taskKey: null,
     },
     config: adapterConfig,
     context,
     onLog,
+    authToken: claimed.authToken ?? undefined,
   };
 
   let result: AdapterExecutionResult;
@@ -227,6 +249,7 @@ async function executeJob(
       errorMessage: result.errorMessage ?? null,
       errorCode: result.errorCode ?? null,
       resultJson: result.resultJson ?? null,
+      sessionId: result.sessionId ?? null,
     })
     .catch((err) => {
       console.error(pc.yellow(`[runner] Warning: failed to report completion for ${runId}: ${err instanceof Error ? err.message : String(err)}`));

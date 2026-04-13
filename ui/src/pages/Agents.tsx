@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useAnimateIn } from "@/hooks/useAnimateIn";
 import { Link, useNavigate, useLocation } from "@/lib/router";
 import { useQuery } from "@tanstack/react-query";
 import { agentsApi, type OrgNode } from "../api/agents";
@@ -64,6 +65,7 @@ function filterOrgTree(nodes: OrgNode[], tab: FilterTab, showTerminated: boolean
 }
 
 export function Agents() {
+  const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
   const { selectedCompanyId } = useCompany();
   const { openNewAgent } = useDialog();
   const { setBreadcrumbs } = useBreadcrumbs();
@@ -141,7 +143,7 @@ export function Agents() {
   const filteredOrg = useMemo(() => filterOrgTree(orgTree ?? [], tab, showTerminated), [orgTree, tab, showTerminated]);
 
   return (
-    <div className="space-y-4">
+    <div ref={animateRef} className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Tabs value={tab} onValueChange={(v) => navigate(`/agents/${v}`)}>
           <PageTabBar

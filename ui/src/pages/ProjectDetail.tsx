@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useAnimateIn } from "@/hooks/useAnimateIn";
 import { Link, useParams, useNavigate, useLocation, Navigate } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DocumentToTasksDialog } from "../components/DocumentToTasksDialog";
@@ -489,6 +490,7 @@ function ProjectWorkspacesContent({
 /* ── Main project page ── */
 
 export function ProjectDetail() {
+  const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
   const { companyPrefix, projectId, filter } = useParams<{
     companyPrefix?: string;
     projectId: string;
@@ -856,7 +858,7 @@ export function ProjectDetail() {
   };
 
   return (
-    <div className="space-y-6">
+    <div ref={animateRef} className="space-y-6">
       <div className="flex items-start gap-3">
         <div className="h-7 flex items-center">
           <ColorPicker

@@ -731,7 +731,7 @@ export const IssuesList = memo(function IssuesList({
         </div>
       )}
 
-      {isLoading && <PageSkeleton variant="issues-list" />}
+      {isLoading && <PageSkeleton variant={viewState.viewMode === "board" ? "issues-board" : "issues-list"} />}
       {error && <p className="text-sm text-destructive">{error.message}</p>}
 
       {!isLoading && filtered.length === 0 && viewState.viewMode === "list" && (

@@ -332,9 +332,37 @@ async function resolveSpawnTarget(
 }
 
 export function ensurePathInEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  if (typeof env.PATH === "string" && env.PATH.length > 0) return env;
-  if (typeof env.Path === "string" && env.Path.length > 0) return env;
-  return { ...env, PATH: defaultPathForPlatform() };
+  const sep = process.platform === "win32" ? ";" : ":";
+  const existing = env.PATH ?? env.Path ?? "";
+
+  if (!existing) {
+    return { ...env, PATH: defaultPathForPlatform() };
+  }
+
+  // Enrich existing PATH with common binary locations so CLIs like
+  // `claude` installed via Homebrew, npm global, Volta, etc. are found
+  // even when the runner process inherits a minimal PATH.
+  const home = env.HOME ?? process.env.HOME ?? "";
+  const extras = process.platform === "win32"
+    ? []
+    : [
+        "/usr/local/bin",
+        "/opt/homebrew/bin",
+        "/opt/homebrew/sbin",
+        ...(home ? [
+          `${home}/.local/bin`,
+          `${home}/.nvm/current/bin`,
+          `${home}/.volta/bin`,
+        ] : []),
+      ];
+
+  const existingParts = new Set(existing.split(sep).filter(Boolean));
+  const toAppend = extras.filter((p) => !existingParts.has(p));
+
+  if (toAppend.length === 0) return env;
+
+  const enriched = [existing, ...toAppend].join(sep);
+  return { ...env, PATH: enriched };
 }
 
 export async function ensureAbsoluteDirectory(

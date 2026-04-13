@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAnimateIn } from "@/hooks/useAnimateIn";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@/lib/router";
 import { ChevronDown, ChevronRight, MoreHorizontal, Play, Plus, Repeat } from "lucide-react";
@@ -72,6 +73,7 @@ function nextRoutineStatus(currentStatus: string, enabled: boolean) {
 }
 
 export function Routines() {
+  const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
   const { selectedCompanyId } = useCompany();
   const { isMember } = useMemberRole(selectedCompanyId);
   const { setBreadcrumbs } = useBreadcrumbs();
@@ -278,7 +280,7 @@ export function Routines() {
   }
 
   return (
-    <div className="space-y-6">
+    <div ref={animateRef} className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">

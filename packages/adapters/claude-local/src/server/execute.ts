@@ -404,11 +404,19 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       ? renderTemplate(bootstrapPromptTemplate, templateData).trim()
       : "";
   const sessionHandoffNote = asString(context.paperclipSessionHandoffMarkdown, "").trim();
-  const prompt = joinPromptSections([
-    renderedBootstrapPrompt,
-    sessionHandoffNote,
-    renderedPrompt,
-  ]);
+
+  // For interactive continuation turns, use the user's message directly instead
+  // of the full rendered prompt — Claude CLI already has the prior context via --resume.
+  const isInteractiveTurn = context.isInteractiveTurn === true && sessionId;
+  const interactivePrompt = isInteractiveTurn ? asString(context.prompt, "") : "";
+
+  const prompt = isInteractiveTurn && interactivePrompt
+    ? interactivePrompt
+    : joinPromptSections([
+        renderedBootstrapPrompt,
+        sessionHandoffNote,
+        renderedPrompt,
+      ]);
   const promptMetrics = {
     promptChars: prompt.length,
     bootstrapPromptChars: renderedBootstrapPrompt.length,

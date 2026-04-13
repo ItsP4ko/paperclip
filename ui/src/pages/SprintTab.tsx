@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Milestone, Plus, BarChart2 } from "lucide-react";
 import { sprintsApi } from "../api/sprints";
@@ -35,6 +35,13 @@ export function SprintTab({ projectId }: { projectId: string }) {
 
   const effectiveSprintId = selectedSprintId ?? sprints.find((s) => s.status === "active")?.id ?? sprints[0]?.id ?? null;
   const selectedSprint = sprints.find((s) => s.id === effectiveSprintId) ?? null;
+
+  // On initial load (no manual selection), auto-switch to board view if the resolved sprint is active
+  useEffect(() => {
+    if (!isLoading && selectedSprintId === null && selectedSprint?.status === "active") {
+      setView("board");
+    }
+  }, [isLoading, selectedSprintId, selectedSprint?.status]);
 
   const handleSelectSprint = (sprint: Sprint) => {
     setSelectedSprintId(sprint.id);

@@ -321,7 +321,11 @@ export const HEARTBEAT_RUN_STATUSES = [
   "failed",
   "cancelled",
   "timed_out",
+  "pending_local",
 ] as const;
+
+export const SESSION_STATUSES = ["active", "idle", "closed"] as const;
+export type SessionStatus = (typeof SESSION_STATUSES)[number];
 export type HeartbeatRunStatus = (typeof HEARTBEAT_RUN_STATUSES)[number];
 
 export const LIVE_EVENT_TYPES = [
@@ -329,6 +333,7 @@ export const LIVE_EVENT_TYPES = [
   "heartbeat.run.status",
   "heartbeat.run.event",
   "heartbeat.run.log",
+  "heartbeat.run.message",
   "runner.jobs.pending",
   "agent.status",
   "activity.logged",

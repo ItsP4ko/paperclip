@@ -4,6 +4,10 @@ name: Desktop Release
 # then publishes a merged latest.json so the in-app updater can find every
 # platform.
 #
+# The version is derived from the git tag (e.g. v0.8.5 → 0.8.5) and
+# injected into tauri.conf.json before building, so you never need to
+# bump it manually.
+#
 # Required secrets:
 #   TAURI_SIGNING_PRIVATE_KEY          — minisign private key (full file contents)
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — passphrase (can be empty string)
@@ -15,19 +19,50 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to build (e.g. v0.6.0)'
+        description: 'Tag to build (e.g. v0.8.5)'
         required: true
         type: string
 
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
 jobs:
+  # ── Validate tag format ──────────────────────────────────────
+  validate:
+    name: Validate tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.parse.outputs.version }}
+    steps:
+      - name: Parse and validate semver from tag
+        id: parse
+        shell: bash
+        run: |
+          TAG="${{ env.TAG }}"
+          # Strip leading 'v' and validate semver (X.Y.Z)
+          VERSION="${TAG#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '$TAG' does not produce valid semver. Expected format: vX.Y.Z (got version='$VERSION')"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "✅ Version: $VERSION"
+
+  # ── macOS (Apple Silicon) ────────────────────────────────────
   build-macos:
     name: Build macOS (Apple Silicon)
+    needs: validate
     runs-on: macos-14
     permissions:
       contents: write
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set version in tauri.conf.json
+        run: |
+          jq '.version = "${{ needs.validate.outputs.version }}"' src-tauri/tauri.conf.json > tmp.json
+          mv tmp.json src-tauri/tauri.conf.json
 
       - uses: pnpm/action-setup@v4
 
@@ -100,13 +135,12 @@ jobs:
           echo "sig=$SIG"     >> "$GITHUB_OUTPUT"
 
       - name: Prepare artifacts and upload to release
-        id: artifacts
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          REF_TAG="${{ github.event.inputs.tag || github.ref_name }}"
-          VERSION="${REF_TAG#v}"
+          TAG="${{ env.TAG }}"
+          REPO="${GITHUB_REPOSITORY}"
           BUNDLE_DIR="src-tauri/target/release/bundle"
 
           DMG=$(find "$BUNDLE_DIR/dmg" -name "*.dmg" | head -1)
@@ -119,9 +153,6 @@ jobs:
           # Version-less DMG keeps a stable /releases/latest/download/ URL
           DMG_VERSIONLESS="$(dirname "$DMG")/Relay.Control_aarch64.dmg"
           cp "$DMG" "$DMG_VERSIONLESS"
-
-          TAG="${{ github.event.inputs.tag || github.ref_name }}"
-          REPO="${GITHUB_REPOSITORY}"
 
           if ! gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
             gh release create "$TAG" -R "$REPO" \
@@ -137,7 +168,7 @@ jobs:
             --repo "$REPO" \
             --clobber
 
-          DOWNLOAD_URL="https://github.com/$REPO/releases/download/v$VERSION/$TARGZ_FILENAME"
+          DOWNLOAD_URL="https://github.com/$REPO/releases/download/$TAG/$TARGZ_FILENAME"
           mkdir -p "$RUNNER_TEMP/updater-meta"
           cat > "$RUNNER_TEMP/updater-meta/darwin-aarch64.json" <<EOF
           {
@@ -152,14 +183,22 @@ jobs:
           name: updater-meta-darwin
           path: ${{ runner.temp }}/updater-meta/darwin-*.json
 
+  # ── Windows (x86_64) ─────────────────────────────────────────
   build-windows:
     name: Build Windows (x86_64)
+    needs: validate
     runs-on: windows-latest
     permissions:
       contents: write
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set version in tauri.conf.json
+        shell: bash
+        run: |
+          jq '.version = "${{ needs.validate.outputs.version }}"' src-tauri/tauri.conf.json > tmp.json
+          mv tmp.json src-tauri/tauri.conf.json
 
       - uses: pnpm/action-setup@v4
 
@@ -225,21 +264,17 @@ jobs:
           echo "sig=$SIG"             >> "$GITHUB_OUTPUT"
 
       - name: Prepare artifacts and upload to release
-        id: artifacts
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          REF_TAG="${{ github.event.inputs.tag || github.ref_name }}"
-          VERSION="${REF_TAG#v}"
+          TAG="${{ env.TAG }}"
+          REPO="${GITHUB_REPOSITORY}"
 
           INSTALLER="${{ steps.sign.outputs.installer }}"
           SIG="${{ steps.sign.outputs.sig }}"
           SIGNATURE=$(cat "$SIG")
           INSTALLER_FILENAME=$(basename "$INSTALLER" | tr ' ' '.')
-
-          TAG="${{ github.event.inputs.tag || github.ref_name }}"
-          REPO="${GITHUB_REPOSITORY}"
 
           if ! gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
             gh release create "$TAG" -R "$REPO" \
@@ -253,11 +288,12 @@ jobs:
             --repo "$REPO" \
             --clobber
 
+          DOWNLOAD_URL="https://github.com/$REPO/releases/download/$TAG/$INSTALLER_FILENAME"
           mkdir -p "$RUNNER_TEMP/updater-meta"
           cat > "$RUNNER_TEMP/updater-meta/windows-x86_64.json" <<EOF
           {
             "signature": "$SIGNATURE",
-            "url": "https://github.com/$REPO/releases/download/v$VERSION/$INSTALLER_FILENAME"
+            "url": "$DOWNLOAD_URL"
           }
           EOF
 
@@ -267,9 +303,10 @@ jobs:
           name: updater-meta-windows-x86_64
           path: ${{ runner.temp }}/updater-meta/windows-x86_64.json
 
+  # ── Publish latest.json ──────────────────────────────────────
   publish-latest-json:
     name: Publish latest.json
-    needs: [build-macos, build-windows]
+    needs: [validate, build-macos, build-windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -287,8 +324,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          TAG="${{ github.event.inputs.tag || github.ref_name }}"
-          VERSION="${TAG#v}"
+          TAG="${{ env.TAG }}"
+          VERSION="${{ needs.validate.outputs.version }}"
           PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
           REPO="${{ github.repository }}"
 
@@ -312,6 +349,9 @@ jobs:
                 "windows-x86_64": $windows_x86_64
               }
             }' > /tmp/latest.json
+
+          echo "latest.json contents:"
+          cat /tmp/latest.json
 
           gh release upload "$TAG" \
             /tmp/latest.json \

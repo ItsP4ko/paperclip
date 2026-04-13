@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useAnimateIn } from "@/hooks/useAnimateIn";
 import { useQuery } from "@tanstack/react-query";
 import { activityApi } from "../api/activity";
 import { agentsApi } from "../api/agents";
@@ -22,6 +23,7 @@ import { History } from "lucide-react";
 import type { Agent } from "@paperclipai/shared";
 
 export function Activity() {
+  const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const [filter, setFilter] = useState("all");
@@ -99,7 +101,7 @@ export function Activity() {
     : [];
 
   return (
-    <div className="space-y-4">
+    <div ref={animateRef} className="space-y-4">
       <div className="flex items-center justify-end">
         <Select value={filter} onValueChange={setFilter}>
           <SelectTrigger className="w-[140px] h-8 text-xs">

@@ -38,8 +38,24 @@ export interface HeartbeatRun {
   retryOfRunId: string | null;
   processLossRetryCount: number;
   contextSnapshot: Record<string, unknown> | null;
+  sessionStatus: "active" | "idle" | "closed" | null;
+  idleSince: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface HeartbeatRunTurn {
+  id: string;
+  runId: string;
+  companyId: string;
+  seq: number;
+  role: "agent" | "human";
+  prompt: string | null;
+  status: "running" | "succeeded" | "failed";
+  exitCode: number | null;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  createdAt: Date;
 }
 
 export interface AgentWakeupSkipped {

@@ -7,6 +7,7 @@ import { logger } from "../middleware/logger.js";
 import { heartbeatService } from "../services/index.js";
 import { assertBoard } from "./authz.js";
 import { forbidden } from "../errors.js";
+import { createLocalAgentJwt } from "../agent-auth-jwt.js";
 import { subscribeCompanyLiveEvents, subscribeGlobalLiveEvents } from "../services/live-events.js";
 
 const logSchema = z.object({
@@ -21,6 +22,7 @@ const completeSchema = z.object({
   errorMessage: z.string().nullable().optional(),
   errorCode: z.string().nullable().optional(),
   resultJson: z.record(z.unknown()).nullable().optional(),
+  sessionId: z.string().nullable().optional(),
 });
 
 export function runnerRoutes(db: Db) {
@@ -67,7 +69,13 @@ export function runnerRoutes(db: Db) {
       }
     }
 
-    res.json({ run: result.run, agent: result.agent });
+    // Generate a short-lived JWT so the local runner can inject PAPERCLIP_API_KEY
+    // into the spawned agent process — same mechanism the server-side heartbeat uses.
+    const authToken = result.agent
+      ? createLocalAgentJwt(result.agent.id, result.run.companyId, result.agent.adapterType, runId)
+      : null;
+
+    res.json({ run: result.run, agent: result.agent, authToken });
   });
 
   /**

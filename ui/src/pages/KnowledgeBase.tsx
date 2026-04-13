@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useAnimateIn } from "@/hooks/useAnimateIn";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCompany } from "../context/CompanyContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
@@ -135,6 +136,7 @@ function EntryEditor({
 }
 
 export function KnowledgeBase() {
+  const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const queryClient = useQueryClient();
@@ -235,7 +237,7 @@ export function KnowledgeBase() {
   }
 
   return (
-    <div className="p-6 max-w-5xl space-y-4">
+    <div ref={animateRef} className="p-6 max-w-5xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Knowledge Base</h1>

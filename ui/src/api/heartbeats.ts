@@ -1,6 +1,7 @@
 import type {
   HeartbeatRun,
   HeartbeatRunEvent,
+  HeartbeatRunTurn,
   InstanceSchedulerHeartbeatAgent,
   WorkspaceOperation,
 } from "@paperclipai/shared";
@@ -24,6 +25,8 @@ export interface LiveRunForIssue {
   agentName: string;
   adapterType: string;
   issueId?: string | null;
+  sessionStatus?: "active" | "idle" | "closed" | null;
+  sessionIdAfter?: string | null;
 }
 
 export const heartbeatsApi = {
@@ -50,6 +53,10 @@ export const heartbeatsApi = {
       `/workspace-operations/${operationId}/log?offset=${encodeURIComponent(String(offset))}&limitBytes=${encodeURIComponent(String(limitBytes))}`,
     ),
   cancel: (runId: string) => api.post<void>(`/heartbeat-runs/${runId}/cancel`, {}),
+  sendMessage: (runId: string, message: string) =>
+    api.post<{ turnId: string; seq: number }>(`/heartbeat-runs/${runId}/message`, { message }),
+  closeSession: (runId: string) => api.post<HeartbeatRun>(`/heartbeat-runs/${runId}/session/close`, {}),
+  getTurns: (runId: string) => api.get<HeartbeatRunTurn[]>(`/heartbeat-runs/${runId}/turns`),
   deleteAllForAgent: (agentId: string) => api.delete<{ deleted: number }>(`/agents/${agentId}/runs`),
   deleteMany: (runIds: string[], companyId: string) =>
     api.deleteWithBody<{ deleted: number }>(`/heartbeat-runs`, { runIds, companyId }),

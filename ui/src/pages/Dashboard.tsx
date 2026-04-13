@@ -11,6 +11,7 @@ import { useCompany } from "../context/CompanyContext";
 import { useDialog } from "../context/DialogContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { queryKeys } from "../lib/queryKeys";
+import { gsap } from "../lib/gsap";
 import { MetricCard } from "../components/MetricCard";
 import { EmptyState } from "../components/EmptyState";
 import { StatusIcon } from "../components/StatusIcon";
@@ -250,6 +251,27 @@ export function Dashboard() {
     [agents],
   );
 
+  // --- GSAP entrance animation (callback ref for conditional rendering) ---
+  const dashAnimated = useRef(false);
+  const contentRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node || dashAnimated.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    dashAnimated.current = true;
+    const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
+    const metrics = node.querySelector("[data-animate='metrics']");
+    const charts = node.querySelector("[data-animate='charts']");
+    const bottom = node.querySelector("[data-animate='bottom']");
+    if (metrics?.children.length) {
+      tl.from(metrics.children, { y: 20, opacity: 0, stagger: 0.06, duration: 0.4 });
+    }
+    if (charts?.children.length) {
+      tl.from(charts.children, { y: 20, opacity: 0, stagger: 0.06, duration: 0.4 }, "-=0.15");
+    }
+    if (bottom?.children.length) {
+      tl.from(bottom.children, { y: 20, opacity: 0, stagger: 0.08, duration: 0.5 }, "-=0.15");
+    }
+  }, []);
+
   if (!selectedCompanyId) {
     if (companies.length === 0) {
       return (
@@ -297,7 +319,7 @@ export function Dashboard() {
       <ActiveAgentsPanel companyId={selectedCompanyId!} />
 
       {data && (
-        <>
+        <div ref={contentRef}>
           {data.budgets.activeIncidents > 0 ? (
             <div className="flex items-start justify-between gap-3 rounded-xl border border-red-500/20 bg-[linear-gradient(180deg,rgba(255,80,80,0.12),rgba(255,255,255,0.02))] px-4 py-3">
               <div className="flex items-start gap-2.5">
@@ -317,7 +339,7 @@ export function Dashboard() {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-1 sm:gap-2">
+          <div data-animate="metrics" className="grid grid-cols-2 xl:grid-cols-4 gap-1 sm:gap-2">
             <MetricCard
               icon={Bot}
               value={data.agents.active + data.agents.running + data.agents.paused + data.agents.error}
@@ -371,7 +393,7 @@ export function Dashboard() {
             />
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div data-animate="charts" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <ChartCard title="Run Activity" subtitle="Last 14 days">
               <RunActivityChart runs={runs ?? []} />
             </ChartCard>
@@ -393,7 +415,7 @@ export function Dashboard() {
             itemClassName="rounded-lg border bg-card p-4 shadow-sm"
           />
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div data-animate="bottom" className="grid md:grid-cols-2 gap-4">
             {/* Recent Activity */}
             {recentActivity.length > 0 && (
               <div className="min-w-0">
@@ -468,7 +490,7 @@ export function Dashboard() {
             </div>
           </div>
 
-        </>
+        </div>
       )}
     </div>
   );

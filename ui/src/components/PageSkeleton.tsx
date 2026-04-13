@@ -4,6 +4,7 @@ interface PageSkeletonProps {
   variant?:
     | "list"
     | "issues-list"
+    | "issues-board"
     | "detail"
     | "dashboard"
     | "approvals"
@@ -130,6 +131,32 @@ export function PageSkeleton({ variant = "list" }: PageSkeletonProps) {
           </div>
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === "issues-board") {
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Skeleton className="h-9 w-64" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+        </div>
+
+        <div className="flex gap-3 overflow-hidden">
+          {Array.from({ length: 6 }).map((_, col) => (
+            <div key={col} className="min-w-[260px] w-[260px] shrink-0 space-y-2">
+              <Skeleton className="h-6 w-24" />
+              {Array.from({ length: col < 2 ? 4 : col < 4 ? 2 : 1 }).map((_, row) => (
+                <Skeleton key={row} className="h-20 w-full" />
+              ))}
+            </div>
+          ))}
         </div>
       </div>
     );
