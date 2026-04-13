@@ -242,18 +242,16 @@ export function GroupDetail() {
                 {canManage && (
                   <div className="flex items-center gap-1 shrink-0">
                     {isOwner && (
-                      <Select
-                        value={member.role}
-                        onValueChange={(role) => updateRole.mutate({ member, role })}
+                      <Button
+                        size="xs"
+                        variant={member.role === "admin" ? "secondary" : "ghost"}
+                        className="h-6 px-2 text-[10px] gap-1"
+                        title={member.role === "admin" ? "Demote to member" : "Promote to admin"}
+                        onClick={() => updateRole.mutate({ member, role: member.role === "admin" ? "member" : "admin" })}
                       >
-                        <SelectTrigger className="h-6 w-20 text-[10px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="member">member</SelectItem>
-                          <SelectItem value="admin">admin</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        <Shield className="h-3 w-3" />
+                        {member.role === "admin" ? "admin" : "member"}
+                      </Button>
                     )}
                     <Button
                       size="xs"
