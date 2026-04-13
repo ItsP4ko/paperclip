@@ -39,6 +39,7 @@ import { searchRoutes } from "./routes/search.js";
 import { costRecommendationRoutes } from "./routes/cost-recommendations.js";
 import { pipelineRoutes } from "./routes/pipelines.js";
 import { sprintRoutes } from "./routes/sprints.js";
+import { groupRoutes } from "./routes/groups.js";
 import { runnerRoutes } from "./routes/runner.js";
 import { geminiAnalysisRoutes } from "./routes/gemini-analysis.js";
 import { pluginRoutes } from "./routes/plugins.js";
@@ -267,6 +268,7 @@ export async function createApp(
   api.use(costRecommendationRoutes(db));
   api.use(pipelineRoutes(db, opts.redisClient));
   api.use(sprintRoutes(db));
+  api.use(groupRoutes(db));
   api.use(runnerRoutes(db));
   api.use(geminiAnalysisRoutes(db, opts.storageService));
   api.use(remoteControlRoutes(db));
