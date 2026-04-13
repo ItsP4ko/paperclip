@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, Play } from "lucide-react";
 import { useState } from "react";
+import { useToast } from "../context/ToastContext";
 import {
   DndContext,
   DragOverlay,
@@ -92,6 +93,7 @@ function DroppableZone({ id, children, isOver }: { id: string; children: React.R
 
 export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: Props) {
   const queryClient = useQueryClient();
+  const { pushToast } = useToast();
   const [search, setSearch] = useState("");
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -166,6 +168,10 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
   const activate = useMutation({
     mutationFn: () => sprintsApi.activate(sprint!.id),
     onSuccess: () => onActivated(),
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : "No se pudo activar el sprint";
+      pushToast({ title: msg, tone: "error" });
+    },
   });
 
   const allIssues = [...backlog, ...sprintIssues];
