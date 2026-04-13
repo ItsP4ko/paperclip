@@ -218,14 +218,9 @@ function ProjectIssuesList({ projectId, companyId }: { projectId: string; compan
     return ids;
   }, [liveRuns]);
 
-  const { data: activeSprint } = useQuery({
-    queryKey: queryKeys.sprints.active(projectId),
-    queryFn: () => sprintsApi.getActive(projectId),
-  });
-
   const { data: issues, isLoading, error } = useQuery({
-    queryKey: [...queryKeys.issues.listByProject(companyId, projectId), activeSprint?.id ?? "no-sprint"],
-    queryFn: () => issuesApi.list(companyId, { projectId, sprintId: activeSprint?.id }),
+    queryKey: queryKeys.issues.listByProject(companyId, projectId),
+    queryFn: () => issuesApi.list(companyId, { projectId }),
     enabled: !!companyId,
   });
 

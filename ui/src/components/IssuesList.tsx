@@ -369,6 +369,15 @@ export const IssuesList = memo(function IssuesList({
     return sortIssues(filteredByControls, viewState);
   }, [issues, searchedIssues, viewState, normalizedIssueSearch, currentUserId]);
 
+  // Board mode shows every status in its own column, so status filters shouldn't hide cards.
+  // Other filters (priority, assignee, labels, search) still apply.
+  const boardIssues = useMemo(() => {
+    if (viewState.viewMode !== "board") return filtered;
+    const sourceIssues = normalizedIssueSearch.length > 0 ? searchedIssues : issues;
+    const filteredByControls = applyFilters(sourceIssues, { ...viewState, statuses: [] }, currentUserId);
+    return sortIssues(filteredByControls, viewState);
+  }, [issues, searchedIssues, viewState, normalizedIssueSearch, currentUserId, filtered]);
+
   const { data: labels } = useQuery({
     queryKey: queryKeys.issues.labels(selectedCompanyId!),
     queryFn: () => issuesApi.listLabels(selectedCompanyId!),
@@ -745,7 +754,7 @@ export const IssuesList = memo(function IssuesList({
 
       {viewState.viewMode === "board" ? (
         <KanbanBoard
-          issues={filtered}
+          issues={boardIssues}
           agents={agents}
           liveIssueIds={liveIssueIds}
           onUpdateIssue={onUpdateIssue}
