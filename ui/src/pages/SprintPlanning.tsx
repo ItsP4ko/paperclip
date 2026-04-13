@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Play } from "lucide-react";
+import { Search, Play, Square } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "../context/ToastContext";
+import { CloseSprintModal } from "../components/CloseSprintModal";
 import {
   DndContext,
   DragOverlay,
@@ -30,6 +31,7 @@ interface Props {
   sprint: Sprint | null;
   projectId: string;
   onActivated: () => void;
+  onClosed?: () => void;
   onCreateNew: () => void;
 }
 
@@ -91,12 +93,13 @@ function DroppableZone({ id, children, isOver }: { id: string; children: React.R
   );
 }
 
-export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: Props) {
+export function SprintPlanning({ sprint, projectId, onActivated, onClosed, onCreateNew }: Props) {
   const queryClient = useQueryClient();
   const { pushToast } = useToast();
   const [search, setSearch] = useState("");
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [showCloseModal, setShowCloseModal] = useState(false);
   const { selectedCompanyId: companyId } = useCompany();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -232,14 +235,21 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
               {sprintIssues.length} tareas asignadas
             </p>
           </div>
-          <Button
-            size="sm"
-            onClick={() => activate.mutate()}
-            disabled={sprintIssues.length === 0 || activate.isPending}
-          >
-            <Play className="h-3.5 w-3.5 mr-1.5" />
-            {activate.isPending ? "Activando..." : "Activar Sprint"}
-          </Button>
+          {sprint.status === "active" ? (
+            <Button size="sm" variant="outline" onClick={() => setShowCloseModal(true)}>
+              <Square className="h-3.5 w-3.5 mr-1.5" />
+              Cerrar Sprint
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => activate.mutate()}
+              disabled={sprintIssues.length === 0 || activate.isPending}
+            >
+              <Play className="h-3.5 w-3.5 mr-1.5" />
+              {activate.isPending ? "Activando..." : "Activar Sprint"}
+            </Button>
+          )}
         </div>
 
         {/* Two panels */}
@@ -307,6 +317,20 @@ export function SprintPlanning({ sprint, projectId, onActivated, onCreateNew }: 
           </div>
         )}
       </DragOverlay>
+
+      {showCloseModal && sprint && (
+        <CloseSprintModal
+          sprint={sprint}
+          projectId={projectId}
+          totalIssues={sprintIssues.length}
+          doneIssues={sprintIssues.filter((i) => i.status === "done").length}
+          onClose={() => setShowCloseModal(false)}
+          onClosed={() => {
+            setShowCloseModal(false);
+            onClosed?.();
+          }}
+        />
+      )}
     </DndContext>
   );
 }

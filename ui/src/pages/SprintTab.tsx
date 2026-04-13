@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Milestone, Plus, BarChart2 } from "lucide-react";
 import { sprintsApi } from "../api/sprints";
@@ -11,10 +11,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { CreateSprintModal } from "../components/CreateSprintModal";
 import { SprintPlanning } from "./SprintPlanning";
-import { SprintBoard } from "./SprintBoard";
 import { SprintMetricsPanel } from "./SprintMetricsPanel";
 
-type SprintView = "planning" | "board" | "metrics";
+type SprintView = "planning" | "metrics";
 
 function SprintStatusBadge({ status }: { status: string }) {
   if (status === "active") return <Badge variant="outline" className="text-xs border-primary/40 text-primary bg-primary/10">Activo</Badge>;
@@ -36,16 +35,13 @@ export function SprintTab({ projectId }: { projectId: string }) {
   const effectiveSprintId = selectedSprintId ?? sprints.find((s) => s.status === "active")?.id ?? sprints[0]?.id ?? null;
   const selectedSprint = sprints.find((s) => s.id === effectiveSprintId) ?? null;
 
-  // On initial load (no manual selection), auto-switch to board view if the resolved sprint is active
-  useEffect(() => {
-    if (!isLoading && selectedSprintId === null && selectedSprint?.status === "active") {
-      setView("board");
-    }
-  }, [isLoading, selectedSprintId, selectedSprint?.status]);
-
   const handleSelectSprint = (sprint: Sprint) => {
     setSelectedSprintId(sprint.id);
-    setView(sprint.status === "active" ? "board" : "planning");
+    setView("planning");
+  };
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.sprints.list(projectId) });
   };
 
   return (
@@ -110,23 +106,12 @@ export function SprintTab({ projectId }: { projectId: string }) {
               </Button>
             </div>
           </div>
-        ) : selectedSprint?.status === "active" && view === "board" ? (
-          <SprintBoard
-            sprint={selectedSprint}
-            projectId={projectId}
-            onClosed={() => {
-              queryClient.invalidateQueries({ queryKey: queryKeys.sprints.list(projectId) });
-              setView("planning");
-            }}
-          />
         ) : (
           <SprintPlanning
             sprint={selectedSprint}
             projectId={projectId}
-            onActivated={() => {
-              queryClient.invalidateQueries({ queryKey: queryKeys.sprints.list(projectId) });
-              setView("board");
-            }}
+            onActivated={handleRefresh}
+            onClosed={handleRefresh}
             onCreateNew={() => setShowCreate(true)}
           />
         )}
