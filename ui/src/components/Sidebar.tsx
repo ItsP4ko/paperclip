@@ -19,6 +19,7 @@ import {
   GitBranch,
   Milestone,
   Users,
+  UsersRound,
   LogOut,
   Smartphone,
 } from "lucide-react";
@@ -150,6 +151,7 @@ export function Sidebar() {
         <SidebarSection label="Company">
           {!isMember && <SidebarNavItem to="/org" label="Org" icon={Network} />}
           <SidebarNavItem to="/members" label="Members" icon={Users} />
+          <SidebarNavItem to="/groups" label="Groups" icon={UsersRound} />
 
           {!isMember && (
             <SidebarCollapsible label="Insights" storageKey="sidebar.company.insights">

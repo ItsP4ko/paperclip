@@ -38,6 +38,9 @@ interface DialogContextValue {
   onboardingOptions: OnboardingOptions;
   openOnboarding: (options?: OnboardingOptions) => void;
   closeOnboarding: () => void;
+  newGroupOpen: boolean;
+  openNewGroup: () => void;
+  closeNewGroup: () => void;
 }
 
 const DialogContext = createContext<DialogContextValue | null>(null);
@@ -51,6 +54,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   const [newAgentOpen, setNewAgentOpen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [onboardingOptions, setOnboardingOptions] = useState<OnboardingOptions>({});
+  const [newGroupOpen, setNewGroupOpen] = useState(false);
 
   const openNewIssue = useCallback((defaults: NewIssueDefaults = {}) => {
     setNewIssueDefaults(defaults);
@@ -98,6 +102,14 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     setOnboardingOptions({});
   }, []);
 
+  const openNewGroup = useCallback(() => {
+    setNewGroupOpen(true);
+  }, []);
+
+  const closeNewGroup = useCallback(() => {
+    setNewGroupOpen(false);
+  }, []);
+
   const value = useMemo<DialogContextValue>(
     () => ({
       newIssueOpen,
@@ -118,6 +130,9 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       onboardingOptions,
       openOnboarding,
       closeOnboarding,
+      newGroupOpen,
+      openNewGroup,
+      closeNewGroup,
     }),
     [
       newIssueOpen,
@@ -138,6 +153,9 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       onboardingOptions,
       openOnboarding,
       closeOnboarding,
+      newGroupOpen,
+      openNewGroup,
+      closeNewGroup,
     ],
   );
 
