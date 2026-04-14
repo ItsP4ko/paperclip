@@ -1075,7 +1075,7 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
       return;
     }
     assertCompanyAccess(req, existing.companyId);
-    // PERM-02: Members cannot assign issues to AI agents.
+    // PERM-01/PERM-02: Member permission gates.
     // local_implicit source exits this gate early, so bypass sessions are unaffected.
     if (req.actor.type === "board" && req.actor.userId) {
       const isLocalOrAdmin = req.actor.source === "local_implicit" || req.actor.isInstanceAdmin;
@@ -1086,7 +1086,11 @@ export function issueRoutes(db: Db, storage: StorageService, redisClient?: Redis
           req.actor.userId,
         );
         const memberRole = membership?.membershipRole;
-        // Members cannot assign issues to AI agents
+        // PERM-01: Members can only mutate their own tasks
+        if (memberRole === "member" && existing.assigneeUserId !== req.actor.userId) {
+          throw forbidden("Members can only mutate their own tasks");
+        }
+        // PERM-02: Members cannot assign issues to AI agents
         if (
           memberRole === "member" &&
           req.body.assigneeAgentId !== undefined &&
