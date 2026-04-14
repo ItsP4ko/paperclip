@@ -79,6 +79,12 @@ import {
   agentConfigurationDoc as hermesAgentConfigurationDoc,
   models as hermesModels,
 } from "hermes-paperclip-adapter";
+import {
+  execute as e2bSandboxExecute,
+  testEnvironment as e2bSandboxTestEnvironment,
+  sessionCodec as e2bSandboxSessionCodec,
+} from "@paperclipai/adapter-e2b-sandbox/server";
+import { agentConfigurationDoc as e2bSandboxAgentConfigurationDoc } from "@paperclipai/adapter-e2b-sandbox";
 import { processAdapter } from "./process/index.js";
 import { httpAdapter } from "./http/index.js";
 
@@ -188,6 +194,16 @@ const hermesLocalAdapter: ServerAdapterModule = {
   detectModel: () => detectModelFromHermes(),
 };
 
+const e2bSandboxAdapter: ServerAdapterModule = {
+  type: "e2b_sandbox",
+  execute: e2bSandboxExecute,
+  testEnvironment: e2bSandboxTestEnvironment,
+  sessionCodec: e2bSandboxSessionCodec,
+  models: [],
+  supportsLocalAgentJwt: false,
+  agentConfigurationDoc: e2bSandboxAgentConfigurationDoc,
+};
+
 const adaptersByType = new Map<string, ServerAdapterModule>(
   [
     claudeLocalAdapter,
@@ -198,6 +214,7 @@ const adaptersByType = new Map<string, ServerAdapterModule>(
     geminiLocalAdapter,
     openclawGatewayAdapter,
     hermesLocalAdapter,
+    e2bSandboxAdapter,
     processAdapter,
     httpAdapter,
   ].map((a) => [a.type, a]),

@@ -1,6 +1,6 @@
 {
   "name": "relaycontrol",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "Relay Control CLI \u2014 orchestrate AI agent teams to run a business",
   "type": "module",
   "bin": {
@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.10.0",
+    "@paperclipai/adapter-e2b-sandbox": "workspace:*",
     "@paperclipai/adapter-claude-local": "workspace:*",
     "@paperclipai/adapter-codex-local": "workspace:*",
     "@paperclipai/adapter-cursor-local": "workspace:*",

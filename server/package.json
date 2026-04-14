@@ -1,6 +1,6 @@
 {
   "name": "@paperclipai/server",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "license": "MIT",
   "homepage": "https://github.com/paperclipai/paperclip",
   "bugs": {
@@ -48,6 +48,7 @@
     "@google/generative-ai": "^0.21.0",
     "@supabase/storage-js": "^2.7.1",
     "mammoth": "^1.8.0",
+    "@paperclipai/adapter-e2b-sandbox": "workspace:*",
     "@paperclipai/adapter-claude-local": "workspace:*",
     "@paperclipai/adapter-codex-local": "workspace:*",
     "@paperclipai/adapter-cursor-local": "workspace:*",
