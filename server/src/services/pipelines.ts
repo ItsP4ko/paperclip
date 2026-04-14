@@ -7,6 +7,7 @@ import {
   pipelineRunSteps,
   issues,
 } from "@paperclipai/db";
+import { badRequest } from "../errors.js";
 import { issueService } from "./issues.js";
 
 export function pipelineService(db: Db) {
@@ -66,7 +67,8 @@ export function pipelineService(db: Db) {
       })
       .from(pipelineRunSteps)
       .innerJoin(pipelineSteps, eq(pipelineRunSteps.pipelineStepId, pipelineSteps.id))
-      .where(eq(pipelineRunSteps.pipelineRunId, runId));
+      .where(eq(pipelineRunSteps.pipelineRunId, runId))
+      .orderBy(pipelineSteps.position, pipelineSteps.createdAt);
 
     const completedStepIds = new Set(
       runStepRows
@@ -75,6 +77,9 @@ export function pipelineService(db: Db) {
         )
         .map((rs) => rs.runStep.pipelineStepId),
     );
+    // Track step IDs skipped during this evaluation pass so the loop does not
+    // overwrite a DB "skipped" set by cascadeSkip with "running".
+    const localSkippedIds = new Set<string>();
 
     const [run] = await db
       .select()
@@ -103,6 +108,7 @@ export function pipelineService(db: Db) {
 
     for (const { runStep, step } of runStepRows) {
       if (runStep.status !== "pending") continue;
+      if (localSkippedIds.has(step.id)) continue;
 
       const deps = step.dependsOn ?? [];
       const allDepsCompleted = deps.every((depStepId) => completedStepIds.has(depStepId));
@@ -147,6 +153,9 @@ export function pipelineService(db: Db) {
         for (let i = 0; i < branches.length; i++) {
           if (i !== winningIdx) losingStepIds.push(...(branches[i].nextStepIds ?? []));
         }
+        // Mark locally so the remainder of this loop pass doesn't overwrite
+        // the DB "skipped" status with "running".
+        for (const lsId of losingStepIds) localSkippedIds.add(lsId);
         if (losingStepIds.length > 0) await cascadeSkip(runId, losingStepIds);
         continue;
       }
@@ -319,7 +328,7 @@ export function pipelineService(db: Db) {
         .where(and(inArray(issues.id, data.issueIds), eq(issues.companyId, companyId)));
 
       if (issueRows.length !== data.issueIds.length) {
-        throw new Error("One or more issues not found or do not belong to this company");
+        throw badRequest("One or more issues not found or do not belong to this company");
       }
 
       // Build a lookup map preserving the order from issueIds
@@ -380,10 +389,10 @@ export function pipelineService(db: Db) {
     ) => {
       // Validate assigneeType constraints
       if (data.assigneeType === "agent" && !data.agentId) {
-        throw new Error("agentId is required when assigneeType is 'agent'");
+        throw badRequest("agentId is required when assigneeType is 'agent'");
       }
       if (data.assigneeType === "user" && !data.assigneeUserId) {
-        throw new Error("assigneeUserId is required when assigneeType is 'user'");
+        throw badRequest("assigneeUserId is required when assigneeType is 'user'");
       }
       // Validate issueId belongs to same company
       if (data.issueId) {
@@ -392,7 +401,7 @@ export function pipelineService(db: Db) {
           .from(issues)
           .where(and(eq(issues.id, data.issueId), eq(issues.companyId, companyId)));
         if (!issue) {
-          throw new Error("Issue not found or does not belong to this company");
+          throw badRequest("Issue not found or does not belong to this company");
         }
       }
       const [pipeline] = await db
@@ -455,10 +464,10 @@ export function pipelineService(db: Db) {
           const effectiveAgentId = data.agentId !== undefined ? data.agentId : existing.agentId;
           const effectiveAssigneeUserId = data.assigneeUserId !== undefined ? data.assigneeUserId : existing.assigneeUserId;
           if (effectiveAssigneeType === "agent" && !effectiveAgentId) {
-            throw new Error("agentId is required when assigneeType is 'agent'");
+            throw badRequest("agentId is required when assigneeType is 'agent'");
           }
           if (effectiveAssigneeType === "user" && !effectiveAssigneeUserId) {
-            throw new Error("assigneeUserId is required when assigneeType is 'user'");
+            throw badRequest("assigneeUserId is required when assigneeType is 'user'");
           }
         }
       }
@@ -470,7 +479,7 @@ export function pipelineService(db: Db) {
           .from(issues)
           .where(and(eq(issues.id, data.issueId), eq(issues.companyId, companyId)));
         if (!issue) {
-          throw new Error("Issue not found or does not belong to this company");
+          throw badRequest("Issue not found or does not belong to this company");
         }
       }
 
@@ -536,11 +545,11 @@ export function pipelineService(db: Db) {
         .orderBy(pipelineSteps.position);
 
       if (steps.length === 0) {
-        throw new Error("Pipeline has no steps");
+        throw badRequest("Pipeline has no steps");
       }
-      const unassigned = steps.filter(s => !s.assigneeType);
+      const unassigned = steps.filter(s => s.stepType !== "if_else" && !s.assigneeType);
       if (unassigned.length > 0) {
-        throw new Error(`All steps must have an assignee. Unassigned: ${unassigned.map(s => s.name).join(", ")}`);
+        throw badRequest(`All steps must have an assignee. Unassigned: ${unassigned.map(s => s.name).join(", ")}`);
       }
 
       // Mark pipeline as running

@@ -1048,7 +1048,7 @@ export function issueService(db: Db) {
         .from(issues)
         .where(and(eq(issues.companyId, companyId), eq(issues.id, issueId)));
       const lastActivityAt = activityRow?.lastActivityAt;
-      const baseMs = Math.max(archivedAt.getTime(), lastActivityAt?.getTime() ?? 0);
+      const baseMs = Math.max(archivedAt.getTime(), lastActivityAt ? new Date(lastActivityAt as any).getTime() : 0);
       // +1ms so the archive is strictly after all observed activity
       const effectiveArchivedAt = new Date(baseMs + 1);
 
