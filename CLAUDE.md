@@ -56,3 +56,14 @@ When the user asks me to implement or fix something, I must pick the branch type
 - After committing, **always push the branch and open a GitHub PR** in the same step.
 - PR title format: `hotfix/(branch-name): brief description` or `Feature/(branch-name): brief description`.
 - Do not ask the user which type to use — infer it from the scope of the change.
+
+---
+
+## Version bumps (MANDATORY)
+
+When making changes to the **server** or **cli** packages, bump the `version` field in the corresponding `package.json` before committing:
+
+- **server** → `server/package.json` (`@paperclipai/server`)
+- **cli** → `cli/package.json` (`relaycontrol`)
+
+Use `patch` bumps (e.g. `0.6.4` → `0.6.5`) unless the change is a new feature (`minor`) or breaking (`major`). This ensures Docker rebuilds and npm publishes pick up the new version.

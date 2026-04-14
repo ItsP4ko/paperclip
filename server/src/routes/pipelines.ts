@@ -155,6 +155,21 @@ export function pipelineRoutes(db: Db, redisClient?: RedisClientType) {
     res.status(201).json(step);
   });
 
+  // Batch update step positions (MUST be before /:stepId routes to avoid "positions" matching :stepId)
+  router.patch(
+    "/companies/:companyId/pipelines/:pipelineId/steps/positions",
+    validate(batchPositionsSchema),
+    async (req, res) => {
+      const companyId = req.params.companyId as string;
+      const pipelineId = req.params.pipelineId as string;
+      assertCompanyAccess(req, companyId);
+      const { positions } = req.body;
+      await svc.batchUpdatePositions(companyId, pipelineId, positions);
+      await redisClient?.del(`paperclip:pipeline:detail:${pipelineId}`).catch(() => null);
+      res.json({ updated: positions.length });
+    },
+  );
+
   // Update step
   router.patch(
     "/companies/:companyId/pipelines/:pipelineId/steps/:stepId",
@@ -195,21 +210,6 @@ export function pipelineRoutes(db: Db, redisClient?: RedisClientType) {
       await svc.deleteStep(companyId, pipelineId, stepId);
       await redisClient?.del(`paperclip:pipeline:detail:${pipelineId}`).catch(() => null);
       res.status(204).send();
-    },
-  );
-
-  // Batch update step positions
-  router.patch(
-    "/companies/:companyId/pipelines/:pipelineId/steps/positions",
-    validate(batchPositionsSchema),
-    async (req, res) => {
-      const companyId = req.params.companyId as string;
-      const pipelineId = req.params.pipelineId as string;
-      assertCompanyAccess(req, companyId);
-      const { positions } = req.body;
-      await svc.batchUpdatePositions(companyId, pipelineId, positions);
-      await redisClient?.del(`paperclip:pipeline:detail:${pipelineId}`).catch(() => null);
-      res.json({ updated: positions.length });
     },
   );
 
