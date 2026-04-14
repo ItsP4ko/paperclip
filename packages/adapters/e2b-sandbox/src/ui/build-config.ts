@@ -8,7 +8,7 @@ export function buildE2BSandboxAdapterConfig(
     model: values.model || "",
     promptTemplate: values.promptTemplate || "",
     cwd: values.cwd || "/workspace",
-    timeoutSec: values.intervalSec > 0 ? values.intervalSec : 300,
+    timeoutSec: 300,
     maxTurnsPerRun: values.maxTurnsPerRun || 0,
     dangerouslySkipPermissions: true,
   };

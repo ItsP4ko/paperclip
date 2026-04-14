@@ -125,7 +125,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   // 4. Run command inside sandbox
   const fullCommand = buildShellCommand(target.binary, target.args, target.prompt);
 
-  let timedOut = false;
   let result;
   try {
     result = await runCommandInSandbox(sandbox, {
@@ -138,7 +137,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    timedOut = msg.toLowerCase().includes("timeout");
+    const timedOut = msg.toLowerCase().includes("timeout");
     return {
       exitCode: null,
       signal: null,
@@ -151,7 +150,14 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     };
   }
 
-  // 5. Return result
+  // 5. Keep sandbox alive for the configured idle period
+  try {
+    await sandbox.setTimeout(15 * 60 * 1000); // 15 minutes
+  } catch {
+    // Non-fatal — sandbox may still be kept alive by E2B defaults
+  }
+
+  // 6. Return result
   return {
     exitCode: result.exitCode,
     signal: null,
@@ -173,9 +179,14 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   };
 }
 
+function shellEscape(s: string): string {
+  return "'" + s.replace(/'/g, "'\\''") + "'";
+}
+
 function buildShellCommand(binary: string, args: string[], prompt: string): string {
-  const escapedPrompt = prompt.replace(/'/g, "'\\''");
-  return `echo '${escapedPrompt}' | ${binary} ${args.join(" ")}`;
+  const escapedArgs = args.map(shellEscape).join(" ");
+  const escapedPrompt = shellEscape(prompt);
+  return `echo ${escapedPrompt} | ${shellEscape(binary)} ${escapedArgs}`;
 }
 
 function buildServiceReport(

@@ -25,8 +25,8 @@ const CLI_INSTALL_COMMANDS: Record<string, string> = {
   claude_local: "npm install -g @anthropic-ai/claude-code",
   codex_local: "npm install -g @openai/codex",
   opencode_local: "npm install -g opencode",
-  pi_local: "npm install -g @anthropic-ai/pi",
-  gemini_local: "npm install -g @anthropic-ai/gemini-cli",
+  // pi_local and gemini_local are intentionally omitted — package names are uncertain.
+  // The adapter will fail with a clear error asking the user to pre-install the CLI.
 };
 
 const CLI_BINARIES: Record<string, string> = {
