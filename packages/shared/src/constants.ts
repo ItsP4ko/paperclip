@@ -349,6 +349,9 @@ export type PrincipalType = (typeof PRINCIPAL_TYPES)[number];
 export const MEMBERSHIP_STATUSES = ["pending", "active", "suspended"] as const;
 export type MembershipStatus = (typeof MEMBERSHIP_STATUSES)[number];
 
+export const GROUP_MEMBERSHIP_ROLES = ["member", "admin"] as const;
+export type GroupMembershipRole = (typeof GROUP_MEMBERSHIP_ROLES)[number];
+
 export const INSTANCE_USER_ROLES = ["instance_admin"] as const;
 export type InstanceUserRole = (typeof INSTANCE_USER_ROLES)[number];
 

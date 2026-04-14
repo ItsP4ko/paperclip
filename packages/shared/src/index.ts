@@ -48,6 +48,7 @@ export {
   LIVE_EVENT_TYPES,
   PRINCIPAL_TYPES,
   MEMBERSHIP_STATUSES,
+  GROUP_MEMBERSHIP_ROLES,
   INSTANCE_USER_ROLES,
   INVITE_TYPES,
   INVITE_JOIN_TYPES,
@@ -117,6 +118,7 @@ export {
   type LiveEventType,
   type PrincipalType,
   type MembershipStatus,
+  type GroupMembershipRole,
   type InstanceUserRole,
   type InviteType,
   type InviteJoinType,
@@ -606,6 +608,16 @@ export {
   type PluginStateScopeKey,
   type SetPluginState,
   type ListPluginState,
+  createGroupSchema,
+  updateGroupSchema,
+  addGroupMembersSchema,
+  updateGroupMemberRoleSchema,
+  addGroupProjectsSchema,
+  type CreateGroup,
+  type UpdateGroup,
+  type AddGroupMembers,
+  type UpdateGroupMemberRole,
+  type AddGroupProjects,
 } from "./validators/index.js";
 
 export { API_PREFIX, API } from "./api.js";

@@ -57,6 +57,8 @@ const PluginPage = lazy(() => import("./pages/PluginPage").then((m) => ({ defaul
 const RunTranscriptUxLab = lazy(() => import("./pages/RunTranscriptUxLab").then((m) => ({ default: m.RunTranscriptUxLab })));
 const Org = lazy(() => import("./pages/Org").then((m) => ({ default: m.Org })));
 const Members = lazy(() => import("./pages/Members").then((m) => ({ default: m.Members })));
+const Groups = lazy(() => import("./pages/Groups").then((m) => ({ default: m.Groups })));
+const GroupDetail = lazy(() => import("./pages/GroupDetail").then((m) => ({ default: m.GroupDetail })));
 const NewAgent = lazy(() => import("./pages/NewAgent").then((m) => ({ default: m.NewAgent })));
 const AuthPage = lazy(() => import("./pages/Auth").then((m) => ({ default: m.AuthPage })));
 const BoardClaimPage = lazy(() => import("./pages/BoardClaim").then((m) => ({ default: m.BoardClaimPage })));
@@ -159,6 +161,8 @@ function boardRoutes() {
       <Route path="plugins/:pluginId" element={<S><PluginPage /></S>} />
       <Route path="org" element={<S><Org /></S>} />
       <Route path="members" element={<S><Members /></S>} />
+      <Route path="groups" element={<S><Groups /></S>} />
+      <Route path="groups/:groupId" element={<S><GroupDetail /></S>} />
       <Route element={<TauriGuard />}>
         <Route path="agents" element={<Navigate to="/agents/all" replace />} />
         <Route path="agents/all" element={<S><Agents /></S>} />

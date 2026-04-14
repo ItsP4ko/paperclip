@@ -190,6 +190,11 @@ export const queryKeys = {
   skills: {
     available: ["skills", "available"] as const,
   },
+  groups: {
+    list: (companyId: string) => ["groups", companyId] as const,
+    detail: (companyId: string, groupId: string) => ["groups", companyId, groupId] as const,
+    forProject: (projectId: string) => ["groups", "project", projectId] as const,
+  },
   plugins: {
     all: ["plugins"] as const,
     examples: ["plugins", "examples"] as const,
