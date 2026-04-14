@@ -314,7 +314,6 @@ export function GroupDetail() {
               >
                 <div className="min-w-0">
                   <span className="text-sm truncate">{project.name}</span>
-                  <Badge variant="outline" className="ml-2 text-[10px]">{project.status}</Badge>
                 </div>
                 {canManage && (
                   <Button
