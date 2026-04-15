@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Milestone, Plus, BarChart2, ChevronDown } from "lucide-react";
 import { sprintsApi } from "../api/sprints";
+import { groupsApi } from "../api/groups";
 import { queryKeys } from "../lib/queryKeys";
 import type { Sprint } from "@paperclipai/shared";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,23 @@ export function SprintTab({ projectId }: { projectId: string }) {
     queryKey: queryKeys.sprints.list(projectId),
     queryFn: () => sprintsApi.listByProject(projectId),
   });
+
+  const { data: projectGroups = [] } = useQuery({
+    queryKey: queryKeys.groups.forProject(projectId),
+    queryFn: () => groupsApi.listForProject(projectId),
+    enabled: !!projectId,
+  });
+
+  const groupMap = Object.fromEntries(projectGroups.map((g) => [g.id, g]));
+
+  const sprintsByGroup = (() => {
+    const map: Record<string, typeof sprints> = {};
+    for (const sprint of sprints) {
+      const key = sprint.groupId ?? "__ungrouped__";
+      (map[key] ??= []).push(sprint);
+    }
+    return Object.entries(map);
+  })();
 
   const effectiveSprintId = selectedSprintId ?? sprints.find((s) => s.status === "active")?.id ?? sprints[0]?.id ?? null;
   const selectedSprint = sprints.find((s) => s.id === effectiveSprintId) ?? null;
@@ -135,23 +153,30 @@ export function SprintTab({ projectId }: { projectId: string }) {
                 ? Array.from({ length: 3 }).map((_, i) => (
                     <div key={i} className="px-3 py-3"><Skeleton className="h-10 w-full" /></div>
                   ))
-                : sprints.map((sprint) => (
-                    <button
-                      key={sprint.id}
-                      onClick={() => { handleSelectSprint(sprint); setSprintPickerOpen(false); }}
-                      className={cn(
-                        "w-full text-left px-4 py-3 text-sm transition-colors rounded-lg mb-1",
-                        effectiveSprintId === sprint.id
-                          ? "bg-accent/10 text-foreground"
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                      )}
-                    >
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <Milestone className="h-4 w-4 shrink-0" />
-                        <span className="font-medium truncate">{sprint.name}</span>
+                : sprintsByGroup.map(([groupId, groupSprints]) => (
+                    <div key={groupId}>
+                      <div className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        {groupId === "__ungrouped__" ? "Sin grupo" : (groupMap[groupId]?.name ?? "Grupo")}
                       </div>
-                      <SprintStatusBadge status={sprint.status} />
-                    </button>
+                      {groupSprints.map((sprint) => (
+                        <button
+                          key={sprint.id}
+                          onClick={() => { handleSelectSprint(sprint); setSprintPickerOpen(false); }}
+                          className={cn(
+                            "w-full text-left px-4 py-3 text-sm transition-colors rounded-lg mb-1",
+                            effectiveSprintId === sprint.id
+                              ? "bg-accent/10 text-foreground"
+                              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                          )}
+                        >
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <Milestone className="h-4 w-4 shrink-0" />
+                            <span className="font-medium truncate">{sprint.name}</span>
+                          </div>
+                          <SprintStatusBadge status={sprint.status} />
+                        </button>
+                      ))}
+                    </div>
                   ))}
             </ScrollArea>
           </SheetContent>
@@ -178,23 +203,30 @@ export function SprintTab({ projectId }: { projectId: string }) {
             ? Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="px-3 py-2"><Skeleton className="h-8 w-full" /></div>
               ))
-            : sprints.map((sprint) => (
-                <button
-                  key={sprint.id}
-                  onClick={() => handleSelectSprint(sprint)}
-                  className={cn(
-                    "w-full text-left px-3 py-2 text-xs transition-colors border-l-2",
-                    effectiveSprintId === sprint.id
-                      ? "bg-accent/10 border-l-primary text-foreground"
-                      : "border-l-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                  )}
-                >
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <Milestone className="h-3 w-3 shrink-0" />
-                    <span className="font-medium truncate">{sprint.name}</span>
+            : sprintsByGroup.map(([groupId, groupSprints]) => (
+                <div key={groupId}>
+                  <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    {groupId === "__ungrouped__" ? "Sin grupo" : (groupMap[groupId]?.name ?? "Grupo")}
                   </div>
-                  <SprintStatusBadge status={sprint.status} />
-                </button>
+                  {groupSprints.map((sprint) => (
+                    <button
+                      key={sprint.id}
+                      onClick={() => handleSelectSprint(sprint)}
+                      className={cn(
+                        "w-full text-left px-3 py-2 text-xs transition-colors border-l-2",
+                        effectiveSprintId === sprint.id
+                          ? "bg-accent/10 border-l-primary text-foreground"
+                          : "border-l-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <Milestone className="h-3 w-3 shrink-0" />
+                        <span className="font-medium truncate">{sprint.name}</span>
+                      </div>
+                      <SprintStatusBadge status={sprint.status} />
+                    </button>
+                  ))}
+                </div>
               ))}
         </ScrollArea>
 

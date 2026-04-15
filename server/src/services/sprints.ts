@@ -1,6 +1,6 @@
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
-import { issues, sprints, sprintIssueHistory, issueStateHistory } from "@paperclipai/db";
+import { groups, issues, sprints, sprintIssueHistory, issueStateHistory } from "@paperclipai/db";
 import type { ProjectSprintMetrics, SprintMetrics } from "@paperclipai/shared";
 import { conflict, notFound } from "../errors.js";
 
@@ -11,6 +11,13 @@ export function sprintService(db: Db) {
         .select()
         .from(sprints)
         .where(eq(sprints.projectId, projectId))
+        .orderBy(desc(sprints.createdAt)),
+
+    listForGroup: (groupId: string) =>
+      db
+        .select()
+        .from(sprints)
+        .where(eq(sprints.groupId, groupId))
         .orderBy(desc(sprints.createdAt)),
 
     getById: (id: string) =>
@@ -47,12 +54,21 @@ export function sprintService(db: Db) {
       if (!sprint) throw notFound("Sprint not found");
       if (sprint.status !== "planning") throw conflict("Only a planning sprint can be activated");
 
-      const existing = await db
-        .select({ id: sprints.id })
-        .from(sprints)
-        .where(and(eq(sprints.projectId, sprint.projectId), eq(sprints.status, "active")))
-        .then((r) => r[0] ?? null);
-      if (existing) throw conflict("There is already an active sprint in this project.");
+      if (sprint.groupId) {
+        const existing = await db
+          .select({ id: sprints.id })
+          .from(sprints)
+          .where(and(eq(sprints.groupId, sprint.groupId), eq(sprints.status, "active")))
+          .then((r) => r[0] ?? null);
+        if (existing) throw conflict("This group already has an active sprint.");
+      } else {
+        const existing = await db
+          .select({ id: sprints.id })
+          .from(sprints)
+          .where(and(eq(sprints.projectId, sprint.projectId), eq(sprints.status, "active")))
+          .then((r) => r[0] ?? null);
+        if (existing) throw conflict("There is already an active sprint in this project.");
+      }
 
       return db
         .update(sprints)
@@ -278,6 +294,65 @@ export function sprintService(db: Db) {
       if (!sprint) throw notFound("Sprint not found");
       if (sprint.status !== "planning") throw conflict("Only a planning sprint can be deleted");
       return db.delete(sprints).where(eq(sprints.id, id)).returning().then((r) => r[0] ?? null);
+    },
+
+    getBoard: async (projectId: string, userGroupIds: string[], isAdminOrOwner: boolean) => {
+      const activeSprints = await db
+        .select({
+          id: sprints.id,
+          projectId: sprints.projectId,
+          groupId: sprints.groupId,
+          name: sprints.name,
+          description: sprints.description,
+          status: sprints.status,
+          startDate: sprints.startDate,
+          endDate: sprints.endDate,
+          startedAt: sprints.startedAt,
+          completedAt: sprints.completedAt,
+          createdAt: sprints.createdAt,
+          updatedAt: sprints.updatedAt,
+          groupName: groups.name,
+        })
+        .from(sprints)
+        .leftJoin(groups, eq(sprints.groupId, groups.id))
+        .where(and(eq(sprints.projectId, projectId), eq(sprints.status, "active")));
+
+      const relevantSprints = isAdminOrOwner
+        ? activeSprints
+        : activeSprints.filter((s) => s.groupId && userGroupIds.includes(s.groupId));
+
+      const groupSprints = [];
+      for (const sprint of relevantSprints) {
+        const sprintIssues = await db
+          .select()
+          .from(issues)
+          .where(eq(issues.sprintId, sprint.id));
+        groupSprints.push({
+          group: sprint.groupId ? { id: sprint.groupId, name: sprint.groupName ?? "Unknown" } : null,
+          sprint: {
+            id: sprint.id,
+            projectId: sprint.projectId,
+            groupId: sprint.groupId,
+            name: sprint.name,
+            description: sprint.description,
+            status: sprint.status,
+            startDate: sprint.startDate,
+            endDate: sprint.endDate,
+            startedAt: sprint.startedAt,
+            completedAt: sprint.completedAt,
+            createdAt: sprint.createdAt,
+            updatedAt: sprint.updatedAt,
+          },
+          issues: sprintIssues,
+        });
+      }
+
+      const unassignedIssues = await db
+        .select()
+        .from(issues)
+        .where(and(eq(issues.projectId, projectId), sql`${issues.sprintId} IS NULL`));
+
+      return { groupSprints, unassignedIssues };
     },
   };
 }

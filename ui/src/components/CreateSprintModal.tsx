@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { groupsApi } from "../api/groups";
+import { queryKeys } from "../lib/queryKeys";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarDays } from "lucide-react";
 import { sprintsApi } from "../api/sprints";
 import type { Sprint } from "@paperclipai/shared";
@@ -37,6 +40,7 @@ function SprintForm({
   name, setName, description, setDescription,
   startDate, setStartDate, endDate, setEndDate,
   duration, isMobile, isPending, onSubmit, onClose,
+  groupId, setGroupId, projectGroups,
 }: {
   name: string; setName: (v: string) => void;
   description: string; setDescription: (v: string) => void;
@@ -47,6 +51,8 @@ function SprintForm({
   isPending: boolean;
   onSubmit: () => void;
   onClose: () => void;
+  groupId: string; setGroupId: (v: string) => void;
+  projectGroups: Array<{ id: string; name: string; description: string | null }>;
 }) {
   const applyPreset = (days: number) => {
     const start = startDate ? new Date(startDate) : new Date();
@@ -61,6 +67,20 @@ function SprintForm({
     return (
       <>
         <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="sprint-group">Grupo</Label>
+            <Select value={groupId} onValueChange={setGroupId}>
+              <SelectTrigger id="sprint-group" className="h-9 text-sm">
+                <SelectValue placeholder="Seleccionar grupo..." />
+              </SelectTrigger>
+              <SelectContent>
+                {projectGroups.map((g) => (
+                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="sprint-name">Nombre</Label>
             <Input id="sprint-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Sprint #1" autoFocus />
@@ -91,7 +111,7 @@ function SprintForm({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={onSubmit} disabled={!name.trim() || isPending}>
+          <Button onClick={onSubmit} disabled={!name.trim() || !groupId || isPending}>
             {isPending ? "Creando..." : "Crear Sprint"}
           </Button>
         </DialogFooter>
@@ -102,6 +122,21 @@ function SprintForm({
   // Mobile: stacked layout with duration presets
   return (
     <div className="flex flex-col gap-5 px-4 pb-4">
+      {/* Group selector */}
+      <div className="space-y-2">
+        <Label htmlFor="sprint-group-m" className="text-sm font-medium">Grupo</Label>
+        <Select value={groupId} onValueChange={setGroupId}>
+          <SelectTrigger id="sprint-group-m" className="h-12 text-base">
+            <SelectValue placeholder="Seleccionar grupo..." />
+          </SelectTrigger>
+          <SelectContent>
+            {projectGroups.map((g) => (
+              <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Name — large input for easy tapping */}
       <div className="space-y-2">
         <Label htmlFor="sprint-name-m" className="text-sm font-medium">Nombre</Label>
@@ -181,7 +216,7 @@ function SprintForm({
       {/* Submit — full-width sticky button */}
       <Button
         onClick={onSubmit}
-        disabled={!name.trim() || isPending}
+        disabled={!name.trim() || !groupId || isPending}
         className="w-full h-12 text-base font-semibold"
       >
         {isPending ? "Creando..." : "Crear Sprint"}
@@ -196,6 +231,12 @@ export function CreateSprintModal({ projectId, onClose, onCreated }: Props) {
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [groupId, setGroupId] = useState("");
+
+  const { data: projectGroups = [] } = useQuery({
+    queryKey: queryKeys.groups.forProject(projectId),
+    queryFn: () => groupsApi.listForProject(projectId),
+  });
 
   const duration = startDate && endDate && endDate > startDate ? daysBetween(startDate, endDate) : null;
 
@@ -206,6 +247,7 @@ export function CreateSprintModal({ projectId, onClose, onCreated }: Props) {
         description: description.trim() || undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
+        groupId,
       }),
     onSuccess: (sprint) => onCreated(sprint),
   });
@@ -215,6 +257,7 @@ export function CreateSprintModal({ projectId, onClose, onCreated }: Props) {
     startDate, setStartDate, endDate, setEndDate,
     duration, isMobile, isPending: create.isPending,
     onSubmit: () => create.mutate(), onClose,
+    groupId, setGroupId, projectGroups,
   };
 
   if (isMobile) {

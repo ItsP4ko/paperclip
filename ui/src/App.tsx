@@ -415,6 +415,9 @@ export function App() {
           <Route path="inbox/unread" element={<UnprefixedBoardRedirect />} />
           <Route path="inbox/all" element={<UnprefixedBoardRedirect />} />
           <Route path="org" element={<UnprefixedBoardRedirect />} />
+          <Route path="members" element={<UnprefixedBoardRedirect />} />
+          <Route path="groups" element={<UnprefixedBoardRedirect />} />
+          <Route path="groups/:groupId" element={<UnprefixedBoardRedirect />} />
           <Route path="dashboard" element={<UnprefixedBoardRedirect />} />
           <Route path="account" element={<Layout />}>
             <Route index element={<S><AccountSettings /></S>} />

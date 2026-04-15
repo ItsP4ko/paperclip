@@ -142,6 +142,7 @@ export const queryKeys = {
     detail:         (id: string)        => ["sprints", "detail", id] as const,
     metrics:        (id: string)        => ["sprints", "metrics", id] as const,
     projectMetrics: (projectId: string) => ["sprints", "project", projectId, "metrics"] as const,
+    board:          (projectId: string) => ["sprints", "project", projectId, "board"] as const,
     issues:         (sprintId: string)  => ["issues", "sprint", sprintId] as const,
     backlog:        (projectId: string) => ["issues", "project", projectId, "backlog"] as const,
   },

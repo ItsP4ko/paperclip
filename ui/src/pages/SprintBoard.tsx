@@ -13,15 +13,17 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { sprintsApi } from "../api/sprints";
+import { sprintsApi, type BoardGroupSprint } from "../api/sprints";
 import { issuesApi } from "../api/issues";
 import { queryKeys } from "../lib/queryKeys";
 import { useCompany } from "../context/CompanyContext";
-import type { Sprint, Issue } from "@paperclipai/shared";
+import { useMemberRole } from "../hooks/useMemberRole";
+import type { Issue } from "@paperclipai/shared";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { CloseSprintModal } from "../components/CloseSprintModal";
 
@@ -33,12 +35,6 @@ const BOARD_COLUMNS = [
 ] as const;
 
 type ColId = typeof BOARD_COLUMNS[number]["id"];
-
-interface Props {
-  sprint: Sprint;
-  projectId: string;
-  onClosed: () => void;
-}
 
 const PRIORITY_COLOR: Record<string, string> = {
   critical: "text-destructive",
@@ -98,25 +94,39 @@ function DroppableColumn({ colId, isOver, children }: { colId: string; isOver: b
   );
 }
 
-export function SprintBoard({ sprint, projectId, onClosed }: Props) {
+function GroupSprintSection({
+  groupSprint,
+  projectId,
+  onClosed,
+}: {
+  groupSprint: BoardGroupSprint;
+  projectId: string;
+  onClosed: () => void;
+}) {
   const queryClient = useQueryClient();
+  const { selectedCompanyId: companyId } = useCompany();
   const [showClose, setShowClose] = useState(false);
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
-  const { selectedCompanyId: companyId } = useCompany();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  const { data: issues = [], isLoading } = useQuery({
+  const { sprint, group, issues: initialIssues } = groupSprint;
+
+  const { data: issues = initialIssues } = useQuery({
     queryKey: queryKeys.sprints.issues(sprint.id),
     queryFn: () => issuesApi.list(companyId!, { projectId, sprintId: sprint.id }),
     enabled: !!companyId,
+    initialData: initialIssues,
   });
 
   const updateStatus = useMutation({
     mutationFn: ({ issueId, status }: { issueId: string; status: string }) =>
       issuesApi.update(issueId, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.sprints.issues(sprint.id) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sprints.issues(sprint.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sprints.board(projectId) });
+    },
   });
 
   const byStatus: Record<ColId, Issue[]> = { todo: [], in_progress: [], in_review: [], done: [] };
@@ -153,13 +163,16 @@ export function SprintBoard({ sprint, projectId, onClosed }: Props) {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-      <div className="flex flex-col h-full min-h-0">
-        {/* Sprint header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-4">
+      <div className="border-b border-border">
+        {/* Group header */}
+        <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30">
+          <div className="flex items-center gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="font-display font-semibold text-foreground">{sprint.name}</h2>
+                {group && (
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">{group.name}</span>
+                )}
+                <span className="text-sm font-medium text-foreground">{sprint.name}</span>
                 <Badge variant="outline" className="text-xs border-primary/40 text-primary bg-primary/10">Activo</Badge>
               </div>
               {sprint.startDate && sprint.endDate && (
@@ -168,7 +181,7 @@ export function SprintBoard({ sprint, projectId, onClosed }: Props) {
             </div>
             {total > 0 && (
               <div className="flex items-center gap-2">
-                <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                   <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
                 </div>
                 <span className="text-xs text-muted-foreground">{done}/{total}</span>
@@ -176,27 +189,24 @@ export function SprintBoard({ sprint, projectId, onClosed }: Props) {
             )}
           </div>
           <Button size="sm" variant="destructive" onClick={() => setShowClose(true)}>
-            <Square className="h-3.5 w-3.5 mr-1.5" />
-            Cerrar Sprint
+            <Square className="h-3.5 w-3.5 mr-1.5" /> Cerrar Sprint
           </Button>
         </div>
 
-        {/* Board */}
-        <div className="flex-1 min-h-0 grid grid-cols-4 divide-x divide-border overflow-hidden">
+        {/* 4-column kanban */}
+        <div className="grid grid-cols-4 divide-x divide-border" style={{ minHeight: "200px" }}>
           {BOARD_COLUMNS.map((col) => (
-            <div key={col.id} className="flex flex-col min-h-0">
-              <div className="px-3 py-2 border-b border-border flex items-center gap-1.5 shrink-0">
+            <div key={col.id} className="flex flex-col">
+              <div className="px-3 py-1.5 border-b border-border flex items-center gap-1.5">
                 <span className={cn("text-xs font-semibold uppercase tracking-wide", col.color)}>{col.label}</span>
                 <span className="text-xs text-muted-foreground">{byStatus[col.id].length}</span>
               </div>
               <ScrollArea className="flex-1">
                 <DroppableColumn colId={col.id} isOver={overId === col.id}>
-                  {isLoading
-                    ? Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-md" />)
-                    : byStatus[col.id].map((issue) => (
-                        <DraggableCard key={issue.id} issue={issue} isDragging={activeIssue?.id === issue.id} />
-                      ))}
-                  {!isLoading && byStatus[col.id].length === 0 && (
+                  {byStatus[col.id].map((issue) => (
+                    <DraggableCard key={issue.id} issue={issue} isDragging={activeIssue?.id === issue.id} />
+                  ))}
+                  {byStatus[col.id].length === 0 && (
                     <div className="border border-dashed border-border rounded-md p-4 text-center text-xs text-muted-foreground/50 mt-1">
                       vacío
                     </div>
@@ -216,7 +226,7 @@ export function SprintBoard({ sprint, projectId, onClosed }: Props) {
             onClose={() => setShowClose(false)}
             onClosed={() => {
               setShowClose(false);
-              queryClient.invalidateQueries({ queryKey: queryKeys.sprints.list(projectId) });
+              queryClient.invalidateQueries({ queryKey: queryKeys.sprints.board(projectId) });
               onClosed();
             }}
           />
@@ -231,5 +241,87 @@ export function SprintBoard({ sprint, projectId, onClosed }: Props) {
         )}
       </DragOverlay>
     </DndContext>
+  );
+}
+
+interface Props {
+  projectId: string;
+  onClosed: () => void;
+}
+
+export function SprintBoard({ projectId, onClosed }: Props) {
+  const { selectedCompanyId: companyId } = useCompany();
+  const { isOwner } = useMemberRole(companyId);
+  const [groupFilter, setGroupFilter] = useState<string | null>(null);
+
+  const { data: board, isLoading } = useQuery({
+    queryKey: queryKeys.sprints.board(projectId),
+    queryFn: () => sprintsApi.getBoard(projectId),
+    enabled: !!companyId,
+  });
+
+  if (isLoading || !board) {
+    return (
+      <div className="p-4 space-y-4">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <Skeleton key={i} className="h-48 w-full" />
+        ))}
+      </div>
+    );
+  }
+
+  const filtered = groupFilter
+    ? board.groupSprints.filter((gs) => gs.group?.id === groupFilter)
+    : board.groupSprints;
+
+  return (
+    <div className="flex flex-col">
+      {/* Owner filter dropdown */}
+      {isOwner && board.groupSprints.length > 1 && (
+        <div className="px-4 py-2 border-b border-border bg-muted/20">
+          <Select value={groupFilter ?? "all"} onValueChange={(v) => setGroupFilter(v === "all" ? null : v)}>
+            <SelectTrigger className="w-48 h-7 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los grupos</SelectItem>
+              {board.groupSprints.map((gs) => (
+                <SelectItem key={gs.group?.id ?? "none"} value={gs.group?.id ?? "none"}>
+                  {gs.group?.name ?? "Sin grupo"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Group sprint sections */}
+      {filtered.map((gs) => (
+        <GroupSprintSection key={gs.sprint.id} groupSprint={gs} projectId={projectId} onClosed={onClosed} />
+      ))}
+
+      {/* No groups banner */}
+      {filtered.length === 0 && (
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+          No perteneces a ningún grupo en este proyecto. Pide acceso a un administrador.
+        </div>
+      )}
+
+      {/* Backlog / unassigned issues */}
+      {board.unassignedIssues.length > 0 && (
+        <div className="border-t border-border px-4 py-3">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            Issues sin sprint ({board.unassignedIssues.length})
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {board.unassignedIssues.map((issue) => (
+              <div key={issue.id} className="bg-card border border-border rounded-md p-2.5">
+                <IssueCardContent issue={issue} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

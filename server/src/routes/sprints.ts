@@ -7,7 +7,7 @@ import {
   updateSprintSchema,
 } from "@paperclipai/shared";
 import { validate } from "../middleware/validate.js";
-import { sprintService, logActivity, projectService } from "../services/index.js";
+import { sprintService, logActivity, projectService, groupService, accessService } from "../services/index.js";
 import { assertCompanyAccess, getActorInfo } from "./authz.js";
 
 async function resolveProject(db: Db, projectId: string) {
@@ -38,6 +38,37 @@ export function sprintRoutes(db: Db) {
     res.json(sprint ?? null);
   });
 
+  router.get("/projects/:projectId/sprints/board", async (req, res) => {
+    const { projectId } = req.params as { projectId: string };
+    const project = await resolveProject(db, projectId);
+    assertCompanyAccess(req, project.companyId);
+
+    const actor = getActorInfo(req);
+    const userId = actor.actorId;
+
+    const groupSvc = groupService(db);
+    const access = accessService(db);
+
+    let isAdminOrOwner = false;
+    if (userId) {
+      const membership = await access.getMembership(project.companyId, "user", userId);
+      isAdminOrOwner = membership?.membershipRole === "owner";
+    }
+
+    const projectGroups = await groupSvc.listGroupsForProject(projectId);
+    let userGroupIds: string[] = [];
+
+    if (userId && !isAdminOrOwner) {
+      for (const g of projectGroups) {
+        const gm = await groupSvc.getMembership(g.id, "user", userId);
+        if (gm) userGroupIds.push(g.id);
+      }
+    }
+
+    const board = await svc.getBoard(projectId, userGroupIds, isAdminOrOwner);
+    res.json(board);
+  });
+
   router.get("/projects/:projectId/sprints/metrics", async (req, res) => {
     const { projectId } = req.params as { projectId: string };
     const project = await resolveProject(db, projectId);
@@ -50,6 +81,17 @@ export function sprintRoutes(db: Db) {
     const { projectId } = req.params as { projectId: string };
     const project = await resolveProject(db, projectId);
     assertCompanyAccess(req, project.companyId);
+
+    const { groupId } = req.body;
+    if (groupId) {
+      const groupSvc = groupService(db);
+      const isLinked = await groupSvc.isGroupInProject(groupId, projectId);
+      if (!isLinked) {
+        res.status(400).json({ error: "Group is not associated with this project" });
+        return;
+      }
+    }
+
     const sprint = await svc.create(projectId, req.body);
     const actor = getActorInfo(req);
     await logActivity(db, {
@@ -60,7 +102,7 @@ export function sprintRoutes(db: Db) {
       action: "sprint.created",
       entityType: "sprint",
       entityId: sprint.id,
-      details: { name: sprint.name },
+      details: { name: sprint.name, groupId },
     });
     res.status(201).json(sprint);
   });

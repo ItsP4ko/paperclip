@@ -11,13 +11,14 @@ import { cn } from "@/lib/utils";
 interface Props {
   sprint: Sprint;
   projectId: string;
+  groupName?: string;
   totalIssues: number;
   doneIssues: number;
   onClose: () => void;
   onClosed: () => void;
 }
 
-export function CloseSprintModal({ sprint, projectId, totalIssues, doneIssues, onClose, onClosed }: Props) {
+export function CloseSprintModal({ sprint, projectId, groupName, totalIssues, doneIssues, onClose, onClosed }: Props) {
   const pendingIssues = totalIssues - doneIssues;
   const [strategy, setStrategy] = useState<"backlog" | "next_sprint">("backlog");
   const [nextSprintId, setNextSprintId] = useState<string>("");
@@ -27,7 +28,9 @@ export function CloseSprintModal({ sprint, projectId, totalIssues, doneIssues, o
     queryFn: () => sprintsApi.listByProject(projectId),
   });
 
-  const planningSprintsForNext = sprints.filter((s) => s.status === "planning" && s.id !== sprint.id);
+  const planningSprintsForNext = sprints.filter(
+    (s) => s.status === "planning" && s.id !== sprint.id && s.groupId === sprint.groupId,
+  );
 
   const complete = useMutation({
     mutationFn: () =>
@@ -42,7 +45,7 @@ export function CloseSprintModal({ sprint, projectId, totalIssues, doneIssues, o
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle className="font-display">Cerrar {sprint.name}</DialogTitle>
+          <DialogTitle className="font-display">Cerrar {sprint.name}{groupName ? ` (${groupName})` : ""}</DialogTitle>
         </DialogHeader>
 
         <div className="py-2 space-y-4">
