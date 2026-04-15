@@ -12,6 +12,7 @@ import { executionWorkspacesApi } from "../api/execution-workspaces";
 import { instanceSettingsApi } from "../api/instanceSettings";
 import { projectsApi } from "../api/projects";
 import { issuesApi } from "../api/issues";
+import { sprintsApi } from "../api/sprints";
 import { agentsApi } from "../api/agents";
 import { heartbeatsApi } from "../api/heartbeats";
 import { assetsApi } from "../api/assets";
@@ -164,6 +165,22 @@ function ColorPicker({
 
 /* ── List (issues) tab content ── */
 
+function ActiveSprintBadge({ projectId }: { projectId: string }) {
+  const { data: sprint } = useQuery({
+    queryKey: queryKeys.sprints.active(projectId),
+    queryFn: () => sprintsApi.getActive(projectId),
+  });
+  if (!sprint) return <div />;
+  return (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-primary/30 bg-primary/10 text-primary text-xs font-medium">
+        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse inline-block" />
+        {sprint.name}
+      </span>
+    </div>
+  );
+}
+
 function ProjectIssuesList({ projectId, companyId }: { projectId: string; companyId: string }) {
   const queryClient = useQueryClient();
 
@@ -201,9 +218,14 @@ function ProjectIssuesList({ projectId, companyId }: { projectId: string; compan
     return ids;
   }, [liveRuns]);
 
+  const { data: activeSprint } = useQuery({
+    queryKey: queryKeys.sprints.active(projectId),
+    queryFn: () => sprintsApi.getActive(projectId),
+  });
+
   const { data: issues, isLoading, error } = useQuery({
-    queryKey: queryKeys.issues.listByProject(companyId, projectId),
-    queryFn: () => issuesApi.list(companyId, { projectId }),
+    queryKey: [...queryKeys.issues.listByProject(companyId, projectId), activeSprint?.id ?? "no-sprint"],
+    queryFn: () => issuesApi.list(companyId, { projectId, sprintId: activeSprint?.id }),
     enabled: !!companyId,
   });
 
@@ -950,7 +972,8 @@ export function ProjectDetail() {
 
       {activeTab === "list" && project?.id && resolvedCompanyId && (
         <>
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between">
+            <ActiveSprintBadge projectId={project.id} />
             <Button variant="outline" size="sm" onClick={() => setDocDialogOpen(true)}>
               <Sparkles className="h-3.5 w-3.5 mr-1.5" />
               Generar desde documento
