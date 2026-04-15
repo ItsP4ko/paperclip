@@ -7,7 +7,7 @@ import {
   updateSprintSchema,
 } from "@paperclipai/shared";
 import { validate } from "../middleware/validate.js";
-import { sprintService, logActivity, projectService } from "../services/index.js";
+import { sprintService, logActivity, projectService, groupService } from "../services/index.js";
 import { assertCompanyAccess, getActorInfo } from "./authz.js";
 
 async function resolveProject(db: Db, projectId: string) {
@@ -50,6 +50,17 @@ export function sprintRoutes(db: Db) {
     const { projectId } = req.params as { projectId: string };
     const project = await resolveProject(db, projectId);
     assertCompanyAccess(req, project.companyId);
+
+    const { groupId } = req.body;
+    if (groupId) {
+      const groupSvc = groupService(db);
+      const isLinked = await groupSvc.isGroupInProject(groupId, projectId);
+      if (!isLinked) {
+        res.status(400).json({ error: "Group is not associated with this project" });
+        return;
+      }
+    }
+
     const sprint = await svc.create(projectId, req.body);
     const actor = getActorInfo(req);
     await logActivity(db, {
@@ -60,7 +71,7 @@ export function sprintRoutes(db: Db) {
       action: "sprint.created",
       entityType: "sprint",
       entityId: sprint.id,
-      details: { name: sprint.name },
+      details: { name: sprint.name, groupId },
     });
     res.status(201).json(sprint);
   });
