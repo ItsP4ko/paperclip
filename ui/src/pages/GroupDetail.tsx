@@ -32,7 +32,7 @@ export function GroupDetail() {
 
   const { data: session } = useQuery({
     queryKey: queryKeys.auth.session,
-    queryFn: () => import("../api/auth").then((m) => m.fetchSession()),
+    queryFn: () => import("../api/auth").then((m) => m.authApi.getSession()),
   });
   const currentUserId = session?.user?.id ?? session?.session?.userId ?? null;
 
