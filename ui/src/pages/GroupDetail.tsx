@@ -30,6 +30,12 @@ export function GroupDetail() {
 
   const navigate = useNavigate();
 
+  const { data: session } = useQuery({
+    queryKey: queryKeys.auth.session,
+    queryFn: () => import("../api/auth").then((m) => m.fetchSession()),
+  });
+  const currentUserId = session?.user?.id ?? session?.session?.userId ?? null;
+
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [addProjectOpen, setAddProjectOpen] = useState(false);
@@ -114,7 +120,10 @@ export function GroupDetail() {
     },
   });
 
-  const canManage = isOwner;
+  const isGroupAdmin = !!currentUserId && group?.members.some(
+    (m) => m.principalType === "user" && m.principalId === currentUserId && m.role === "admin",
+  );
+  const canManage = isOwner || !!isGroupAdmin;
 
   if (isLoading) return <PageSkeleton />;
   if (!group) return <EmptyState icon={User} message="Group not found." />;

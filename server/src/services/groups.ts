@@ -43,14 +43,11 @@ export function groupService(db: Db) {
         createdByUserId: groups.createdByUserId,
         createdAt: groups.createdAt,
         updatedAt: groups.updatedAt,
-        memberCount: sql<number>`count(distinct ${groupMemberships.id})::int`.as("member_count"),
-        projectCount: sql<number>`count(distinct ${groupProjects.id})::int`.as("project_count"),
+        memberCount: sql<number>`(SELECT count(*)::int FROM group_memberships WHERE group_id = ${groups.id})`.as("member_count"),
+        projectCount: sql<number>`(SELECT count(*)::int FROM group_projects WHERE group_id = ${groups.id})`.as("project_count"),
       })
       .from(groups)
-      .leftJoin(groupMemberships, eq(groupMemberships.groupId, groups.id))
-      .leftJoin(groupProjects, eq(groupProjects.groupId, groups.id))
       .where(eq(groups.companyId, companyId))
-      .groupBy(groups.id)
       .orderBy(groups.name);
     return rows;
   }
@@ -239,6 +236,14 @@ export function groupService(db: Db) {
       .orderBy(groups.name);
   }
 
+  async function isGroupInProject(groupId: string, projectId: string): Promise<boolean> {
+    const [row] = await db
+      .select({ id: groupProjects.id })
+      .from(groupProjects)
+      .where(and(eq(groupProjects.groupId, groupId), eq(groupProjects.projectId, projectId)));
+    return !!row;
+  }
+
   return {
     create,
     list,
@@ -254,5 +259,6 @@ export function groupService(db: Db) {
     addProjects,
     removeProject,
     listGroupsForProject,
+    isGroupInProject,
   };
 }
