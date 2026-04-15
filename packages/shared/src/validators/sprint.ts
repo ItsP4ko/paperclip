@@ -6,6 +6,7 @@ export const createSprintSchema = z.object({
   description: z.string().optional().nullable(),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
+  groupId: z.string().uuid(),
 });
 
 export type CreateSprint = z.infer<typeof createSprintSchema>;

@@ -3,6 +3,7 @@ import type { SprintStatus } from "../constants.js";
 export interface Sprint {
   id: string;
   projectId: string;
+  groupId: string | null;
   name: string;
   description: string | null;
   status: SprintStatus;
