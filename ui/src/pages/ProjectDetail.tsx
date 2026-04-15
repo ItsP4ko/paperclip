@@ -218,7 +218,7 @@ function ProjectIssuesList({ projectId, companyId }: { projectId: string; compan
     return ids;
   }, [liveRuns]);
 
-  const { data: activeSprint } = useQuery({
+  const { data: activeSprint, isFetched: sprintFetched } = useQuery({
     queryKey: queryKeys.sprints.active(projectId),
     queryFn: () => sprintsApi.getActive(projectId),
   });
@@ -226,7 +226,7 @@ function ProjectIssuesList({ projectId, companyId }: { projectId: string; compan
   const { data: issues, isLoading, error } = useQuery({
     queryKey: [...queryKeys.issues.listByProject(companyId, projectId), activeSprint?.id ?? "no-sprint"],
     queryFn: () => issuesApi.list(companyId, { projectId, sprintId: activeSprint?.id }),
-    enabled: !!companyId,
+    enabled: !!companyId && sprintFetched,
   });
 
   const updateIssue = useMutation({
