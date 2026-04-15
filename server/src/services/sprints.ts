@@ -13,6 +13,13 @@ export function sprintService(db: Db) {
         .where(eq(sprints.projectId, projectId))
         .orderBy(desc(sprints.createdAt)),
 
+    listForGroup: (groupId: string) =>
+      db
+        .select()
+        .from(sprints)
+        .where(eq(sprints.groupId, groupId))
+        .orderBy(desc(sprints.createdAt)),
+
     getById: (id: string) =>
       db
         .select()
@@ -47,12 +54,21 @@ export function sprintService(db: Db) {
       if (!sprint) throw notFound("Sprint not found");
       if (sprint.status !== "planning") throw conflict("Only a planning sprint can be activated");
 
-      const existing = await db
-        .select({ id: sprints.id })
-        .from(sprints)
-        .where(and(eq(sprints.projectId, sprint.projectId), eq(sprints.status, "active")))
-        .then((r) => r[0] ?? null);
-      if (existing) throw conflict("There is already an active sprint in this project.");
+      if (sprint.groupId) {
+        const existing = await db
+          .select({ id: sprints.id })
+          .from(sprints)
+          .where(and(eq(sprints.groupId, sprint.groupId), eq(sprints.status, "active")))
+          .then((r) => r[0] ?? null);
+        if (existing) throw conflict("This group already has an active sprint.");
+      } else {
+        const existing = await db
+          .select({ id: sprints.id })
+          .from(sprints)
+          .where(and(eq(sprints.projectId, sprint.projectId), eq(sprints.status, "active")))
+          .then((r) => r[0] ?? null);
+        if (existing) throw conflict("There is already an active sprint in this project.");
+      }
 
       return db
         .update(sprints)

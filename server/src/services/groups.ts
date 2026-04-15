@@ -236,6 +236,14 @@ export function groupService(db: Db) {
       .orderBy(groups.name);
   }
 
+  async function isGroupInProject(groupId: string, projectId: string): Promise<boolean> {
+    const [row] = await db
+      .select({ id: groupProjects.id })
+      .from(groupProjects)
+      .where(and(eq(groupProjects.groupId, groupId), eq(groupProjects.projectId, projectId)));
+    return !!row;
+  }
+
   return {
     create,
     list,
@@ -251,5 +259,6 @@ export function groupService(db: Db) {
     addProjects,
     removeProject,
     listGroupsForProject,
+    isGroupInProject,
   };
 }
