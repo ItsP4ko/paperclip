@@ -1,4 +1,7 @@
-import type { HeartbeatRun } from "@paperclipai/shared";
+import type { HeartbeatRun, Issue, FinanceEvent, CostByProviderModel } from "@paperclipai/shared";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+
+const PROVIDER_COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#06b6d4"];
 
 /* ---- Utilities ---- */
 
@@ -13,6 +16,64 @@ export function getLast14Days(): string[] {
 function formatDayLabel(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00");
   return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function toIsoDay(value: string | Date): string {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+export function bucketIssuesByDay(
+  issues: Pick<Issue, "status" | "createdAt" | "updatedAt">[],
+  days: string[],
+): Map<string, { created: number; completed: number }> {
+  const bucket = new Map<string, { created: number; completed: number }>();
+  for (const day of days) bucket.set(day, { created: 0, completed: 0 });
+  for (const issue of issues) {
+    const createdDay = toIsoDay(issue.createdAt);
+    const createdEntry = bucket.get(createdDay);
+    if (createdEntry) createdEntry.created++;
+    if (issue.status === "done") {
+      const completedDay = toIsoDay(issue.updatedAt);
+      const doneEntry = bucket.get(completedDay);
+      if (doneEntry) doneEntry.completed++;
+    }
+  }
+  return bucket;
+}
+
+export function bucketFinanceEventsByDay(
+  events: Pick<FinanceEvent, "amountCents" | "direction" | "occurredAt">[],
+  days: string[],
+): Map<string, number> {
+  const bucket = new Map<string, number>();
+  for (const day of days) bucket.set(day, 0);
+  for (const event of events) {
+    if (event.direction !== "debit") continue;
+    const day = toIsoDay(event.occurredAt);
+    const current = bucket.get(day);
+    if (current !== undefined) bucket.set(day, current + event.amountCents);
+  }
+  return bucket;
+}
+
+export function groupIssuesByStatus(issues: Pick<Issue, "status">[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const issue of issues) {
+    out[issue.status] = (out[issue.status] ?? 0) + 1;
+  }
+  return out;
+}
+
+export function collapseToTopN<T extends { name: string; value: number }>(
+  rows: T[],
+  n: number,
+): { name: string; value: number }[] {
+  const positive = rows.filter((r) => r.value > 0);
+  const sorted = [...positive].sort((a, b) => b.value - a.value);
+  if (sorted.length <= n) return sorted.map(({ name, value }) => ({ name, value }));
+  const top = sorted.slice(0, n).map(({ name, value }) => ({ name, value }));
+  const other = sorted.slice(n).reduce((sum, r) => sum + r.value, 0);
+  return other > 0 ? [...top, { name: "Other", value: other }] : top;
 }
 
 /* ---- Sub-components ---- */
@@ -57,6 +118,173 @@ export function ChartCard({ title, subtitle, children }: { title: string; subtit
 }
 
 /* ---- Chart Components ---- */
+
+export function TasksThroughputChart({ issues }: { issues: Issue[] }) {
+  const days = getLast14Days();
+  const bucket = bucketIssuesByDay(issues, days);
+  const hasData = Array.from(bucket.values()).some((v) => v.created + v.completed > 0);
+  if (!hasData) return <p className="text-xs text-muted-foreground">No tasks yet</p>;
+
+  const maxValue = Math.max(
+    ...Array.from(bucket.values()).map((v) => Math.max(v.created, v.completed)),
+    1,
+  );
+
+  return (
+    <div>
+      <div className="flex items-end gap-[3px] h-20">
+        {days.map((day) => {
+          const entry = bucket.get(day)!;
+          return (
+            <div
+              key={day}
+              className="flex-1 h-full flex items-end gap-px"
+              title={`${day}: ${entry.created} created, ${entry.completed} completed`}
+            >
+              <div
+                className="flex-1"
+                style={{
+                  height: `${(entry.created / maxValue) * 100}%`,
+                  minHeight: entry.created > 0 ? 2 : 0,
+                  backgroundColor: "#00E5FF",
+                }}
+              />
+              <div
+                className="flex-1"
+                style={{
+                  height: `${(entry.completed / maxValue) * 100}%`,
+                  minHeight: entry.completed > 0 ? 2 : 0,
+                  backgroundColor: "#39FF14",
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <DateLabels days={days} />
+      <ChartLegend
+        items={[
+          { color: "#00E5FF", label: "Created" },
+          { color: "#39FF14", label: "Completed" },
+        ]}
+      />
+    </div>
+  );
+}
+
+export function TasksByStatusChart({ issues }: { issues: Issue[] }) {
+  const grouped = groupIssuesByStatus(issues);
+  const rows = Object.entries(grouped)
+    .map(([status, count]) => ({ name: status, value: count }))
+    .filter((r) => r.value > 0);
+  const total = rows.reduce((sum, r) => sum + r.value, 0);
+  if (total === 0) return <p className="text-xs text-muted-foreground">No tasks yet</p>;
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-20 w-20 shrink-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={rows} dataKey="value" innerRadius={22} outerRadius={38} paddingAngle={2}>
+              {rows.map((row, i) => (
+                <Cell key={i} fill={statusColors[row.name] ?? "#6b7280"} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex flex-col gap-1 min-w-0 flex-1">
+        {rows.map((row) => (
+          <div key={row.name} className="flex items-center gap-1.5 text-[10px]">
+            <span
+              className="h-1.5 w-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: statusColors[row.name] ?? "#6b7280" }}
+            />
+            <span className="truncate text-muted-foreground">{statusLabels[row.name] ?? row.name}</span>
+            <span className="tabular-nums ml-auto">{row.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function SpendByProviderChart({ rows }: { rows: CostByProviderModel[] }) {
+  const byProvider = new Map<string, number>();
+  for (const row of rows) {
+    byProvider.set(row.provider, (byProvider.get(row.provider) ?? 0) + row.costCents);
+  }
+  const aggregated = Array.from(byProvider.entries()).map(([name, value]) => ({ name, value }));
+  const top = collapseToTopN(aggregated, 5);
+  const total = top.reduce((sum, r) => sum + r.value, 0);
+  if (total === 0) return <p className="text-xs text-muted-foreground">No spend recorded</p>;
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-20 w-20 shrink-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={top} dataKey="value" innerRadius={22} outerRadius={38} paddingAngle={2}>
+              {top.map((_, i) => (
+                <Cell key={i} fill={PROVIDER_COLORS[i % PROVIDER_COLORS.length]} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex flex-col gap-1 min-w-0 flex-1">
+        {top.map((row, i) => {
+          const pct = (row.value / total) * 100;
+          return (
+            <div key={row.name} className="flex items-center gap-1.5 text-[10px]">
+              <span
+                className="h-1.5 w-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: PROVIDER_COLORS[i % PROVIDER_COLORS.length] }}
+              />
+              <span className="truncate text-muted-foreground">{row.name}</span>
+              <span className="tabular-nums ml-auto">{pct.toFixed(0)}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function SpendPerDayChart({ events }: { events: FinanceEvent[] }) {
+  const days = getLast14Days();
+  const bucket = bucketFinanceEventsByDay(events, days);
+  const values = days.map((d) => bucket.get(d) ?? 0);
+  const hasData = values.some((v) => v > 0);
+  if (!hasData) return <p className="text-xs text-muted-foreground">No spend recorded</p>;
+
+  const maxValue = Math.max(...values, 1);
+
+  return (
+    <div>
+      <div className="flex items-end gap-[3px] h-20">
+        {days.map((day, i) => {
+          const cents = values[i];
+          const heightPct = (cents / maxValue) * 100;
+          return (
+            <div
+              key={day}
+              className="flex-1 h-full flex flex-col justify-end"
+              title={`${day}: $${(cents / 100).toFixed(2)}`}
+            >
+              {cents > 0 ? (
+                <div style={{ height: `${heightPct}%`, minHeight: 2, backgroundColor: "#f59e0b" }} />
+              ) : (
+                <div className="bg-muted/30 rounded-sm" style={{ height: 2 }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <DateLabels days={days} />
+    </div>
+  );
+}
 
 export function RunActivityChart({ runs }: { runs: HeartbeatRun[] }) {
   const days = getLast14Days();
