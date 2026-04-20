@@ -67,19 +67,28 @@ describe("bucketIssuesByDay", () => {
 describe("bucketFinanceEventsByDay", () => {
   const days = ["2026-04-10", "2026-04-11"];
 
-  it("sums costCents per day", () => {
+  it("sums debit amountCents per day", () => {
     const events = [
-      { costCents: 100, occurredAt: "2026-04-10T10:00:00Z" },
-      { costCents: 250, occurredAt: "2026-04-10T22:00:00Z" },
-      { costCents: 50, occurredAt: "2026-04-11T01:00:00Z" },
+      { amountCents: 100, direction: "debit", occurredAt: "2026-04-10T10:00:00Z" },
+      { amountCents: 250, direction: "debit", occurredAt: "2026-04-10T22:00:00Z" },
+      { amountCents: 50, direction: "debit", occurredAt: "2026-04-11T01:00:00Z" },
     ];
     const result = bucketFinanceEventsByDay(events as any, days);
     expect(result.get("2026-04-10")).toBe(350);
     expect(result.get("2026-04-11")).toBe(50);
   });
 
+  it("ignores credit events", () => {
+    const events = [
+      { amountCents: 100, direction: "debit", occurredAt: "2026-04-10T10:00:00Z" },
+      { amountCents: 500, direction: "credit", occurredAt: "2026-04-10T10:00:00Z" },
+    ];
+    const result = bucketFinanceEventsByDay(events as any, days);
+    expect(result.get("2026-04-10")).toBe(100);
+  });
+
   it("ignores events outside the window", () => {
-    const events = [{ costCents: 999, occurredAt: "2020-01-01T00:00:00Z" }];
+    const events = [{ amountCents: 999, direction: "debit", occurredAt: "2020-01-01T00:00:00Z" }];
     const result = bucketFinanceEventsByDay(events as any, days);
     expect(result.get("2026-04-10")).toBe(0);
   });
