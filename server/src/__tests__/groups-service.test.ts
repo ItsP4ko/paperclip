@@ -90,17 +90,19 @@ describeEmbeddedPostgres("groupService", () => {
     it("returns groups with member and project counts", async () => {
       const group = await svc.create(companyId, "DevOps", null, userId);
 
+      await svc.addMembers(group.id, [{ principalType: "user", principalId: userId2 }], userId);
+
+      const projectId = randomUUID();
+      await db.insert(projects).values({ id: projectId, companyId, name: "ProjX", status: "active" });
+      await svc.addProjects(group.id, [projectId], userId);
+
       const listed = await svc.list(companyId);
 
       expect(listed).toHaveLength(1);
       expect(listed[0].name).toBe("DevOps");
-      // SQL subquery returns correlated count
-      // The count may be a string from postgres or may not be computed
-      // for the embedded test DB; verify name and structure
-      expect(listed[0]).toHaveProperty("memberCount");
-      expect(listed[0]).toHaveProperty("projectCount");
-      expect(listed[0]).toHaveProperty("projectNames");
-      expect(Array.isArray(listed[0].projectNames)).toBe(true);
+      expect(listed[0].memberCount).toBe(2);
+      expect(listed[0].projectCount).toBe(1);
+      expect(listed[0].projectNames).toEqual(["ProjX"]);
     });
 
     it("returns empty array for company with no groups", async () => {

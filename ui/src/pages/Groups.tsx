@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@/lib/router";
-import { Plus, UsersRound } from "lucide-react";
+import { Plus, UsersRound, Folders } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,9 +57,15 @@ export function Groups() {
                     )}
                   </div>
                   <div className="flex items-start gap-2 shrink-0 ml-4">
-                    <Badge variant="secondary" className="text-xs">{group.memberCount}</Badge>
+                    <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                      <UsersRound className="h-3 w-3" />
+                      {group.memberCount}
+                    </Badge>
                     <div className="flex flex-col items-end">
-                      <Badge variant="outline" className="text-xs">{group.projectCount}</Badge>
+                      <Badge variant="outline" className="text-xs flex items-center gap-1">
+                        <Folders className="h-3 w-3" />
+                        {group.projectCount}
+                      </Badge>
                       {group.projectCount > 0 && group.projectNames.length > 0 && (
                         <span className="mt-0.5 truncate max-w-[12ch] text-[10px] text-muted-foreground">
                           {group.projectNames[0]}

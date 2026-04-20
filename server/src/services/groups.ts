@@ -43,32 +43,49 @@ export function groupService(db: Db) {
         createdByUserId: groups.createdByUserId,
         createdAt: groups.createdAt,
         updatedAt: groups.updatedAt,
-        memberCount: sql<number>`(SELECT count(*)::int FROM group_memberships WHERE group_id = ${groups.id})`.as("member_count"),
-        projectCount: sql<number>`(SELECT count(*)::int FROM group_projects WHERE group_id = ${groups.id})`.as("project_count"),
       })
       .from(groups)
       .where(eq(groups.companyId, companyId))
       .orderBy(groups.name);
 
-    if (rows.length === 0) return rows.map((r) => ({ ...r, projectNames: [] as string[] }));
+    if (rows.length === 0) {
+      return rows.map((r) => ({ ...r, memberCount: 0, projectCount: 0, projectNames: [] as string[] }));
+    }
 
-    // Fetch up to 5 project names per group (non-archived) in a single query
     const groupIds = rows.map((r) => r.id);
-    const projectRows = await db
-      .select({
-        groupId: groupProjects.groupId,
-        name: projects.name,
-      })
-      .from(groupProjects)
-      .innerJoin(projects, eq(groupProjects.projectId, projects.id))
-      .where(
-        and(
-          inArray(groupProjects.groupId, groupIds),
-        ),
-      )
-      .orderBy(groupProjects.groupId, projects.name);
 
-    // Group project names by groupId, capping at 5
+    const [memberCounts, projectCounts, projectRows] = await Promise.all([
+      db
+        .select({
+          groupId: groupMemberships.groupId,
+          count: sql<number>`count(*)::int`.as("count"),
+        })
+        .from(groupMemberships)
+        .where(inArray(groupMemberships.groupId, groupIds))
+        .groupBy(groupMemberships.groupId),
+      db
+        .select({
+          groupId: groupProjects.groupId,
+          count: sql<number>`count(*)::int`.as("count"),
+        })
+        .from(groupProjects)
+        .where(inArray(groupProjects.groupId, groupIds))
+        .groupBy(groupProjects.groupId),
+      db
+        .select({
+          groupId: groupProjects.groupId,
+          name: projects.name,
+        })
+        .from(groupProjects)
+        .innerJoin(projects, eq(groupProjects.projectId, projects.id))
+        .where(inArray(groupProjects.groupId, groupIds))
+        .orderBy(groupProjects.groupId, projects.name),
+    ]);
+
+    const memberCountByGroup = new Map(memberCounts.map((r) => [r.groupId, Number(r.count)]));
+    const projectCountByGroup = new Map(projectCounts.map((r) => [r.groupId, Number(r.count)]));
+
+    // Cap project names at 5 per group
     const namesByGroup = new Map<string, string[]>();
     for (const row of projectRows) {
       const existing = namesByGroup.get(row.groupId) ?? [];
@@ -78,6 +95,8 @@ export function groupService(db: Db) {
 
     return rows.map((r) => ({
       ...r,
+      memberCount: memberCountByGroup.get(r.id) ?? 0,
+      projectCount: projectCountByGroup.get(r.id) ?? 0,
       projectNames: namesByGroup.get(r.id) ?? [],
     }));
   }
