@@ -6,7 +6,7 @@ import { activityApi } from "../api/activity";
 import { issuesApi } from "../api/issues";
 import { agentsApi } from "../api/agents";
 import { projectsApi } from "../api/projects";
-import { heartbeatsApi } from "../api/heartbeats";
+import { costsApi } from "../api/costs";
 import { useCompany } from "../context/CompanyContext";
 import { useDialog } from "../context/DialogContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
@@ -21,7 +21,7 @@ import { Identity } from "../components/Identity";
 import { timeAgo } from "../lib/timeAgo";
 import { cn, formatCents } from "../lib/utils";
 import { CircleDot, DollarSign, ShieldCheck, LayoutDashboard, PauseCircle, Smartphone } from "lucide-react";
-import { ChartCard, RunActivityChart, PriorityChart, IssueStatusChart, SuccessRateChart } from "../components/ActivityCharts";
+import { ChartCard, TasksThroughputChart, SpendPerDayChart, SpendByProviderChart, TasksByStatusChart } from "../components/ActivityCharts";
 import { PageSkeleton } from "../components/PageSkeleton";
 import type { Agent, Issue } from "@paperclipai/shared";
 import { PluginSlotOutlet } from "@/plugins/slots";
@@ -157,9 +157,29 @@ export function Dashboard() {
     staleTime: 2 * 60 * 1000,
   });
 
-  const { data: runs } = useQuery({
-    queryKey: queryKeys.heartbeats(selectedCompanyId!),
-    queryFn: () => heartbeatsApi.list(selectedCompanyId!),
+  const fourteenDaysAgo = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 14);
+    return d.toISOString().slice(0, 10);
+  }, []);
+
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const monthStart = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+  }, []);
+
+  const { data: financeEvents } = useQuery({
+    queryKey: queryKeys.financeEvents(selectedCompanyId!, fourteenDaysAgo, today, 2000),
+    queryFn: () => costsApi.financeEvents(selectedCompanyId!, fourteenDaysAgo, today, 2000),
+    enabled: !!selectedCompanyId,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: costByProvider } = useQuery({
+    queryKey: queryKeys.usageByProvider(selectedCompanyId!, monthStart, today),
+    queryFn: () => costsApi.byProvider(selectedCompanyId!, monthStart, today),
     enabled: !!selectedCompanyId,
     staleTime: 2 * 60 * 1000,
   });
@@ -359,17 +379,17 @@ export function Dashboard() {
           </div>
 
           <div data-animate="charts" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <ChartCard title="Run Activity" subtitle="Last 14 days">
-              <RunActivityChart runs={runs ?? []} />
+            <ChartCard title="Tasks Throughput" subtitle="Last 14 days">
+              <TasksThroughputChart issues={issues ?? []} />
             </ChartCard>
-            <ChartCard title="Issues by Priority" subtitle="Last 14 days">
-              <PriorityChart issues={issues ?? []} />
+            <ChartCard title="Spend per Day" subtitle="Last 14 days">
+              <SpendPerDayChart events={financeEvents ?? []} />
             </ChartCard>
-            <ChartCard title="Issues by Status" subtitle="Last 14 days">
-              <IssueStatusChart issues={issues ?? []} />
+            <ChartCard title="Spend by Provider" subtitle="This month">
+              <SpendByProviderChart rows={costByProvider ?? []} />
             </ChartCard>
-            <ChartCard title="Success Rate" subtitle="Last 14 days">
-              <SuccessRateChart runs={runs ?? []} />
+            <ChartCard title="Tasks by Status" subtitle="Current snapshot">
+              <TasksByStatusChart issues={issues ?? []} />
             </ChartCard>
           </div>
 
