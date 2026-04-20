@@ -1,4 +1,7 @@
-import type { HeartbeatRun, Issue, FinanceEvent } from "@paperclipai/shared";
+import type { HeartbeatRun, Issue, FinanceEvent, CostByProviderModel } from "@paperclipai/shared";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+
+const PROVIDER_COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#06b6d4"];
 
 /* ---- Utilities ---- */
 
@@ -165,6 +168,48 @@ export function TasksThroughputChart({ issues }: { issues: Issue[] }) {
           { color: "#39FF14", label: "Completed" },
         ]}
       />
+    </div>
+  );
+}
+
+export function SpendByProviderChart({ rows }: { rows: CostByProviderModel[] }) {
+  const byProvider = new Map<string, number>();
+  for (const row of rows) {
+    byProvider.set(row.provider, (byProvider.get(row.provider) ?? 0) + row.costCents);
+  }
+  const aggregated = Array.from(byProvider.entries()).map(([name, value]) => ({ name, value }));
+  const top = collapseToTopN(aggregated, 5);
+  const total = top.reduce((sum, r) => sum + r.value, 0);
+  if (total === 0) return <p className="text-xs text-muted-foreground">No spend recorded</p>;
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-20 w-20 shrink-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={top} dataKey="value" innerRadius={22} outerRadius={38} paddingAngle={2}>
+              {top.map((_, i) => (
+                <Cell key={i} fill={PROVIDER_COLORS[i % PROVIDER_COLORS.length]} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex flex-col gap-1 min-w-0 flex-1">
+        {top.map((row, i) => {
+          const pct = (row.value / total) * 100;
+          return (
+            <div key={row.name} className="flex items-center gap-1.5 text-[10px]">
+              <span
+                className="h-1.5 w-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: PROVIDER_COLORS[i % PROVIDER_COLORS.length] }}
+              />
+              <span className="truncate text-muted-foreground">{row.name}</span>
+              <span className="tabular-nums ml-auto">{pct.toFixed(0)}%</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
