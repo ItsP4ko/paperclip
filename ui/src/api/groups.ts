@@ -8,6 +8,7 @@ export interface GroupListItem {
   createdByUserId: string;
   memberCount: number;
   projectCount: number;
+  projectNames: string[];
   createdAt: string;
   updatedAt: string;
 }

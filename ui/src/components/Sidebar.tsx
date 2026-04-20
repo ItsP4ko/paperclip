@@ -29,7 +29,6 @@ import { SidebarSection } from "./SidebarSection";
 import { SidebarCollapsible } from "./SidebarCollapsible";
 import { SidebarNavItem } from "./SidebarNavItem";
 import { SidebarProjects } from "./SidebarProjects";
-import { SidebarAgents } from "./SidebarAgents";
 import { useDialog } from "../context/DialogContext";
 import { useCompany } from "../context/CompanyContext";
 import { heartbeatsApi } from "../api/heartbeats";
@@ -41,13 +40,11 @@ import { Button } from "@/components/ui/button";
 import { PluginSlotOutlet } from "@/plugins/slots";
 import { RunnerStatusIndicator } from "./RunnerStatusIndicator";
 import { DesktopDownloadButton } from "./DesktopDownloadButton";
-import { isTauriEnv } from "../lib/platform";
 
 export function Sidebar() {
   const { openNewIssue } = useDialog();
   const { selectedCompanyId, selectedCompany } = useCompany();
-  const { isMember, canManageAgents } = useMemberRole(selectedCompanyId);
-  const isTauri = isTauriEnv();
+  const { isMember } = useMemberRole(selectedCompanyId);
   const queryClient = useQueryClient();
   const { data: session } = useQuery({
     queryKey: queryKeys.auth.session,
@@ -145,8 +142,6 @@ export function Sidebar() {
         </SidebarSection>
 
         <SidebarProjects />
-
-        {canManageAgents && isTauri && <SidebarAgents />}
 
         <SidebarSection label="Company">
           {!isMember && <SidebarNavItem to="/org" label="Org" icon={Network} />}

@@ -99,6 +99,8 @@ describeEmbeddedPostgres("groupService", () => {
       // for the embedded test DB; verify name and structure
       expect(listed[0]).toHaveProperty("memberCount");
       expect(listed[0]).toHaveProperty("projectCount");
+      expect(listed[0]).toHaveProperty("projectNames");
+      expect(Array.isArray(listed[0].projectNames)).toBe(true);
     });
 
     it("returns empty array for company with no groups", async () => {

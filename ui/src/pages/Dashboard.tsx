@@ -20,8 +20,7 @@ import { ActivityRow } from "../components/ActivityRow";
 import { Identity } from "../components/Identity";
 import { timeAgo } from "../lib/timeAgo";
 import { cn, formatCents } from "../lib/utils";
-import { Bot, CircleDot, DollarSign, ShieldCheck, LayoutDashboard, PauseCircle, Smartphone } from "lucide-react";
-import { ActiveAgentsPanel } from "../components/ActiveAgentsPanel";
+import { CircleDot, DollarSign, ShieldCheck, LayoutDashboard, PauseCircle, Smartphone } from "lucide-react";
 import { ChartCard, RunActivityChart, PriorityChart, IssueStatusChart, SuccessRateChart } from "../components/ActivityCharts";
 import { PageSkeleton } from "../components/PageSkeleton";
 import type { Agent, Issue } from "@paperclipai/shared";
@@ -277,7 +276,7 @@ export function Dashboard() {
       return (
         <EmptyState
           icon={LayoutDashboard}
-          message="Welcome to Relay Control. Set up your first company and agent to get started."
+          message="Welcome to Relay Control. Set up your first company to get started."
           action="Get Started"
           onAction={openOnboarding}
         />
@@ -292,31 +291,10 @@ export function Dashboard() {
     return <PageSkeleton variant="dashboard" />;
   }
 
-  const hasNoAgents = agents !== undefined && agents.length === 0;
-
   return (
     <div className="space-y-6">
       <RemoteControlWidget />
       {error && <p className="text-sm text-destructive">{error.message}</p>}
-
-      {hasNoAgents && (
-        <div className="flex items-center justify-between gap-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-500/25 dark:bg-amber-950/60">
-          <div className="flex items-center gap-2.5">
-            <Bot className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-            <p className="text-sm text-amber-900 dark:text-amber-100">
-              You have no agents.
-            </p>
-          </div>
-          <button
-            onClick={() => openOnboarding({ initialStep: 2, companyId: selectedCompanyId! })}
-            className="text-sm font-medium text-amber-700 hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100 underline underline-offset-2 shrink-0"
-          >
-            Create one here
-          </button>
-        </div>
-      )}
-
-      <ActiveAgentsPanel companyId={selectedCompanyId!} />
 
       {data && (
         <div ref={contentRef}>
@@ -339,20 +317,7 @@ export function Dashboard() {
             </div>
           ) : null}
 
-          <div data-animate="metrics" className="grid grid-cols-2 xl:grid-cols-4 gap-1 sm:gap-2">
-            <MetricCard
-              icon={Bot}
-              value={data.agents.active + data.agents.running + data.agents.paused + data.agents.error}
-              label="Agents Enabled"
-              to="/agents"
-              description={
-                <span>
-                  {data.agents.running} running{", "}
-                  {data.agents.paused} paused{", "}
-                  {data.agents.error} errors
-                </span>
-              }
-            />
+          <div data-animate="metrics" className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2">
             <MetricCard
               icon={CircleDot}
               value={data.tasks.inProgress}

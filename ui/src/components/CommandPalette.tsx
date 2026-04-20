@@ -41,12 +41,14 @@ const TYPE_CONFIG: Record<
   run: { label: "Runs", icon: Play, urlPrefix: "/runs/" },
 };
 
+const HIDDEN_SEARCH_TYPES: ReadonlySet<SearchResult["type"]> = new Set(["agent"]);
+
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
   const { selectedCompanyId } = useCompany();
-  const { openNewIssue, openNewAgent } = useDialog();
+  const { openNewIssue } = useDialog();
   const { isMobile, setSidebarOpen } = useSidebar();
   const searchQuery = query.trim();
 
@@ -73,17 +75,20 @@ export function CommandPalette() {
     placeholderData: (prev) => prev,
   });
 
-  const grouped = searchResults.reduce<Record<string, SearchResult[]>>((acc, r) => {
-    (acc[r.type] ??= []).push(r);
-    return acc;
-  }, {});
+  const grouped = searchResults
+    .filter((r) => !HIDDEN_SEARCH_TYPES.has(r.type))
+    .reduce<Record<string, SearchResult[]>>((acc, r) => {
+      (acc[r.type] ??= []).push(r);
+      return acc;
+    }, {});
 
   function go(path: string) {
     setOpen(false);
     navigate(path);
   }
 
-  const showResults = searchQuery.length > 1 && searchResults.length > 0;
+  const visibleResultCount = Object.values(grouped).reduce((n, arr) => n + arr.length, 0);
+  const showResults = searchQuery.length > 1 && visibleResultCount > 0;
 
   return (
     <CommandDialog
@@ -94,7 +99,7 @@ export function CommandPalette() {
       }}
     >
       <CommandInput
-        placeholder="Search issues, agents, projects, knowledge, runs..."
+        placeholder="Search issues, projects, knowledge, runs..."
         value={query}
         onValueChange={setQuery}
       />
@@ -113,15 +118,6 @@ export function CommandPalette() {
                 <SquarePen className="mr-2 h-4 w-4" />
                 Create new issue
                 <span className="ml-auto text-xs text-muted-foreground">C</span>
-              </CommandItem>
-              <CommandItem
-                onSelect={() => {
-                  setOpen(false);
-                  openNewAgent();
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Create new agent
               </CommandItem>
               <CommandItem onSelect={() => go("/projects")}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -151,10 +147,6 @@ export function CommandPalette() {
               <CommandItem onSelect={() => go("/goals")}>
                 <Target className="mr-2 h-4 w-4" />
                 Goals
-              </CommandItem>
-              <CommandItem onSelect={() => go("/agents")}>
-                <Bot className="mr-2 h-4 w-4" />
-                Agents
               </CommandItem>
               <CommandItem onSelect={() => go("/costs")}>
                 <DollarSign className="mr-2 h-4 w-4" />
