@@ -116,6 +116,59 @@ export function ChartCard({ title, subtitle, children }: { title: string; subtit
 
 /* ---- Chart Components ---- */
 
+export function TasksThroughputChart({ issues }: { issues: Issue[] }) {
+  const days = getLast14Days();
+  const bucket = bucketIssuesByDay(issues, days);
+  const hasData = Array.from(bucket.values()).some((v) => v.created + v.completed > 0);
+  if (!hasData) return <p className="text-xs text-muted-foreground">No tasks yet</p>;
+
+  const maxValue = Math.max(
+    ...Array.from(bucket.values()).map((v) => Math.max(v.created, v.completed)),
+    1,
+  );
+
+  return (
+    <div>
+      <div className="flex items-end gap-[3px] h-20">
+        {days.map((day) => {
+          const entry = bucket.get(day)!;
+          return (
+            <div
+              key={day}
+              className="flex-1 h-full flex items-end gap-px"
+              title={`${day}: ${entry.created} created, ${entry.completed} completed`}
+            >
+              <div
+                className="flex-1"
+                style={{
+                  height: `${(entry.created / maxValue) * 100}%`,
+                  minHeight: entry.created > 0 ? 2 : 0,
+                  backgroundColor: "#00E5FF",
+                }}
+              />
+              <div
+                className="flex-1"
+                style={{
+                  height: `${(entry.completed / maxValue) * 100}%`,
+                  minHeight: entry.completed > 0 ? 2 : 0,
+                  backgroundColor: "#39FF14",
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <DateLabels days={days} />
+      <ChartLegend
+        items={[
+          { color: "#00E5FF", label: "Created" },
+          { color: "#39FF14", label: "Completed" },
+        ]}
+      />
+    </div>
+  );
+}
+
 export function RunActivityChart({ runs }: { runs: HeartbeatRun[] }) {
   const days = getLast14Days();
 
