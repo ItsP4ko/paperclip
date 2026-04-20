@@ -12,12 +12,9 @@ import { useCompany } from "./context/CompanyContext";
 import { useDialog } from "./context/DialogContext";
 import { loadLastInboxTab } from "./lib/inbox";
 import { shouldRedirectCompanylessRouteToOnboarding } from "./lib/onboarding-route";
-import { isTauriEnv } from "./lib/platform";
 
 const Dashboard = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })));
 const Companies = lazy(() => import("./pages/Companies").then((m) => ({ default: m.Companies })));
-const Agents = lazy(() => import("./pages/Agents").then((m) => ({ default: m.Agents })));
-const AgentDetail = lazy(() => import("./pages/AgentDetail").then((m) => ({ default: m.AgentDetail })));
 const Projects = lazy(() => import("./pages/Projects").then((m) => ({ default: m.Projects })));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail").then((m) => ({ default: m.ProjectDetail })));
 const ProjectWorkspaceDetail = lazy(() => import("./pages/ProjectWorkspaceDetail").then((m) => ({ default: m.ProjectWorkspaceDetail })));
@@ -59,7 +56,6 @@ const Org = lazy(() => import("./pages/Org").then((m) => ({ default: m.Org })));
 const Members = lazy(() => import("./pages/Members").then((m) => ({ default: m.Members })));
 const Groups = lazy(() => import("./pages/Groups").then((m) => ({ default: m.Groups })));
 const GroupDetail = lazy(() => import("./pages/GroupDetail").then((m) => ({ default: m.GroupDetail })));
-const NewAgent = lazy(() => import("./pages/NewAgent").then((m) => ({ default: m.NewAgent })));
 const AuthPage = lazy(() => import("./pages/Auth").then((m) => ({ default: m.AuthPage })));
 const BoardClaimPage = lazy(() => import("./pages/BoardClaim").then((m) => ({ default: m.BoardClaimPage })));
 const CliAuthPage = lazy(() => import("./pages/CliAuth").then((m) => ({ default: m.CliAuthPage })));
@@ -67,11 +63,6 @@ const InviteLandingPage = lazy(() => import("./pages/InviteLanding").then((m) =>
 const NotFoundPage = lazy(() => import("./pages/NotFound").then((m) => ({ default: m.NotFoundPage })));
 const DownloadPage = lazy(() => import("./pages/Download").then((m) => ({ default: m.DownloadPage })));
 
-
-function TauriGuard() {
-  if (!isTauriEnv()) return <Navigate to="/" replace />;
-  return <Outlet />;
-}
 
 function BootstrapPendingPage({ hasActiveInvite = false }: { hasActiveInvite?: boolean }) {
   return (
@@ -163,17 +154,6 @@ function boardRoutes() {
       <Route path="members" element={<S><Members /></S>} />
       <Route path="groups" element={<S><Groups /></S>} />
       <Route path="groups/:groupId" element={<S><GroupDetail /></S>} />
-      <Route element={<TauriGuard />}>
-        <Route path="agents" element={<Navigate to="/agents/all" replace />} />
-        <Route path="agents/all" element={<S><Agents /></S>} />
-        <Route path="agents/active" element={<S><Agents /></S>} />
-        <Route path="agents/paused" element={<S><Agents /></S>} />
-        <Route path="agents/error" element={<S><Agents /></S>} />
-        <Route path="agents/new" element={<S><NewAgent /></S>} />
-        <Route path="agents/:agentId" element={<S><AgentDetail /></S>} />
-        <Route path="agents/:agentId/:tab" element={<S><AgentDetail /></S>} />
-        <Route path="agents/:agentId/runs/:runId" element={<S><AgentDetail /></S>} />
-      </Route>
       <Route path="projects" element={<S><Projects /></S>} />
       <Route path="projects/:projectId" element={<S><ProjectDetail /></S>} />
       <Route path="projects/:projectId/overview" element={<S><ProjectDetail /></S>} />
@@ -377,11 +357,6 @@ export function App() {
           <Route path="skills/*" element={<UnprefixedBoardRedirect />} />
           <Route path="settings" element={<LegacySettingsRedirect />} />
           <Route path="settings/*" element={<LegacySettingsRedirect />} />
-          <Route path="agents" element={<UnprefixedBoardRedirect />} />
-          <Route path="agents/new" element={<UnprefixedBoardRedirect />} />
-          <Route path="agents/:agentId" element={<UnprefixedBoardRedirect />} />
-          <Route path="agents/:agentId/:tab" element={<UnprefixedBoardRedirect />} />
-          <Route path="agents/:agentId/runs/:runId" element={<UnprefixedBoardRedirect />} />
           <Route path="projects" element={<UnprefixedBoardRedirect />} />
           <Route path="projects/:projectId" element={<UnprefixedBoardRedirect />} />
           <Route path="projects/:projectId/overview" element={<UnprefixedBoardRedirect />} />

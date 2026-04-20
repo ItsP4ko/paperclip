@@ -258,9 +258,6 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
     [agents, recentAssigneeIds],
   );
 
-  const assignee = issue.assigneeAgentId
-    ? agents?.find((a) => a.id === issue.assigneeAgentId)
-    : null;
   const userLabel = (userId: string | null | undefined) => formatAssigneeUserLabel(userId, currentUserId);
   const assigneeUserLabel = userLabel(issue.assigneeUserId);
   const creatorUserLabel = userLabel(issue.createdByUserId);
@@ -364,9 +361,7 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
     </>
   );
 
-  const assigneeTrigger = assignee ? (
-    <Identity name={assignee.name} size="sm" />
-  ) : assigneeUserLabel ? (
+  const assigneeTrigger = assigneeUserLabel ? (
     <>
       <User className="h-3.5 w-3.5 text-muted-foreground" />
       <span className="text-sm">{assigneeUserLabel}</span>
@@ -459,28 +454,6 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
             }
           </>
         )}
-        {!isMember && isTauri && sortedAgents.length > 0 && (
-          <div className="px-2 py-1 text-xs font-semibold text-muted-foreground mt-1">AI Agents</div>
-        )}
-        {!isMember && isTauri && sortedAgents
-          .filter((a) => {
-            if (!assigneeSearch.trim()) return true;
-            const q = assigneeSearch.toLowerCase();
-            return a.name.toLowerCase().includes(q);
-          })
-          .map((a) => (
-          <button
-            key={a.id}
-            className={cn(
-              "flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50",
-              a.id === issue.assigneeAgentId && "bg-accent"
-            )}
-            onClick={() => { trackRecentAssignee(a.id); handleAssigneeChange({ assigneeAgentId: a.id, assigneeUserId: null }); setAssigneeOpen(false); }}
-          >
-            <AgentIcon icon={a.icon} className="shrink-0 h-3 w-3 text-muted-foreground" />
-            {a.name}
-          </button>
-        ))}
       </div>
     </>
   );
@@ -605,15 +578,6 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
           onOpenChange={(open) => { setAssigneeOpen(open); if (!open) setAssigneeSearch(""); }}
           triggerContent={assigneeTrigger}
           popoverClassName="w-52"
-          extra={issue.assigneeAgentId ? (
-            <Link
-              to={`/agents/${issue.assigneeAgentId}`}
-              className="inline-flex items-center justify-center h-5 w-5 rounded hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ArrowUpRight className="h-3 w-3" />
-            </Link>
-          ) : undefined}
         >
           {assigneeContent}
         </PropertyPicker>
@@ -660,21 +624,10 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
       <Separator />
 
       <div className="space-y-1">
-        {(issue.createdByAgentId || issue.createdByUserId) && (
+        {issue.createdByUserId && !issue.createdByAgentId && (
           <PropertyRow label="Created by">
-            {issue.createdByAgentId ? (
-              <Link
-                to={`/agents/${issue.createdByAgentId}`}
-                className="hover:underline"
-              >
-                <Identity name={agentName(issue.createdByAgentId) ?? issue.createdByAgentId.slice(0, 8)} size="sm" />
-              </Link>
-            ) : (
-              <>
-                <User className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-sm">{creatorUserLabel ?? "User"}</span>
-              </>
-            )}
+            <User className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-sm">{creatorUserLabel ?? "User"}</span>
           </PropertyRow>
         )}
         {issue.startedAt && (
