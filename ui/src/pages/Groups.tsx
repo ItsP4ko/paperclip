@@ -56,13 +56,17 @@ export function Groups() {
                       <div className="text-xs text-muted-foreground truncate mt-0.5">{group.description}</div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 ml-4">
-                    <Badge variant="secondary" className="text-xs">
-                      {group.memberCount} {group.memberCount === 1 ? "member" : "members"}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      {group.projectCount} {group.projectCount === 1 ? "project" : "projects"}
-                    </Badge>
+                  <div className="flex items-start gap-2 shrink-0 ml-4">
+                    <Badge variant="secondary" className="text-xs">{group.memberCount}</Badge>
+                    <div className="flex flex-col items-end">
+                      <Badge variant="outline" className="text-xs">{group.projectCount}</Badge>
+                      {group.projectCount > 0 && group.projectNames.length > 0 && (
+                        <span className="mt-0.5 truncate max-w-[12ch] text-[10px] text-muted-foreground">
+                          {group.projectNames[0]}
+                          {group.projectCount > 1 && ` +${group.projectCount - 1}`}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

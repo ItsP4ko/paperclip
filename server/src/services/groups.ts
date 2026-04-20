@@ -1,4 +1,4 @@
-import { and, eq, sql, count } from "drizzle-orm";
+import { and, eq, sql, count, inArray } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import {
   groups,
@@ -49,7 +49,37 @@ export function groupService(db: Db) {
       .from(groups)
       .where(eq(groups.companyId, companyId))
       .orderBy(groups.name);
-    return rows;
+
+    if (rows.length === 0) return rows.map((r) => ({ ...r, projectNames: [] as string[] }));
+
+    // Fetch up to 5 project names per group (non-archived) in a single query
+    const groupIds = rows.map((r) => r.id);
+    const projectRows = await db
+      .select({
+        groupId: groupProjects.groupId,
+        name: projects.name,
+      })
+      .from(groupProjects)
+      .innerJoin(projects, eq(groupProjects.projectId, projects.id))
+      .where(
+        and(
+          inArray(groupProjects.groupId, groupIds),
+        ),
+      )
+      .orderBy(groupProjects.groupId, projects.name);
+
+    // Group project names by groupId, capping at 5
+    const namesByGroup = new Map<string, string[]>();
+    for (const row of projectRows) {
+      const existing = namesByGroup.get(row.groupId) ?? [];
+      if (existing.length < 5) existing.push(row.name);
+      namesByGroup.set(row.groupId, existing);
+    }
+
+    return rows.map((r) => ({
+      ...r,
+      projectNames: namesByGroup.get(r.id) ?? [],
+    }));
   }
 
   async function getById(groupId: string) {

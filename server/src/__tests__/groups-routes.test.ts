@@ -135,7 +135,7 @@ describe("groups routes", () => {
 
     mockGroupService.getById.mockResolvedValue(baseGroup);
     mockGroupService.getDetail.mockResolvedValue(baseGroupDetail);
-    mockGroupService.list.mockResolvedValue([{ ...baseGroup, memberCount: 1, projectCount: 0 }]);
+    mockGroupService.list.mockResolvedValue([{ ...baseGroup, memberCount: 1, projectCount: 0, projectNames: [] }]);
   });
 
   // --- CREATE ---
