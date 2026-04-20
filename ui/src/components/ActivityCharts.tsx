@@ -1,4 +1,4 @@
-import type { HeartbeatRun } from "@paperclipai/shared";
+import type { HeartbeatRun, Issue, FinanceEvent } from "@paperclipai/shared";
 
 /* ---- Utilities ---- */
 
@@ -13,6 +13,64 @@ export function getLast14Days(): string[] {
 function formatDayLabel(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00");
   return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function toIsoDay(value: string | Date): string {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+export function bucketIssuesByDay(
+  issues: Pick<Issue, "status" | "createdAt" | "updatedAt">[],
+  days: string[],
+): Map<string, { created: number; completed: number }> {
+  const bucket = new Map<string, { created: number; completed: number }>();
+  for (const day of days) bucket.set(day, { created: 0, completed: 0 });
+  for (const issue of issues) {
+    const createdDay = toIsoDay(issue.createdAt);
+    const createdEntry = bucket.get(createdDay);
+    if (createdEntry) createdEntry.created++;
+    if (issue.status === "done") {
+      const completedDay = toIsoDay(issue.updatedAt);
+      const doneEntry = bucket.get(completedDay);
+      if (doneEntry) doneEntry.completed++;
+    }
+  }
+  return bucket;
+}
+
+export function bucketFinanceEventsByDay(
+  events: Pick<FinanceEvent, "amountCents" | "direction" | "occurredAt">[],
+  days: string[],
+): Map<string, number> {
+  const bucket = new Map<string, number>();
+  for (const day of days) bucket.set(day, 0);
+  for (const event of events) {
+    if (event.direction !== "debit") continue;
+    const day = toIsoDay(event.occurredAt);
+    const current = bucket.get(day);
+    if (current !== undefined) bucket.set(day, current + event.amountCents);
+  }
+  return bucket;
+}
+
+export function groupIssuesByStatus(issues: Pick<Issue, "status">[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const issue of issues) {
+    out[issue.status] = (out[issue.status] ?? 0) + 1;
+  }
+  return out;
+}
+
+export function collapseToTopN<T extends { name: string; value: number }>(
+  rows: T[],
+  n: number,
+): { name: string; value: number }[] {
+  const positive = rows.filter((r) => r.value > 0);
+  const sorted = [...positive].sort((a, b) => b.value - a.value);
+  if (sorted.length <= n) return sorted.map(({ name, value }) => ({ name, value }));
+  const top = sorted.slice(0, n).map(({ name, value }) => ({ name, value }));
+  const other = sorted.slice(n).reduce((sum, r) => sum + r.value, 0);
+  return other > 0 ? [...top, { name: "Other", value: other }] : top;
 }
 
 /* ---- Sub-components ---- */
