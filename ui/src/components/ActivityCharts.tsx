@@ -172,6 +172,43 @@ export function TasksThroughputChart({ issues }: { issues: Issue[] }) {
   );
 }
 
+export function TasksByStatusChart({ issues }: { issues: Issue[] }) {
+  const grouped = groupIssuesByStatus(issues);
+  const rows = Object.entries(grouped)
+    .map(([status, count]) => ({ name: status, value: count }))
+    .filter((r) => r.value > 0);
+  const total = rows.reduce((sum, r) => sum + r.value, 0);
+  if (total === 0) return <p className="text-xs text-muted-foreground">No tasks yet</p>;
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-20 w-20 shrink-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={rows} dataKey="value" innerRadius={22} outerRadius={38} paddingAngle={2}>
+              {rows.map((row, i) => (
+                <Cell key={i} fill={statusColors[row.name] ?? "#6b7280"} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex flex-col gap-1 min-w-0 flex-1">
+        {rows.map((row) => (
+          <div key={row.name} className="flex items-center gap-1.5 text-[10px]">
+            <span
+              className="h-1.5 w-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: statusColors[row.name] ?? "#6b7280" }}
+            />
+            <span className="truncate text-muted-foreground">{statusLabels[row.name] ?? row.name}</span>
+            <span className="tabular-nums ml-auto">{row.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function SpendByProviderChart({ rows }: { rows: CostByProviderModel[] }) {
   const byProvider = new Map<string, number>();
   for (const row of rows) {
