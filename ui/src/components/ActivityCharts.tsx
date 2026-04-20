@@ -169,6 +169,41 @@ export function TasksThroughputChart({ issues }: { issues: Issue[] }) {
   );
 }
 
+export function SpendPerDayChart({ events }: { events: FinanceEvent[] }) {
+  const days = getLast14Days();
+  const bucket = bucketFinanceEventsByDay(events, days);
+  const values = days.map((d) => bucket.get(d) ?? 0);
+  const hasData = values.some((v) => v > 0);
+  if (!hasData) return <p className="text-xs text-muted-foreground">No spend recorded</p>;
+
+  const maxValue = Math.max(...values, 1);
+
+  return (
+    <div>
+      <div className="flex items-end gap-[3px] h-20">
+        {days.map((day, i) => {
+          const cents = values[i];
+          const heightPct = (cents / maxValue) * 100;
+          return (
+            <div
+              key={day}
+              className="flex-1 h-full flex flex-col justify-end"
+              title={`${day}: $${(cents / 100).toFixed(2)}`}
+            >
+              {cents > 0 ? (
+                <div style={{ height: `${heightPct}%`, minHeight: 2, backgroundColor: "#f59e0b" }} />
+              ) : (
+                <div className="bg-muted/30 rounded-sm" style={{ height: 2 }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <DateLabels days={days} />
+    </div>
+  );
+}
+
 export function RunActivityChart({ runs }: { runs: HeartbeatRun[] }) {
   const days = getLast14Days();
 
