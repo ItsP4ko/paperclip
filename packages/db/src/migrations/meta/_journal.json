@@ -477,6 +477,13 @@
       "when": 1776115091121,
       "tag": "0067_big_talkback",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1776273834000,
+      "tag": "0068_sprint_group_id",
+      "breakpoints": true
     }
   ]
 }
