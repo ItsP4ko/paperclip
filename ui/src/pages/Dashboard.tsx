@@ -171,8 +171,8 @@ export function Dashboard() {
   }, []);
 
   const { data: financeEvents } = useQuery({
-    queryKey: queryKeys.financeEvents(selectedCompanyId!, fourteenDaysAgo, today, 2000),
-    queryFn: () => costsApi.financeEvents(selectedCompanyId!, fourteenDaysAgo, today, 2000),
+    queryKey: queryKeys.financeEvents(selectedCompanyId!, fourteenDaysAgo, today, 500),
+    queryFn: () => costsApi.financeEvents(selectedCompanyId!, fourteenDaysAgo, today, 500),
     enabled: !!selectedCompanyId,
     staleTime: 2 * 60 * 1000,
   });
@@ -281,13 +281,13 @@ export function Dashboard() {
     const charts = node.querySelector("[data-animate='charts']");
     const bottom = node.querySelector("[data-animate='bottom']");
     if (metrics?.children.length) {
-      tl.from(metrics.children, { y: 20, opacity: 0, stagger: 0.06, duration: 0.4 });
+      tl.from(metrics.children, { y: 20, stagger: 0.06, duration: 0.4 });
     }
     if (charts?.children.length) {
-      tl.from(charts.children, { y: 20, opacity: 0, stagger: 0.06, duration: 0.4 }, "-=0.15");
+      tl.from(charts.children, { y: 20, stagger: 0.06, duration: 0.4 }, "-=0.15");
     }
     if (bottom?.children.length) {
-      tl.from(bottom.children, { y: 20, opacity: 0, stagger: 0.08, duration: 0.5 }, "-=0.15");
+      tl.from(bottom.children, { y: 20, stagger: 0.08, duration: 0.5 }, "-=0.15");
     }
   }, []);
 
