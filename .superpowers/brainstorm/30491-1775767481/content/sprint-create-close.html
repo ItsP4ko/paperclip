@@ -1,0 +1,112 @@
+<h2>Crear Sprint + Cerrar Sprint</h2>
+<p class="subtitle">Dos flujos clave: configurar el sprint antes de planificar, y cerrar con control de tareas pendientes.</p>
+
+<div class="split">
+
+  <!-- CREAR SPRINT -->
+  <div class="mockup">
+    <div class="mockup-header">Modal — Crear / Editar Sprint</div>
+    <div class="mockup-body">
+      <div style="font-family:monospace;font-size:11px;color:#ccc;">
+
+        <div style="margin-bottom:12px;">
+          <div style="color:#888;font-size:9px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Nombre</div>
+          <div style="background:#1a1a1a;border:1px solid #6366f1;border-radius:4px;padding:6px 10px;color:#fff;font-size:11px;">Sprint #3</div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="color:#888;font-size:9px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Descripción (opcional)</div>
+          <div style="background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:6px 10px;color:#555;font-size:10px;height:40px;">Foco en sprint planning y backlog...</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div>
+            <div style="color:#888;font-size:9px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Fecha de inicio</div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:6px 10px;color:#fff;font-size:11px;display:flex;align-items:center;gap:6px;">
+              <span>📅</span> 15 abr 2026
+            </div>
+          </div>
+          <div>
+            <div style="color:#888;font-size:9px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Fecha de fin</div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:6px 10px;color:#fff;font-size:11px;display:flex;align-items:center;gap:6px;">
+              <span>📅</span> 29 abr 2026
+            </div>
+          </div>
+        </div>
+
+        <div style="background:#1a1a1a;border:1px solid #222;border-radius:4px;padding:8px 10px;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:14px;">⏱</span>
+          <div>
+            <div style="color:#aaa;font-size:10px;">Duración: <strong style="color:#6366f1;">14 días</strong></div>
+            <div style="color:#555;font-size:9px;">Sprints anteriores: 14 días promedio</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button style="background:#1a1a1a;border:1px solid #333;color:#aaa;border-radius:4px;padding:6px 14px;font-size:10px;cursor:pointer;">Cancelar</button>
+          <button style="background:#6366f1;border:none;color:#fff;border-radius:4px;padding:6px 14px;font-size:10px;font-weight:700;cursor:pointer;">Crear Sprint</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CERRAR SPRINT -->
+  <div class="mockup">
+    <div class="mockup-header">Modal — Cerrar Sprint #3</div>
+    <div class="mockup-body">
+      <div style="font-family:monospace;font-size:11px;color:#ccc;">
+
+        <div style="background:#1a1a1a;border:1px solid #222;border-radius:4px;padding:8px 10px;margin-bottom:12px;">
+          <div style="color:#aaa;font-size:10px;margin-bottom:4px;">Resumen del sprint</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+            <div style="background:#22c55e22;border:1px solid #22c55e44;border-radius:3px;padding:5px;">
+              <div style="color:#22c55e;font-size:14px;font-weight:700;">3</div>
+              <div style="color:#555;font-size:8px;">Completadas</div>
+            </div>
+            <div style="background:#ef444422;border:1px solid #ef444444;border-radius:3px;padding:5px;">
+              <div style="color:#ef4444;font-size:14px;font-weight:700;">4</div>
+              <div style="color:#555;font-size:8px;">Pendientes</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:3px;padding:5px;">
+              <div style="color:#aaa;font-size:14px;font-weight:700;">7</div>
+              <div style="color:#555;font-size:8px;">Total</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="color:#aaa;font-size:10px;margin-bottom:8px;">¿Qué hacemos con las <strong style="color:#ef4444;">4 tareas pendientes</strong>?</div>
+
+          <div style="background:#1a1a1a;border:1px solid #6366f1;border-radius:4px;padding:8px 10px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:8px;">
+            <span style="color:#6366f1;font-size:12px;">●</span>
+            <div>
+              <div style="color:#fff;font-size:10px;">Mover al siguiente sprint</div>
+              <div style="color:#555;font-size:9px;">Se asignan automáticamente a Sprint #4</div>
+            </div>
+          </div>
+
+          <div style="background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;">
+            <span style="color:#555;font-size:12px;">○</span>
+            <div>
+              <div style="color:#aaa;font-size:10px;">Volver al backlog</div>
+              <div style="color:#555;font-size:9px;">Quedan sin sprint asignado</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:#1a1a1a;border:1px solid #222;border-radius:4px;padding:7px 10px;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:10px;">📊</span>
+          <div style="color:#555;font-size:9px;">Todo queda registrado en métricas: qué tareas pasaron, cuántas veces y a qué sprint.</div>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button style="background:#1a1a1a;border:1px solid #333;color:#aaa;border-radius:4px;padding:6px 14px;font-size:10px;cursor:pointer;">Cancelar</button>
+          <button style="background:#dc2626;border:none;color:#fff;border-radius:4px;padding:6px 14px;font-size:10px;font-weight:700;cursor:pointer;">Cerrar Sprint</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:12px;">¿Está bien este flujo? Próximo: el panel de métricas por proyecto.</p>
