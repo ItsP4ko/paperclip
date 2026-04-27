@@ -439,7 +439,7 @@ export async function captureClaudeCliUsageText(timeoutMs = 12_000): Promise<str
   const command = buildClaudeCliShellProbeCommand();
   try {
     const { stdout, stderr } = await execFileAsync("sh", ["-c", command], {
-      env: createClaudeQuotaEnv(),
+      env: createClaudeQuotaEnv() as NodeJS.ProcessEnv,
       timeout: timeoutMs,
       maxBuffer: 8 * 1024 * 1024,
     });

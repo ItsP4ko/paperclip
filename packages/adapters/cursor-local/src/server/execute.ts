@@ -54,7 +54,7 @@ function resolveCursorBiller(
   billingType: "api" | "subscription",
   provider: string | null,
 ): string {
-  const openAiCompatibleBiller = inferOpenAiCompatibleBiller(env, null);
+  const openAiCompatibleBiller = inferOpenAiCompatibleBiller(env as NodeJS.ProcessEnv, null);
   if (openAiCompatibleBiller === "openrouter") return "openrouter";
   if (billingType === "subscription") return "cursor";
   return provider ?? "cursor";
@@ -270,7 +270,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     ),
   );
   const billingType = resolveCursorBillingType(effectiveEnv);
-  const runtimeEnv = ensurePathInEnv(effectiveEnv);
+  const runtimeEnv = ensurePathInEnv(effectiveEnv as NodeJS.ProcessEnv);
   await ensureCommandResolvable(command, cwd, runtimeEnv);
   const resolvedCommand = await resolveCommandForLogs(command, cwd, runtimeEnv);
   const loggedEnv = buildInvocationEnvForLogs(env, {

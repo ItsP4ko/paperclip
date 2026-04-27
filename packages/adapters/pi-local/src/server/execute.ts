@@ -93,7 +93,7 @@ async function ensurePiSkillsInjected(
 }
 
 function resolvePiBiller(env: Record<string, string>, provider: string | null): string {
-  return inferOpenAiCompatibleBiller(env, null) ?? provider ?? "unknown";
+  return inferOpenAiCompatibleBiller(env as NodeJS.ProcessEnv, null) ?? provider ?? "unknown";
 }
 
 async function ensureSessionsDir(): Promise<string> {
@@ -204,8 +204,8 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       (entry): entry is [string, string] => typeof entry[1] === "string",
     ),
   );
-  await ensureCommandResolvable(command, cwd, runtimeEnv);
-  const resolvedCommand = await resolveCommandForLogs(command, cwd, runtimeEnv);
+  await ensureCommandResolvable(command, cwd, runtimeEnv as NodeJS.ProcessEnv);
+  const resolvedCommand = await resolveCommandForLogs(command, cwd, runtimeEnv as NodeJS.ProcessEnv);
   const loggedEnv = buildInvocationEnvForLogs(env, {
     runtimeEnv,
     includeRuntimeKeys: ["HOME"],

@@ -1368,7 +1368,7 @@ async function startLocalRuntimeService(input: {
   const shell = resolveShell();
   const child = spawn(shell, ["-lc", command], {
     cwd: serviceCwd,
-    env,
+    env: env as NodeJS.ProcessEnv,
     detached: process.platform !== "win32",
     stdio: ["ignore", "pipe", "pipe"],
   });

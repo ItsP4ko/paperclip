@@ -1,4 +1,4 @@
-import { unprocessable } from "../errors.js";
+import { unprocessable } from "@/server/errors";
 import type { SecretProviderModule } from "./types.js";
 
 function unavailableProvider(

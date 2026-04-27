@@ -115,7 +115,7 @@ export async function testEnvironment(
       });
     } else {
       try {
-        await ensureCommandResolvable(command, cwd, runtimeEnv);
+        await ensureCommandResolvable(command, cwd, runtimeEnv as NodeJS.ProcessEnv);
         checks.push({
           code: "opencode_command_resolvable",
           level: "info",

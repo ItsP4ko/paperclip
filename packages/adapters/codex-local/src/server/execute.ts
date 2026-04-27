@@ -64,7 +64,7 @@ function resolveCodexBillingType(env: Record<string, string>): "api" | "subscrip
 }
 
 function resolveCodexBiller(env: Record<string, string>, billingType: "api" | "subscription"): string {
-  const openAiCompatibleBiller = inferOpenAiCompatibleBiller(env, "openai");
+  const openAiCompatibleBiller = inferOpenAiCompatibleBiller(env as NodeJS.ProcessEnv, "openai");
   if (openAiCompatibleBiller === "openrouter") return "openrouter";
   return billingType === "subscription" ? "chatgpt" : openAiCompatibleBiller ?? "openai";
 }
@@ -382,7 +382,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     ),
   );
   const billingType = resolveCodexBillingType(effectiveEnv);
-  const runtimeEnv = ensurePathInEnv(effectiveEnv);
+  const runtimeEnv = ensurePathInEnv(effectiveEnv as NodeJS.ProcessEnv);
   await ensureCommandResolvable(command, cwd, runtimeEnv);
   const resolvedCommand = await resolveCommandForLogs(command, cwd, runtimeEnv);
   const loggedEnv = buildInvocationEnvForLogs(env, {

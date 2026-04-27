@@ -132,7 +132,7 @@ export function MarkdownBody({ children, className, resolveImageSrc }: MarkdownB
   };
   if (resolveImageSrc) {
     components.img = ({ node: _node, src, alt, ...imgProps }) => {
-      const resolved = src ? resolveImageSrc(src) : null;
+      const resolved = typeof src === 'string' ? resolveImageSrc(src) : null;
       return <img {...imgProps} src={resolved ?? src} alt={alt ?? ""} />;
     };
   }

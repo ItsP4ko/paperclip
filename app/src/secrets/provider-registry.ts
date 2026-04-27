@@ -6,7 +6,7 @@ import {
   vaultProvider,
 } from "./external-stub-providers.js";
 import type { SecretProviderModule } from "./types.js";
-import { unprocessable } from "../errors.js";
+import { unprocessable } from "@/server/errors";
 
 const providers: SecretProviderModule[] = [
   localEncryptedProvider,

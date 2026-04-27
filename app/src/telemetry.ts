@@ -1,30 +1,10 @@
-import path from "node:path";
-import {
-  TelemetryClient,
-  resolveTelemetryConfig,
-  loadOrCreateState,
-} from "@paperclipai/shared/telemetry";
-import { resolvePaperclipInstanceRoot } from "./home-paths.js";
-import { serverVersion } from "./version.js";
+import type { TelemetryClient } from "@paperclipai/shared/telemetry";
 
-let client: TelemetryClient | null = null;
-
-export function initTelemetry(fileConfig?: { enabled?: boolean }): TelemetryClient | null {
-  if (client) return client;
-
-  const config = resolveTelemetryConfig(fileConfig);
-  if (!config.enabled) return null;
-
-  const stateDir = path.join(resolvePaperclipInstanceRoot(), "telemetry");
-  client = new TelemetryClient(
-    config,
-    () => loadOrCreateState(stateDir, serverVersion),
-    serverVersion,
-  );
-  client.startPeriodicFlush(60_000);
-  return client;
+// Telemetry is disabled in the serverless Next.js app.
+export function initTelemetry(_fileConfig?: { enabled?: boolean }): TelemetryClient | null {
+  return null;
 }
 
 export function getTelemetryClient(): TelemetryClient | null {
-  return client;
+  return null;
 }
