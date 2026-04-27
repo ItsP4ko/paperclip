@@ -231,7 +231,7 @@ function AdapterAuthRow({ adapter }: { adapter: AdapterAuthInfo }) {
   );
 }
 
-const FEEDBACK_TERMS_URL = import.meta.env.VITE_FEEDBACK_TERMS_URL?.trim() || "https://paperclip.ing/tos";
+const FEEDBACK_TERMS_URL = process.env.NEXT_PUBLIC_FEEDBACK_TERMS_URL?.trim() || "https://paperclip.ing/tos";
 
 export function InstanceGeneralSettings() {
   const { setBreadcrumbs } = useBreadcrumbs();
@@ -521,7 +521,7 @@ export function InstanceGeneralSettings() {
 
 function LocalRunnerSetupSection() {
   const [copied, setCopied] = useState(false);
-  const instanceUrl = import.meta.env.VITE_API_URL?.trim().replace(/\/+$/, "") || window.location.origin;
+  const instanceUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, "") || window.location.origin;
   const command = `npx relaycontrol@latest runner start --api-base ${instanceUrl}`;
 
   const handleCopy = () => {

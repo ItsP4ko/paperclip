@@ -114,7 +114,7 @@ const ACTION_LABELS: Record<string, string> = {
   "approval.rejected": "rejected",
 };
 
-const FEEDBACK_TERMS_URL = import.meta.env.VITE_FEEDBACK_TERMS_URL?.trim() || "https://paperclip.ing/tos";
+const FEEDBACK_TERMS_URL = process.env.NEXT_PUBLIC_FEEDBACK_TERMS_URL?.trim() || "https://paperclip.ing/tos";
 
 function humanizeValue(value: unknown): string {
   if (typeof value !== "string") return String(value ?? "none");

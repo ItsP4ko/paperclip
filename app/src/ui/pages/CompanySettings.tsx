@@ -25,7 +25,7 @@ type AgentSnippetInput = {
   testResolutionUrl?: string | null;
 };
 
-const FEEDBACK_TERMS_URL = import.meta.env.VITE_FEEDBACK_TERMS_URL?.trim() || "https://paperclip.ing/tos";
+const FEEDBACK_TERMS_URL = process.env.NEXT_PUBLIC_FEEDBACK_TERMS_URL?.trim() || "https://paperclip.ing/tos";
 
 export function CompanySettings() {
   const { scope: animateRef } = useAnimateIn({ preset: "fadeUp" });
@@ -138,7 +138,7 @@ export function CompanySettings() {
       accessApi.createOpenClawInvitePrompt(selectedCompanyId!),
     onSuccess: async (invite) => {
       setInviteError(null);
-      const base = (import.meta.env.VITE_API_URL?.trim() || window.location.origin).replace(/\/+$/, "");
+      const base = (process.env.NEXT_PUBLIC_API_URL?.trim() || window.location.origin).replace(/\/+$/, "");
       const onboardingTextLink =
         invite.onboardingTextUrl ??
         invite.onboardingTextPath ??
@@ -193,7 +193,7 @@ export function CompanySettings() {
       }),
     onSuccess: (invite) => {
       setHumanInviteError(null);
-      const webOrigin = (import.meta.env.VITE_API_URL?.trim() || window.location.origin).replace(/\/+$/, "");
+      const webOrigin = (process.env.NEXT_PUBLIC_API_URL?.trim() || window.location.origin).replace(/\/+$/, "");
       setHumanInviteUrl(webOrigin + invite.inviteUrl);
       setHumanUrlCopied(false);
       setHumanCopyDelightId(0);

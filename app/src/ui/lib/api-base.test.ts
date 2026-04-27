@@ -14,7 +14,7 @@ describe("api-base", () => {
     });
 
     it("falls back to /api when VITE_API_URL is unset", async () => {
-      // VITE_API_URL not set — import.meta.env.VITE_API_URL is undefined
+      // VITE_API_URL not set — process.env.NEXT_PUBLIC_API_URL is undefined
       const { API_BASE } = await import("./api-base");
       expect(API_BASE).toBe("/api");
     });
