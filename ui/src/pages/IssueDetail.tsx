@@ -49,8 +49,6 @@ import { StatusIcon } from "../components/StatusIcon";
 import { PriorityIcon } from "../components/PriorityIcon";
 import { StatusBadge } from "../components/StatusBadge";
 import { Identity } from "../components/Identity";
-import { PluginSlotMount, PluginSlotOutlet, usePluginSlots } from "@/plugins/slots";
-import { PluginLauncherOutlet } from "@/plugins/launchers";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -461,22 +459,6 @@ export function IssueDetail() {
     companyId: selectedCompanyId,
     userId: currentUserId,
   });
-  const { slots: issuePluginDetailSlots } = usePluginSlots({
-    slotTypes: ["detailTab"],
-    entityType: "issue",
-    companyId: resolvedCompanyId,
-    enabled: !!resolvedCompanyId,
-  });
-  const issuePluginTabItems = useMemo(
-    () => issuePluginDetailSlots.map((slot) => ({
-      value: `plugin:${slot.pluginKey}:${slot.id}`,
-      label: slot.displayName,
-      slot,
-    })),
-    [issuePluginDetailSlots],
-  );
-  const activePluginTab = issuePluginTabItems.find((item) => item.value === detailTab) ?? null;
-
   const agentMap = useMemo(() => {
     const map = new Map<string, Agent>();
     for (const a of agents ?? []) map.set(a.id, a);
@@ -1582,47 +1564,6 @@ export function IssueDetail() {
         <p className="text-xs text-destructive px-1">{uploadError}</p>
       )}
 
-      <PluginSlotOutlet
-        slotTypes={["toolbarButton", "contextMenuItem"]}
-        entityType="issue"
-        context={{
-          companyId: issue.companyId,
-          projectId: issue.projectId ?? null,
-          entityId: issue.id,
-          entityType: "issue",
-        }}
-        className="flex flex-wrap gap-2"
-        itemClassName="inline-flex"
-        missingBehavior="placeholder"
-      />
-
-      <PluginLauncherOutlet
-        placementZones={["toolbarButton"]}
-        entityType="issue"
-        context={{
-          companyId: issue.companyId,
-          projectId: issue.projectId ?? null,
-          entityId: issue.id,
-          entityType: "issue",
-        }}
-        className="flex flex-wrap gap-2"
-        itemClassName="inline-flex"
-      />
-
-      <PluginSlotOutlet
-        slotTypes={["taskDetailView"]}
-        entityType="issue"
-        context={{
-          companyId: issue.companyId,
-          projectId: issue.projectId ?? null,
-          entityId: issue.id,
-          entityType: "issue",
-        }}
-        className="space-y-3"
-        itemClassName="rounded-lg border border-border p-3"
-        missingBehavior="placeholder"
-      />
-
       <IssueDocumentsSection
         issue={issue}
         canDeleteDocuments={Boolean(session?.user?.id)}
@@ -1754,11 +1695,6 @@ export function IssueDetail() {
             <ActivityIcon className="h-3.5 w-3.5" />
             Activity
           </TabsTrigger>
-          {issuePluginTabItems.map((item) => (
-            <TabsTrigger key={item.value} value={item.value}>
-              {item.label}
-            </TabsTrigger>
-          ))}
         </TabsList>
 
         <TabsContent value="comments">
@@ -1933,20 +1869,6 @@ export function IssueDetail() {
           )}
         </TabsContent>
 
-        {activePluginTab && (
-          <TabsContent value={activePluginTab.value}>
-            <PluginSlotMount
-              slot={activePluginTab.slot}
-              context={{
-                companyId: issue.companyId,
-                projectId: issue.projectId ?? null,
-                entityId: issue.id,
-                entityType: "issue",
-              }}
-              missingBehavior="placeholder"
-            />
-          </TabsContent>
-        )}
       </Tabs>
 
       {linkedApprovals && linkedApprovals.length > 0 && (

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+<meta charset="UTF-8" />
+<title>Sprint Preview</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        background: '#0a0a0a',
+        card: '#111111',
+        border: '#1f1f1f',
+        muted: '#161616',
+        primary: '#4ade80',
+        accent: '#67e8f9',
+        sidebar: '#0d0d0d',
+        foreground: '#f5f5f5',
+      },
+      fontFamily: {
+        sans: ['Space Grotesk', 'sans-serif'],
+        display: ['Syne', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      }
+    }
+  }
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Syne:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { background: #0a0a0a; color: #f5f5f5; }
+  .drag-ghost {
+    animation: floatIn 0.15s ease-out;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(74,222,128,0.3);
+  }
+  @keyframes floatIn { from { opacity:0; transform: scale(0.96); } to { opacity:1; transform: scale(1); } }
+  .drop-zone-active { background: rgba(74,222,128,0.05); box-shadow: inset 0 0 0 1px rgba(74,222,128,0.2); }
+  .tab-active { border-bottom: 2px solid #4ade80; color: #f5f5f5; }
+  .tab-inactive { border-bottom: 2px solid transparent; color: #737373; }
+  .sprint-item-active { border-left: 2px solid #4ade80; background: rgba(74,222,128,0.06); }
+  .sprint-item { border-left: 2px solid transparent; }
+  .cursor-grab { cursor: grab; }
+  .cursor-grabbing { cursor: grabbing; }
+</style>
+</head>
+<body class="font-sans min-h-screen flex flex-col">
+
+<!-- Top nav -->
+<div class="h-10 border-b flex items-center px-4 gap-3 shrink-0" style="background:#0d0d0d;border-color:#1f1f1f">
+  <span class="font-display font-bold text-sm text-white">Paperclip</span>
+  <span class="text-[#333] text-xs">›</span>
+  <span class="text-xs text-[#737373]">Hit Estote</span>
+  <span class="text-[#333] text-xs">›</span>
+  <span class="text-xs text-[#f5f5f5]">Proyectos › Hit Estote</span>
+</div>
+
+<!-- Tab bar -->
+<div class="flex items-center gap-1 px-4 border-b shrink-0" style="background:#0d0d0d;border-color:#1f1f1f">
+  <button class="tab-inactive text-xs px-3 py-2.5">Overview</button>
+  <button class="tab-inactive text-xs px-3 py-2.5">Issues</button>
+  <button class="tab-inactive text-xs px-3 py-2.5">Biblioteca</button>
+  <button class="tab-active text-xs px-3 py-2.5 font-medium">Sprints</button>
+  <button class="tab-inactive text-xs px-3 py-2.5">Configuration</button>
+  <button class="tab-inactive text-xs px-3 py-2.5">Budget</button>
+</div>
+
+<!-- Tabs para alternar vistas -->
+<div class="flex gap-2 px-4 py-2 border-b text-xs" style="background:#0a0a0a;border-color:#1f1f1f">
+  <button onclick="showView('planning')" id="btn-planning" class="px-3 py-1 rounded-md text-[#4ade80] border border-[#4ade80]/30 bg-[#4ade80]/5 font-medium">Planning</button>
+  <button onclick="showView('board')" id="btn-board" class="px-3 py-1 rounded-md text-[#737373] border border-[#1f1f1f] hover:text-white">Board</button>
+</div>
+
+<!-- Main layout -->
+<div class="flex flex-1 min-h-0 overflow-hidden">
+
+  <!-- Sidebar -->
+  <div class="w-48 shrink-0 border-r flex flex-col" style="background:#0d0d0d;border-color:#1f1f1f">
+    <div class="p-3 border-b" style="border-color:#1f1f1f">
+      <button class="w-full flex items-center gap-1.5 text-xs px-2 py-1.5 rounded-md border text-[#737373] hover:text-white transition-colors" style="border-color:#1f1f1f">
+        <span class="text-base leading-none">+</span> Nuevo Sprint
+      </button>
+    </div>
+    <div class="flex-1 overflow-auto">
+      <button class="w-full text-left px-3 py-2.5 text-xs sprint-item">
+        <div class="flex items-center gap-1.5 mb-1 text-[#737373]">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <span class="font-medium truncate">Sprint 0</span>
+        </div>
+        <span class="text-[10px] px-1.5 py-0.5 rounded-sm border text-[#737373]" style="border-color:#1f1f1f">Completado</span>
+      </button>
+      <button class="w-full text-left px-3 py-2.5 text-xs sprint-item-active">
+        <div class="flex items-center gap-1.5 mb-1 text-white">
+          <svg class="w-3 h-3 text-[#4ade80]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <span class="font-medium truncate">Sprint 1</span>
+        </div>
+        <span class="text-[10px] px-1.5 py-0.5 rounded-sm border text-[#4ade80]" style="border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.08)">Planificando</span>
+      </button>
+    </div>
+    <div class="border-t p-2" style="border-color:#1f1f1f">
+      <button class="w-full text-left px-3 py-2 text-xs rounded-md flex items-center gap-1.5 text-[#737373] hover:bg-[#161616] hover:text-white transition-colors">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Métricas del proyecto
+      </button>
+    </div>
+  </div>
+
+  <!-- PLANNING VIEW -->
+  <div id="view-planning" class="flex-1 flex flex-col min-h-0 min-w-0">
+    <!-- Sprint header -->
+    <div class="flex items-center justify-between px-4 py-3 border-b shrink-0" style="border-color:#1f1f1f">
+      <div>
+        <h2 class="font-display font-semibold text-white">Sprint 1</h2>
+        <p class="text-xs mt-0.5" style="color:#737373">2026-04-10 → 2026-04-24 · 3 tareas asignadas</p>
+      </div>
+      <button class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium" style="background:#4ade80;color:#000">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Activar Sprint
+      </button>
+    </div>
+
+    <!-- Two panels -->
+    <div class="flex-1 min-h-0 grid grid-cols-2 overflow-hidden" style="border-right:none">
+
+      <!-- Backlog panel -->
+      <div class="flex flex-col min-h-0 border-r" style="border-color:#1f1f1f" id="panel-backlog">
+        <div class="flex items-center gap-2 px-3 py-2 border-b shrink-0" style="border-color:#1f1f1f">
+          <span class="text-[10px] font-semibold tracking-widest" style="color:#737373">BACKLOG</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded-sm" style="background:#1a1a1a;color:#737373">12</span>
+          <div class="flex-1"></div>
+          <div class="relative">
+            <svg class="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3" style="color:#737373" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input class="h-6 pl-6 text-xs w-28 rounded-md border outline-none" style="background:#111;border-color:#1f1f1f;color:#f5f5f5" placeholder="Buscar...">
+          </div>
+        </div>
+        <div class="flex-1 overflow-auto p-2 space-y-1" id="backlog-list">
+          <!-- Issues draggables -->
+          <div class="issue-card cursor-grab px-3 py-2 rounded-md border transition-colors select-none" style="border-color:#1f1f1f;background:#111" draggable="true" data-id="1">
+            <p class="text-sm text-white truncate">Fix: no firmar — puede ver todas las minutas pero solo firmar las aprobadas</p>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-xs font-medium" style="color:#ef4444">Critical</span>
+              <span class="text-xs font-mono" style="color:#737373">FAC-29</span>
+            </div>
+          </div>
+          <div class="issue-card cursor-grab px-3 py-2 rounded-md border transition-colors select-none" style="border-color:#1f1f1f;background:#111" draggable="true" data-id="2">
+            <p class="text-sm text-white truncate">Separar descripción y número de lote en exportación</p>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-xs font-medium" style="color:#f97316">High</span>
+              <span class="text-xs font-mono" style="color:#737373">FAC-30</span>
+            </div>
+          </div>
+          <div class="issue-card cursor-grab px-3 py-2 rounded-md border transition-colors select-none" style="border-color:#1f1f1f;background:#111" draggable="true" data-id="3">
+            <p class="text-sm text-white truncate">Asegurar orden correcto en la numeración de lotes</p>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-xs font-medium" style="color:#eab308">Medium</span>
+              <span class="text-xs font-mono" style="color:#737373">FAC-21</span>
+            </div>
+          </div>
+          <div class="issue-card cursor-grab px-3 py-2 rounded-md border transition-colors select-none" style="border-color:#1f1f1f;background:#111" draggable="true" data-id="4">
+            <p class="text-sm text-white truncate">Test: notificar a firmante cuando cambia estado de unidad</p>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-xs font-medium" style="color:#eab308">Medium</span>
+              <span class="text-xs font-mono" style="color:#737373">FAC-22</span>
+            </div>
+          </div>
+          <div class="issue-card cursor-grab px-3 py-2 rounded-md border transition-colors select-none" style="border-color:#1f1f1f;background:#111" draggable="true" data-id="5">
+            <p class="text-sm text-white truncate">Fix: horizontal scrollbar en bottom table</p>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-xs font-medium" style="color:#737373">Low</span>
+              <span class="text-xs font-mono" style="color:#737373">FAC-22</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sprint panel -->
+      <div class="flex flex-col min-h-0" id="panel-sprint">
+        <div class="flex items-center gap-2 px-3 py-2 border-b shrink-0" style="border-color:#1f1f1f">
+          <span class="text-[10px] font-semibold tracking-widest" style="color:#737373">SPRINT 1</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded-sm" id="sprint-count" style="background:#1a1a1a;color:#737373">3</span>
+        </div>
+        <div class="flex-1 overflow-auto p-2 space-y-1" id="sprint-list">
+          <div class="issue-card cursor-grab px-3 py-2 rounded-md border transition-colors select-none" style="border-color:#1f1f1f;background:#111" draggable="true" data-id="s1">
+            <p class="text-sm text-white truncate">Fix: campo título comercial unidad funcional</p>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-xs font-medium" style="color:#ef4444">Critical</span>
+              <span class="text-xs font-mono" style="color:#737373">FAC-26</span>
+            </div>
+          </div>
+          <div class="issue-card cursor-grab px-3 py-2 rounded-md border transition-colors select-none" style="border-color:#1f1f1f;background:#111" draggable="true" data-id="s2">
+            <p class="text-sm text-white truncate">Fix: todos deben ordenarse primero por manzana</p>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-xs font-medium" style="color:#eab308">Medium</span>
+              <span class="text-xs font-mono" style="color:#737373">FAC-23</span>
+            </div>
+          </div>
+          <div class="issue-card cursor-grab px-3 py-2 rounded-md border transition-colors select-none" style="border-color:#1f1f1f;background:#111" draggable="true" data-id="s3">
+            <p class="text-sm text-white truncate">Cambiar un umbral de tipo lote al número de unidad</p>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-xs font-medium" style="color:#eab308">Medium</span>
+              <span class="text-xs font-mono" style="color:#737373">FAC-13</span>
+            </div>
+          </div>
+          <div id="sprint-empty" class="hidden text-xs text-center py-8" style="color:#737373">
+            Arrastrá tareas del backlog
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BOARD VIEW -->
+  <div id="view-board" class="flex-1 flex-col min-h-0 min-w-0 hidden">
+    <div class="flex items-center justify-between px-4 py-3 border-b shrink-0" style="border-color:#1f1f1f">
+      <div class="flex items-center gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="font-display font-semibold text-white">Sprint 1</h2>
+            <span class="text-[10px] px-1.5 py-0.5 rounded-sm border font-medium" style="color:#4ade80;border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.08)">Activo</span>
+          </div>
+          <p class="text-xs mt-0.5" style="color:#737373">2026-04-10 → 2026-04-24</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="w-20 h-1.5 rounded-full overflow-hidden" style="background:#1a1a1a">
+            <div class="h-full rounded-full" style="width:25%;background:#4ade80"></div>
+          </div>
+          <span class="text-xs" style="color:#737373">1/4</span>
+        </div>
+      </div>
+      <button class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium" style="background:#ef4444;color:#fff">
+        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        Cerrar Sprint
+      </button>
+    </div>
+
+    <div class="flex-1 min-h-0 grid grid-cols-4 overflow-hidden" style="divide-x:1px solid #1f1f1f">
+      <!-- Todo -->
+      <div class="flex flex-col min-h-0 border-r" style="border-color:#1f1f1f">
+        <div class="px-3 py-2 border-b flex items-center gap-1.5 shrink-0" style="border-color:#1f1f1f">
+          <span class="text-[10px] font-semibold tracking-widest" style="color:#737373">TODO</span>
+          <span class="text-[10px]" style="color:#737373">2</span>
+        </div>
+        <div class="flex-1 overflow-auto p-2 space-y-1.5">
+          <div class="cursor-grab rounded-md border p-2.5 select-none transition-colors" style="background:#111;border-color:#1f1f1f">
+            <p class="text-sm text-white leading-snug">Separar descripción y número de lote</p>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="text-xs font-medium" style="color:#f97316">High</span>
+              <span class="text-xs font-mono" style="color:#737373">FAC-30</span>
+            </div>
+          </div>
+          <div class="cursor-grab rounded-md border p-2.5 select-none transition-colors" style="background:#111;border-color:#1f1f1f">
+            <p class="text-sm text-white leading-snug">Asegurar orden correcto en numeración</p>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="text-xs font-medium" style="color:#eab308">Medium</span>
+              <span class="text-xs font-mono" style="color:#737373">FAC-21</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- In Progress -->
+      <div class="flex flex-col min-h-0 border-r" style="border-color:#1f1f1f">
+        <div class="px-3 py-2 border-b flex items-center gap-1.5 shrink-0" style="border-color:#1f1f1f">
+          <span class="text-[10px] font-semibold tracking-widest" style="color:#67e8f9">IN PROGRESS</span>
+          <span class="text-[10px]" style="color:#737373">1</span>
+        </div>
+        <div class="flex-1 overflow-auto p-2 space-y-1.5">
+          <div class="cursor-grab rounded-md border p-2.5 select-none transition-colors" style="background:#111;border-color:rgba(74,222,128,0.25)">
+            <p class="text-sm text-white leading-snug">Fix: campo título comercial unidad funcional</p>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="text-xs font-medium" style="color:#ef4444">Critical</span>
+              <span class="text-xs font-mono" style="color:#737373">FAC-26</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- In Review -->
+      <div class="flex flex-col min-h-0 border-r" style="border-color:#1f1f1f">
+        <div class="px-3 py-2 border-b flex items-center gap-1.5 shrink-0" style="border-color:#1f1f1f">
+          <span class="text-[10px] font-semibold tracking-widest" style="color:#eab308">IN REVIEW</span>
+          <span class="text-[10px]" style="color:#737373">0</span>
+        </div>
+        <div class="flex-1 overflow-auto p-2">
+          <div class="rounded-md border border-dashed p-4 text-center text-xs mt-1" style="border-color:#1f1f1f;color:rgba(115,115,115,0.5)">vacío</div>
+        </div>
+      </div>
+      <!-- Done -->
+      <div class="flex flex-col min-h-0">
+        <div class="px-3 py-2 border-b flex items-center gap-1.5 shrink-0" style="border-color:#1f1f1f">
+          <span class="text-[10px] font-semibold tracking-widest" style="color:#4ade80">DONE</span>
+          <span class="text-[10px]" style="color:#737373">1</span>
+        </div>
+        <div class="flex-1 overflow-auto p-2 space-y-1.5">
+          <div class="cursor-grab rounded-md border p-2.5 select-none opacity-60" style="background:#111;border-color:#1f1f1f">
+            <p class="text-sm text-white leading-snug">Fix: horizontal scrollbar en bottom table</p>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="text-xs font-medium" style="color:#737373">Low</span>
+              <span class="text-xs font-mono" style="color:#737373">FAC-22</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Toggle views
+function showView(v) {
+  document.getElementById('view-planning').style.display = v === 'planning' ? 'flex' : 'none';
+  document.getElementById('view-board').style.display = v === 'board' ? 'flex' : 'none';
+  document.getElementById('btn-planning').style.cssText = v === 'planning'
+    ? 'color:#4ade80;border:1px solid rgba(74,222,128,0.3);background:rgba(74,222,128,0.05);padding:2px 12px;border-radius:6px;font-weight:500'
+    : 'color:#737373;border:1px solid #1f1f1f;background:transparent;padding:2px 12px;border-radius:6px';
+  document.getElementById('btn-board').style.cssText = v === 'board'
+    ? 'color:#4ade80;border:1px solid rgba(74,222,128,0.3);background:rgba(74,222,128,0.05);padding:2px 12px;border-radius:6px;font-weight:500'
+    : 'color:#737373;border:1px solid #1f1f1f;background:transparent;padding:2px 12px;border-radius:6px';
+}
+
+// Drag-and-drop en planning
+let dragging = null;
+let fromList = null;
+const backlogList = document.getElementById('backlog-list');
+const sprintList  = document.getElementById('sprint-list');
+const panelBacklog = document.getElementById('panel-backlog');
+const panelSprint  = document.getElementById('panel-sprint');
+
+document.querySelectorAll('.issue-card').forEach(card => setupDrag(card));
+
+function setupDrag(card) {
+  card.addEventListener('dragstart', e => {
+    dragging = card;
+    fromList = card.closest('#backlog-list') ? 'backlog' : 'sprint';
+    setTimeout(() => card.style.opacity = '0.35', 0);
+  });
+  card.addEventListener('dragend', () => {
+    if(dragging) dragging.style.opacity = '1';
+    dragging = null;
+    panelBacklog.style.background = '';
+    panelSprint.style.background  = '';
+  });
+}
+
+[panelBacklog, panelSprint].forEach(panel => {
+  panel.addEventListener('dragover', e => {
+    e.preventDefault();
+    const isBacklog = panel.id === 'panel-backlog';
+    panelBacklog.style.background = isBacklog ? 'rgba(74,222,128,0.04)' : '';
+    panelSprint.style.background  = !isBacklog ? 'rgba(74,222,128,0.04)' : '';
+  });
+  panel.addEventListener('dragleave', () => {
+    panelBacklog.style.background = '';
+    panelSprint.style.background  = '';
+  });
+  panel.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!dragging) return;
+    const targetList = panel.id === 'panel-backlog' ? backlogList : sprintList;
+    const sourceList = fromList === 'backlog' ? backlogList : sprintList;
+    if (targetList !== sourceList) {
+      targetList.appendChild(dragging);
+      setupDrag(dragging);
+      updateCount();
+    }
+    panelBacklog.style.background = '';
+    panelSprint.style.background  = '';
+  });
+});
+
+function updateCount() {
+  const n = sprintList.querySelectorAll('.issue-card').length;
+  document.getElementById('sprint-count').textContent = n;
+  document.getElementById('sprint-empty').style.display = n === 0 ? 'block' : 'none';
+}
+</script>
+</body>
+</html>

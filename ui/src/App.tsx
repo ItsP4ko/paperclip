@@ -48,9 +48,6 @@ const DesignGuide = lazy(() => import("./pages/DesignGuide").then((m) => ({ defa
 const InstanceGeneralSettings = lazy(() => import("./pages/InstanceGeneralSettings").then((m) => ({ default: m.InstanceGeneralSettings })));
 const InstanceSettings = lazy(() => import("./pages/InstanceSettings").then((m) => ({ default: m.InstanceSettings })));
 const InstanceExperimentalSettings = lazy(() => import("./pages/InstanceExperimentalSettings").then((m) => ({ default: m.InstanceExperimentalSettings })));
-const PluginManager = lazy(() => import("./pages/PluginManager").then((m) => ({ default: m.PluginManager })));
-const PluginSettings = lazy(() => import("./pages/PluginSettings").then((m) => ({ default: m.PluginSettings })));
-const PluginPage = lazy(() => import("./pages/PluginPage").then((m) => ({ default: m.PluginPage })));
 const RunTranscriptUxLab = lazy(() => import("./pages/RunTranscriptUxLab").then((m) => ({ default: m.RunTranscriptUxLab })));
 const Org = lazy(() => import("./pages/Org").then((m) => ({ default: m.Org })));
 const Members = lazy(() => import("./pages/Members").then((m) => ({ default: m.Members })));
@@ -149,7 +146,6 @@ function boardRoutes() {
       <Route path="skills/*" element={<S><CompanySkills /></S>} />
       <Route path="settings" element={<LegacySettingsRedirect />} />
       <Route path="settings/*" element={<LegacySettingsRedirect />} />
-      <Route path="plugins/:pluginId" element={<S><PluginPage /></S>} />
       <Route path="org" element={<S><Org /></S>} />
       <Route path="members" element={<S><Members /></S>} />
       <Route path="groups" element={<S><Groups /></S>} />
@@ -201,7 +197,6 @@ function boardRoutes() {
       <Route path="inbox/new" element={<Navigate to="/inbox/mine" replace />} />
       <Route path="design-guide" element={<S><DesignGuide /></S>} />
       <Route path="tests/ux/runs" element={<S><RunTranscriptUxLab /></S>} />
-      <Route path=":pluginRoutePath" element={<S><PluginPage /></S>} />
       <Route path="*" element={<S><NotFoundPage scope="board" /></S>} />
     </>
   );
@@ -346,8 +341,6 @@ export function App() {
             <Route path="general" element={<S><InstanceGeneralSettings /></S>} />
             <Route path="heartbeats" element={<S><InstanceSettings /></S>} />
             <Route path="experimental" element={<S><InstanceExperimentalSettings /></S>} />
-            <Route path="plugins" element={<S><PluginManager /></S>} />
-            <Route path="plugins/:pluginId" element={<S><PluginSettings /></S>} />
           </Route>
           <Route path="companies" element={<UnprefixedBoardRedirect />} />
           <Route path="issues" element={<UnprefixedBoardRedirect />} />

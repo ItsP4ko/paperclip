@@ -24,7 +24,6 @@ import { CircleDot, DollarSign, ShieldCheck, LayoutDashboard, PauseCircle, Smart
 import { ChartCard, TasksThroughputChart, SpendPerDayChart, SpendByProviderChart, TasksByStatusChart } from "../components/ActivityCharts";
 import { PageSkeleton } from "../components/PageSkeleton";
 import type { Agent, Issue } from "@paperclipai/shared";
-import { PluginSlotOutlet } from "@/plugins/slots";
 
 // --- Remote Control mini widget (Tauri only) ---
 
@@ -392,13 +391,6 @@ export function Dashboard() {
               <TasksByStatusChart issues={issues ?? []} />
             </ChartCard>
           </div>
-
-          <PluginSlotOutlet
-            slotTypes={["dashboardWidget"]}
-            context={{ companyId: selectedCompanyId }}
-            className="grid gap-4 md:grid-cols-2"
-            itemClassName="rounded-lg border bg-card p-4 shadow-sm"
-          />
 
           <div data-animate="bottom" className="grid md:grid-cols-2 gap-4">
             {/* Recent Activity */}

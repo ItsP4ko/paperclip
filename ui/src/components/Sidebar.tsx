@@ -37,7 +37,6 @@ import { authApi } from "../api/auth";
 import { queryKeys } from "../lib/queryKeys";
 import { useMemberRole } from "../hooks/useMemberRole";
 import { Button } from "@/components/ui/button";
-import { PluginSlotOutlet } from "@/plugins/slots";
 import { RunnerStatusIndicator } from "./RunnerStatusIndicator";
 import { DesktopDownloadButton } from "./DesktopDownloadButton";
 
@@ -76,11 +75,6 @@ export function Sidebar() {
   function openSearch() {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
   }
-
-  const pluginContext = {
-    companyId: selectedCompanyId,
-    companyPrefix: selectedCompany?.issuePrefix ?? null,
-  };
 
   return (
     <aside className="w-60 h-full min-h-0 border-r border-border bg-background flex flex-col">
@@ -124,13 +118,6 @@ export function Sidebar() {
             badgeTone={badges && badges.failedRuns > 0 ? "danger" : "default"}
             alert={badges ? badges.failedRuns > 0 : false}
           />
-          <PluginSlotOutlet
-            slotTypes={["sidebar"]}
-            context={pluginContext}
-            className="flex flex-col gap-0.5"
-            itemClassName="text-[13px] font-medium"
-            missingBehavior="placeholder"
-          />
         </div>
 
         <SidebarSection label="Work">
@@ -166,13 +153,6 @@ export function Sidebar() {
           </SidebarCollapsible>
         </SidebarSection>
 
-        <PluginSlotOutlet
-          slotTypes={["sidebarPanel"]}
-          context={pluginContext}
-          className="flex flex-col gap-3"
-          itemClassName="rounded-lg border border-border p-3"
-          missingBehavior="placeholder"
-        />
       </nav>
 
       <DesktopDownloadButton />

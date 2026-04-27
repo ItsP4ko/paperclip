@@ -100,16 +100,6 @@ vi.mock("../lib/keyboardShortcuts", () => ({
   resolveInboxQuickArchiveKeyAction: () => null,
 }));
 
-vi.mock("@/plugins/slots", () => ({
-  PluginSlotMount: () => <div />,
-  PluginSlotOutlet: () => <div />,
-  usePluginSlots: () => ({ slots: [], hasSlotContent: () => false }),
-}));
-
-vi.mock("@/plugins/launchers", () => ({
-  PluginLauncherOutlet: () => <div />,
-}));
-
 // Mock heavy components that pull in @mdxeditor / sandpack (stitches CSS causes jsdom errors)
 vi.mock("../components/InlineEditor", () => ({
   InlineEditor: () => <div />,

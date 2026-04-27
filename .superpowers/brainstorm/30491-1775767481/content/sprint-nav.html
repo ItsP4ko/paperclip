@@ -1,0 +1,114 @@
+<h2>¿Cómo organizamos Sprints dentro del Proyecto?</h2>
+<p class="subtitle">Tres opciones para la navegación. Elegí la que mejor refleja cómo querés trabajar.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="font-family:monospace;font-size:11px;background:#0f0f0f;border-radius:6px;padding:12px;color:#ccc;">
+        <div style="color:#666;margin-bottom:8px;">ProjectDetail tabs</div>
+        <div style="display:flex;gap:6px;border-bottom:1px solid #333;padding-bottom:6px;margin-bottom:8px;">
+          <span style="padding:3px 8px;border-radius:4px;background:#222;color:#aaa;font-size:10px;">Overview</span>
+          <span style="padding:3px 8px;border-radius:4px;background:#222;color:#aaa;font-size:10px;">Issues</span>
+          <span style="padding:3px 8px;border-radius:4px;background:#6366f1;color:#fff;font-size:10px;">Sprints ✦</span>
+          <span style="padding:3px 8px;border-radius:4px;background:#222;color:#aaa;font-size:10px;">Workspaces</span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div style="width:110px;background:#111;border-radius:4px;padding:8px;font-size:10px;color:#888;">
+            <div style="color:#fff;margin-bottom:6px;font-size:10px;">📋 Backlog</div>
+            <div style="color:#6366f1;margin-bottom:4px;font-size:10px;">▶ Sprint Activo</div>
+            <div style="color:#666;font-size:10px;">Sprint #3</div>
+            <div style="color:#666;font-size:10px;">Sprint #2</div>
+            <div style="color:#666;font-size:10px;">Sprint #1</div>
+          </div>
+          <div style="flex:1;background:#111;border-radius:4px;padding:8px;">
+            <div style="color:#fff;font-size:10px;margin-bottom:4px;">Sprint Activo — Board</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
+              <div style="background:#1a1a1a;border-radius:3px;padding:4px;font-size:9px;color:#aaa;">Todo<br><div style="background:#222;border-radius:2px;padding:2px;margin-top:2px;">Task A</div></div>
+              <div style="background:#1a1a1a;border-radius:3px;padding:4px;font-size:9px;color:#aaa;">In Progress<br><div style="background:#222;border-radius:2px;padding:2px;margin-top:2px;">Task B</div></div>
+              <div style="background:#1a1a1a;border-radius:3px;padding:4px;font-size:9px;color:#aaa;">Done<br><div style="background:#222;border-radius:2px;padding:2px;margin-top:2px;">Task C</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Tab de Sprints en ProjectDetail</h3>
+      <p>Un tab "Sprints" se agrega al header del proyecto. Adentro: sidebar izquierda con backlog + lista de sprints, área principal con el board o vista de planificación. Todo dentro del proyecto.</p>
+      <div class="pros-cons" style="margin-top:8px;font-size:12px;">
+        <div class="pros"><ul><li>Máxima visibilidad dentro del proyecto</li><li>Patrón consistente con los otros tabs</li></ul></div>
+        <div class="cons"><ul><li>Tab más entre los existentes</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="font-family:monospace;font-size:11px;background:#0f0f0f;border-radius:6px;padding:12px;color:#ccc;">
+        <div style="color:#666;margin-bottom:8px;">ProjectDetail tabs</div>
+        <div style="display:flex;gap:6px;border-bottom:1px solid #333;padding-bottom:6px;margin-bottom:8px;">
+          <span style="padding:3px 8px;border-radius:4px;background:#222;color:#aaa;font-size:10px;">Overview</span>
+          <span style="padding:3px 8px;border-radius:4px;background:#6366f1;color:#fff;font-size:10px;">Issues ✦</span>
+          <span style="padding:3px 8px;border-radius:4px;background:#222;color:#aaa;font-size:10px;">Workspaces</span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;background:#111;border-radius:4px;padding:8px;">
+            <div style="display:flex;gap:4px;margin-bottom:6px;">
+              <span style="padding:2px 6px;border-radius:3px;background:#222;color:#aaa;font-size:9px;">📋 Backlog</span>
+              <span style="padding:2px 6px;border-radius:3px;background:#6366f1;color:#fff;font-size:9px;">▶ Board Sprint</span>
+              <span style="padding:2px 6px;border-radius:3px;background:#222;color:#aaa;font-size:9px;">📊 Métricas</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
+              <div style="background:#1a1a1a;border-radius:3px;padding:4px;font-size:9px;color:#aaa;">Todo<br><div style="background:#222;border-radius:2px;padding:2px;margin-top:2px;">Task A</div></div>
+              <div style="background:#1a1a1a;border-radius:3px;padding:4px;font-size:9px;color:#aaa;">In Progress<br><div style="background:#222;border-radius:2px;padding:2px;margin-top:2px;">Task B</div></div>
+              <div style="background:#1a1a1a;border-radius:3px;padding:4px;font-size:9px;color:#aaa;">Done<br><div style="background:#222;border-radius:2px;padding:2px;margin-top:2px;">Task C</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Sub-tabs dentro de "Issues"</h3>
+      <p>El tab de Issues pasa a tener sub-navegación: Backlog / Board Sprint / Métricas. El sprint es una vista más del trabajo, no una sección separada.</p>
+      <div class="pros-cons" style="margin-top:8px;font-size:12px;">
+        <div class="pros"><ul><li>Integrado con el flujo de issues</li><li>No agrega tabs al header</li></ul></div>
+        <div class="cons"><ul><li>Sprints queda "escondido" bajo Issues</li><li>Métricas menos prominentes</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="font-family:monospace;font-size:11px;background:#0f0f0f;border-radius:6px;padding:12px;color:#ccc;">
+        <div style="color:#666;margin-bottom:8px;">ProjectDetail tabs</div>
+        <div style="display:flex;gap:6px;border-bottom:1px solid #333;padding-bottom:6px;margin-bottom:8px;">
+          <span style="padding:3px 8px;border-radius:4px;background:#222;color:#aaa;font-size:10px;">Overview</span>
+          <span style="padding:3px 8px;border-radius:4px;background:#222;color:#aaa;font-size:10px;">Backlog</span>
+          <span style="padding:3px 8px;border-radius:4px;background:#6366f1;color:#fff;font-size:10px;">Board ✦</span>
+          <span style="padding:3px 8px;border-radius:4px;background:#222;color:#aaa;font-size:10px;">Sprints</span>
+          <span style="padding:3px 8px;border-radius:4px;background:#222;color:#aaa;font-size:10px;">Métricas</span>
+        </div>
+        <div style="background:#111;border-radius:4px;padding:8px;">
+          <div style="color:#fff;font-size:10px;margin-bottom:4px;">Board — Sprint #4 (activo)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;">
+            <div style="background:#1a1a1a;border-radius:3px;padding:4px;font-size:9px;color:#aaa;">Backlog<br><div style="background:#222;border-radius:2px;padding:2px;margin-top:2px;">Task D</div></div>
+            <div style="background:#1a1a1a;border-radius:3px;padding:4px;font-size:9px;color:#aaa;">Todo<br><div style="background:#222;border-radius:2px;padding:2px;margin-top:2px;">Task A</div></div>
+            <div style="background:#1a1a1a;border-radius:3px;padding:4px;font-size:9px;color:#aaa;">In Progress<br><div style="background:#222;border-radius:2px;padding:2px;margin-top:2px;">Task B</div></div>
+            <div style="background:#1a1a1a;border-radius:3px;padding:4px;font-size:9px;color:#aaa;">Done<br><div style="background:#222;border-radius:2px;padding:2px;margin-top:2px;">Task C</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Tabs separados por vista</h3>
+      <p>Cada concepto tiene su propio tab: Backlog, Board (sprint activo), Sprints (historial), Métricas. Máxima claridad conceptual.</p>
+      <div class="pros-cons" style="margin-top:8px;font-size:12px;">
+        <div class="pros"><ul><li>Cada vista bien definida</li><li>Métricas prominentes</li></ul></div>
+        <div class="cons"><ul><li>Muchos tabs en el header</li><li>Fragmenta la navegación</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px;">Mi recomendación: <strong>Opción A</strong> — un tab "Sprints" con sidebar interna. Sigue el patrón del proyecto y mantiene backlog + board + historial accesibles sin fragmentar el header.</p>

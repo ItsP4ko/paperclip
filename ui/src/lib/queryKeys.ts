@@ -196,14 +196,4 @@ export const queryKeys = {
     detail: (companyId: string, groupId: string) => ["groups", companyId, groupId] as const,
     forProject: (projectId: string) => ["groups", "project", projectId] as const,
   },
-  plugins: {
-    all: ["plugins"] as const,
-    examples: ["plugins", "examples"] as const,
-    detail: (pluginId: string) => ["plugins", pluginId] as const,
-    health: (pluginId: string) => ["plugins", pluginId, "health"] as const,
-    uiContributions: ["plugins", "ui-contributions"] as const,
-    config: (pluginId: string) => ["plugins", pluginId, "config"] as const,
-    dashboard: (pluginId: string) => ["plugins", pluginId, "dashboard"] as const,
-    logs: (pluginId: string) => ["plugins", pluginId, "logs"] as const,
-  },
 };

@@ -1,0 +1,180 @@
+<h2>Panel de Métricas — Por Proyecto</h2>
+<p class="subtitle">Velocidad de sprints, tareas pendientes acumuladas, tiempos por estado y actividad por usuario.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Proyecto: Paperclip UI — Sprints → Métricas</div>
+  <div class="mockup-body" style="padding:0;">
+    <div style="font-family:monospace;font-size:10px;color:#ccc;height:560px;overflow-y:auto;">
+
+      <!-- TOP KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:#1a1a1a;border-bottom:1px solid #222;">
+        <div style="background:#111;padding:12px 14px;">
+          <div style="color:#555;font-size:8px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Sprints completados</div>
+          <div style="color:#fff;font-size:20px;font-weight:700;">3</div>
+          <div style="color:#22c55e;font-size:8px;margin-top:2px;">de 3 totales</div>
+        </div>
+        <div style="background:#111;padding:12px 14px;">
+          <div style="color:#555;font-size:8px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Velocidad promedio</div>
+          <div style="color:#fff;font-size:20px;font-weight:700;">6.3</div>
+          <div style="color:#555;font-size:8px;margin-top:2px;">tareas/sprint</div>
+        </div>
+        <div style="background:#111;padding:12px 14px;">
+          <div style="color:#555;font-size:8px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Tasa de spill-over</div>
+          <div style="color:#f59e0b;font-size:20px;font-weight:700;">28%</div>
+          <div style="color:#555;font-size:8px;margin-top:2px;">tareas que pasan de sprint</div>
+        </div>
+        <div style="background:#111;padding:12px 14px;">
+          <div style="color:#555;font-size:8px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Cycle time promedio</div>
+          <div style="color:#fff;font-size:20px;font-weight:700;">2.4d</div>
+          <div style="color:#555;font-size:8px;margin-top:2px;">todo → done</div>
+        </div>
+        <div style="background:#111;padding:12px 14px;">
+          <div style="color:#555;font-size:8px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Tareas completadas</div>
+          <div style="color:#22c55e;font-size:20px;font-weight:700;">19</div>
+          <div style="color:#555;font-size:8px;margin-top:2px;">total histórico</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid #1a1a1a;">
+
+        <!-- SPILL-OVER POR SPRINT -->
+        <div style="padding:14px;border-right:1px solid #1a1a1a;">
+          <div style="color:#aaa;font-size:9px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Tareas pendientes por sprint <span style="color:#555;">(spill-over)</span></div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="color:#888;font-size:9px;width:55px;">Sprint #1</div>
+              <div style="flex:1;background:#1a1a1a;border-radius:2px;height:14px;overflow:hidden;">
+                <div style="width:16%;height:100%;background:#22c55e;border-radius:2px;"></div>
+              </div>
+              <div style="color:#22c55e;font-size:9px;width:30px;text-align:right;">1 →</div>
+              <div style="color:#555;font-size:8px;">backlog</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="color:#888;font-size:9px;width:55px;">Sprint #2</div>
+              <div style="flex:1;background:#1a1a1a;border-radius:2px;height:14px;overflow:hidden;">
+                <div style="width:37%;height:100%;background:#f59e0b;border-radius:2px;"></div>
+              </div>
+              <div style="color:#f59e0b;font-size:9px;width:30px;text-align:right;">3 →</div>
+              <div style="color:#555;font-size:8px;">Sprint #3</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="color:#888;font-size:9px;width:55px;">Sprint #3</div>
+              <div style="flex:1;background:#1a1a1a;border-radius:2px;height:14px;overflow:hidden;">
+                <div style="width:57%;height:100%;background:#ef4444;border-radius:2px;"></div>
+              </div>
+              <div style="color:#ef4444;font-size:9px;width:30px;text-align:right;">4 →</div>
+              <div style="color:#555;font-size:8px;">Sprint #4</div>
+            </div>
+          </div>
+          <!-- tareas que rebotaron más de 1 sprint -->
+          <div style="margin-top:10px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:8px;">
+            <div style="color:#f59e0b;font-size:9px;margin-bottom:5px;">⚠ Tareas que rebotaron 2+ sprints</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #222;">
+              <span style="color:#aaa;font-size:9px;">PC-031 · Paginación en Issues</span>
+              <span style="background:#ef444422;border:1px solid #ef444444;color:#ef4444;border-radius:2px;padding:1px 5px;font-size:8px;">3 sprints</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;">
+              <span style="color:#aaa;font-size:9px;">PC-038 · Refactor sidebar</span>
+              <span style="background:#f59e0b22;border:1px solid #f59e0b44;color:#f59e0b;border-radius:2px;padding:1px 5px;font-size:8px;">2 sprints</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TIEMPO POR ESTADO -->
+        <div style="padding:14px;">
+          <div style="color:#aaa;font-size:9px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Tiempo promedio por estado</div>
+          <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="color:#888;font-size:9px;width:70px;">Todo</div>
+              <div style="flex:1;background:#1a1a1a;border-radius:2px;height:12px;overflow:hidden;">
+                <div style="width:20%;height:100%;background:#6366f144;border-radius:2px;"></div>
+              </div>
+              <div style="color:#888;font-size:9px;width:28px;text-align:right;">0.6d</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="color:#888;font-size:9px;width:70px;">In Progress</div>
+              <div style="flex:1;background:#1a1a1a;border-radius:2px;height:12px;overflow:hidden;">
+                <div style="width:60%;height:100%;background:#6366f1;border-radius:2px;"></div>
+              </div>
+              <div style="color:#6366f1;font-size:9px;width:28px;text-align:right;">1.5d</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="color:#888;font-size:9px;width:70px;">In Review</div>
+              <div style="flex:1;background:#1a1a1a;border-radius:2px;height:12px;overflow:hidden;">
+                <div style="width:28%;height:100%;background:#f59e0b;border-radius:2px;"></div>
+              </div>
+              <div style="color:#f59e0b;font-size:9px;width:28px;text-align:right;">0.9d</div>
+            </div>
+          </div>
+
+          <!-- historial de movimientos por tarea -->
+          <div style="color:#aaa;font-size:9px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;margin-top:8px;">Log de movimientos por tarea</div>
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:4px;overflow:hidden;">
+            <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0;font-size:8px;color:#555;padding:4px 8px;border-bottom:1px solid #1a1a1a;text-transform:uppercase;letter-spacing:.5px;">
+              <span>Tarea</span><span>De</span><span>→ A</span><span>Usuario · Tiempo</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px;padding:5px 8px;border-bottom:1px solid #111;align-items:center;">
+              <span style="color:#aaa;">PC-044</span>
+              <span style="background:#222;border-radius:2px;padding:1px 4px;color:#888;">Todo</span>
+              <span style="background:#6366f133;border-radius:2px;padding:1px 4px;color:#6366f1;">In Prog</span>
+              <span style="color:#555;">@valen · 2h</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px;padding:5px 8px;border-bottom:1px solid #111;align-items:center;">
+              <span style="color:#aaa;">PC-043</span>
+              <span style="background:#222;border-radius:2px;padding:1px 4px;color:#888;">Todo</span>
+              <span style="background:#6366f133;border-radius:2px;padding:1px 4px;color:#6366f1;">In Prog</span>
+              <span style="color:#555;">@gromo · 5h</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px;padding:5px 8px;border-bottom:1px solid #111;align-items:center;">
+              <span style="color:#aaa;">PC-040</span>
+              <span style="background:#6366f133;border-radius:2px;padding:1px 4px;color:#6366f1;">In Prog</span>
+              <span style="background:#f59e0b22;border-radius:2px;padding:1px 4px;color:#f59e0b;">Review</span>
+              <span style="color:#555;">@valen · 1.2d</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px;padding:5px 8px;align-items:center;">
+              <span style="color:#aaa;">PC-040</span>
+              <span style="background:#f59e0b22;border-radius:2px;padding:1px 4px;color:#f59e0b;">Review</span>
+              <span style="background:#22c55e22;border-radius:2px;padding:1px 4px;color:#22c55e;">Done</span>
+              <span style="color:#555;">@gromo · 6h</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVIDAD POR USUARIO -->
+      <div style="padding:14px;">
+        <div style="color:#aaa;font-size:9px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Actividad por usuario — histórico del proyecto</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:10px;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+              <div style="width:22px;height:22px;background:#6366f1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700;">V</div>
+              <span style="color:#ddd;font-size:10px;">@valen</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:8px;">
+              <div style="color:#555;">Completadas</div><div style="color:#22c55e;text-align:right;">11</div>
+              <div style="color:#555;">Avg cycle</div><div style="color:#aaa;text-align:right;">2.1d</div>
+              <div style="color:#555;">Movimientos</div><div style="color:#aaa;text-align:right;">34</div>
+            </div>
+          </div>
+          <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:10px;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+              <div style="width:22px;height:22px;background:#f59e0b;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;color:#000;font-weight:700;">G</div>
+              <span style="color:#ddd;font-size:10px;">@gromo</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:8px;">
+              <div style="color:#555;">Completadas</div><div style="color:#22c55e;text-align:right;">8</div>
+              <div style="color:#555;">Avg cycle</div><div style="color:#aaa;text-align:right;">2.9d</div>
+              <div style="color:#555;">Movimientos</div><div style="color:#aaa;text-align:right;">21</div>
+            </div>
+          </div>
+          <div style="background:#1a1a1a;border:1px solid #1a1a1a;border-radius:4px;padding:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:.4;">
+            <div style="color:#555;font-size:9px;">+ agregar miembro</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:12px;">¿Falta alguna métrica? ¿O cambiamos algo de lo que se muestra?</p>

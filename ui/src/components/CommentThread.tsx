@@ -22,7 +22,6 @@ import type { IssueTimelineAssignee, IssueTimelineEvent } from "../lib/issue-tim
 import { timeAgo } from "../lib/timeAgo";
 import { cn, formatDateTime } from "../lib/utils";
 import { restoreSubmittedCommentDraft } from "../lib/comment-submit-draft";
-import { PluginSlotOutlet } from "@/plugins/slots";
 
 interface CommentWithRunMeta extends IssueComment {
   runId?: string | null;
@@ -281,22 +280,6 @@ function CommentCard({
               Queued
             </span>
           ) : null}
-          {companyId && !isPending ? (
-            <PluginSlotOutlet
-              slotTypes={["commentContextMenuItem"]}
-              entityType="comment"
-              context={{
-                companyId,
-                projectId: projectId ?? null,
-                entityId: comment.id,
-                entityType: "comment",
-                parentEntityId: comment.issueId,
-              }}
-              className="flex flex-wrap items-center gap-1.5"
-              itemClassName="inline-flex"
-              missingBehavior="placeholder"
-            />
-          ) : null}
           {isPending ? (
             <span className="text-xs text-muted-foreground">{isQueued ? "Queueing..." : "Sending..."}</span>
           ) : (
@@ -311,24 +294,6 @@ function CommentCard({
         </span>
       </div>
       <MarkdownBody className="text-sm">{comment.body}</MarkdownBody>
-      {companyId && !isPending ? (
-        <div className="mt-2 space-y-2">
-          <PluginSlotOutlet
-            slotTypes={["commentAnnotation"]}
-            entityType="comment"
-            context={{
-              companyId,
-              projectId: projectId ?? null,
-              entityId: comment.id,
-              entityType: "comment",
-              parentEntityId: comment.issueId,
-            }}
-            className="space-y-2"
-            itemClassName="rounded-md"
-            missingBehavior="placeholder"
-          />
-        </div>
-      ) : null}
       {comment.authorAgentId && onVote && !isQueued && !isPending ? (
         <OutputFeedbackButtons
           activeVote={feedbackVote}
