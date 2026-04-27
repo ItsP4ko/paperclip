@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const ALLOWED_ORIGINS = (process.env.PAPERCLIP_ALLOWED_ORIGINS ?? '').split(',').filter(Boolean)
 
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return true
+  try {
+    const { hostname } = new URL(origin)
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') return true
+  } catch {
+    return false
+  }
+  return ALLOWED_ORIGINS.includes(origin)
+}
+
 function corsHeaders(origin: string | null): Record<string, string> {
-  const allowed =
-    !origin ||
-    origin === 'null' ||
-    (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) ||
-    (origin && ALLOWED_ORIGINS.includes(origin))
+  const allowed = isAllowedOrigin(origin)
 
   if (!allowed) return {}
 

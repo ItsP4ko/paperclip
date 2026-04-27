@@ -8,7 +8,7 @@ function getTrustedOrigins(): string[] {
   const origins = new Set<string>()
   const baseUrl = process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL
   if (baseUrl) {
-    try { origins.add(new URL(baseUrl).origin) } catch {}
+    try { origins.add(new URL(baseUrl).origin) } catch { console.warn('[auth] Invalid BETTER_AUTH_URL/NEXT_PUBLIC_APP_URL — skipping trusted origin') }
   }
   const allowed = (process.env.PAPERCLIP_ALLOWED_ORIGINS ?? '').split(',').filter(Boolean)
   for (const o of allowed) origins.add(o.trim())
