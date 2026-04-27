@@ -1,0 +1,183 @@
+import {
+  Inbox,
+  CircleDot,
+  Target,
+  LayoutDashboard,
+  DollarSign,
+  History,
+  Search,
+  SquarePen,
+  Network,
+  Boxes,
+  Repeat,
+  Settings,
+  ListTodo,
+  BarChart3,
+  Shield,
+  BookOpen,
+  Zap,
+  GitBranch,
+  Milestone,
+  Users,
+  UsersRound,
+  LogOut,
+  Smartphone,
+} from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@/ui/lib/router";
+import { SidebarSection } from "./SidebarSection";
+import { SidebarCollapsible } from "./SidebarCollapsible";
+import { SidebarNavItem } from "./SidebarNavItem";
+import { SidebarProjects } from "./SidebarProjects";
+import { useDialog } from "../context/DialogContext";
+import { useCompany } from "../context/CompanyContext";
+import { heartbeatsApi } from "../api/heartbeats";
+import { sidebarBadgesApi } from "../api/sidebarBadges";
+import { authApi } from "../api/auth";
+import { queryKeys } from "../lib/queryKeys";
+import { useMemberRole } from "../hooks/useMemberRole";
+import { Button } from "@/ui/components/ui/button";
+import { RunnerStatusIndicator } from "./RunnerStatusIndicator";
+import { DesktopDownloadButton } from "./DesktopDownloadButton";
+
+export function Sidebar() {
+  const { openNewIssue } = useDialog();
+  const { selectedCompanyId, selectedCompany } = useCompany();
+  const { isMember } = useMemberRole(selectedCompanyId);
+  const queryClient = useQueryClient();
+  const { data: session } = useQuery({
+    queryKey: queryKeys.auth.session,
+    queryFn: () => authApi.getSession(),
+    staleTime: Infinity,
+  });
+
+  async function handleSignOut() {
+    await authApi.signOut();
+    queryClient.clear();
+    window.location.href = "/auth";
+  }
+  const { data: liveRuns } = useQuery({
+    queryKey: queryKeys.liveRuns(selectedCompanyId!),
+    queryFn: () => heartbeatsApi.liveRunsForCompany(selectedCompanyId!),
+    enabled: !!selectedCompanyId,
+    // WebSocket events (LiveUpdatesProvider) already invalidate this cache on
+    // heartbeat.run.status / heartbeat.run.queued. No HTTP polling needed.
+    staleTime: 30_000,
+  });
+  const liveRunCount = liveRuns?.length ?? 0;
+  const { data: badges } = useQuery({
+    queryKey: queryKeys.sidebarBadges(selectedCompanyId!),
+    queryFn: () => sidebarBadgesApi.get(selectedCompanyId!),
+    enabled: !!selectedCompanyId,
+    staleTime: 20_000,
+  });
+
+  function openSearch() {
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
+  }
+
+  return (
+    <aside className="w-60 h-full min-h-0 border-r border-border bg-background flex flex-col">
+      {/* Top bar: Company name (bold) + Search — aligned with top sections (no visible border) */}
+      <div className="flex items-center gap-1 px-3 h-12 shrink-0">
+        {selectedCompany?.brandColor && (
+          <div
+            className="w-4 h-4 rounded-sm shrink-0 ml-1"
+            style={{ backgroundColor: selectedCompany.brandColor }}
+          />
+        )}
+        <span className="flex-1 text-sm font-bold text-foreground truncate pl-1">
+          {selectedCompany?.name ?? "Select company"}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="text-muted-foreground shrink-0"
+          onClick={openSearch}
+        >
+          <Search className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <nav className="flex-1 min-h-0 overflow-y-auto scrollbar-auto-hide flex flex-col gap-4 px-3 py-2">
+        <div className="flex flex-col gap-0.5">
+          {/* New Issue button aligned with nav items */}
+          <button
+            onClick={() => openNewIssue()}
+            className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+          >
+            <SquarePen className="h-4 w-4 shrink-0" />
+            <span className="truncate">New Issue</span>
+          </button>
+          <SidebarNavItem to="/dashboard" label="Dashboard" icon={LayoutDashboard} liveCount={liveRunCount} />
+          <SidebarNavItem
+            to="/inbox"
+            label="Inbox"
+            icon={Inbox}
+            badge={badges?.inbox}
+            badgeTone={badges && badges.failedRuns > 0 ? "danger" : "default"}
+            alert={badges ? badges.failedRuns > 0 : false}
+          />
+        </div>
+
+        <SidebarSection label="Work">
+          <SidebarNavItem to="/issues" label="Issues" icon={CircleDot} />
+          <SidebarNavItem to="/my-tasks" label="My Tasks" icon={ListTodo} badge={badges?.myTasks} />
+          <SidebarNavItem to="/routines" label="Routines" icon={Repeat} textBadge="Beta" textBadgeTone="amber" />
+          <SidebarNavItem to="/pipelines" label="Pipelines" icon={GitBranch} />
+          <SidebarNavItem to="/goals" label="Goals" icon={Target} />
+        </SidebarSection>
+
+        <SidebarProjects />
+
+        <SidebarSection label="Company">
+          {!isMember && <SidebarNavItem to="/org" label="Org" icon={Network} />}
+          <SidebarNavItem to="/members" label="Members" icon={Users} />
+          <SidebarNavItem to="/groups" label="Groups" icon={UsersRound} />
+
+          {!isMember && (
+            <SidebarCollapsible label="Insights" storageKey="sidebar.company.insights">
+              <SidebarNavItem to="/costs" label="Costs" icon={DollarSign} />
+              <SidebarNavItem to="/analytics" label="Analytics" icon={BarChart3} />
+              <SidebarNavItem to="/activity" label="Activity" icon={History} />
+              <SidebarNavItem to="/audit" label="Audit Log" icon={Shield} />
+              <SidebarNavItem to="/cost-recommendations" label="Cost Optimizer" icon={Zap} />
+            </SidebarCollapsible>
+          )}
+
+          <SidebarCollapsible label="Configuration" storageKey="sidebar.company.config">
+            {!isMember && <SidebarNavItem to="/skills" label="Skills" icon={Boxes} />}
+            <SidebarNavItem to="/knowledge" label="Knowledge Base" icon={BookOpen} />
+            <SidebarNavItem to="/company/settings" label="Settings" icon={Settings} />
+            <SidebarNavItem to="/remote-control" label="Remote Control" icon={Smartphone} />
+          </SidebarCollapsible>
+        </SidebarSection>
+
+      </nav>
+
+      <DesktopDownloadButton />
+      <RunnerStatusIndicator />
+
+      {session && (
+        <div className="shrink-0 border-t border-border px-3 py-2 flex items-center gap-2">
+          <Link
+            to="/account"
+            className="flex-1 text-xs text-muted-foreground truncate hover:text-foreground transition-colors"
+            title="Account Settings"
+          >
+            {session.user.email ?? session.user.name ?? "Account"}
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="text-muted-foreground shrink-0"
+            onClick={handleSignOut}
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </aside>
+  );
+}
