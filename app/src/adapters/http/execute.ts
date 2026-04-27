@@ -1,5 +1,5 @@
-import type { AdapterExecutionContext, AdapterExecutionResult } from "../types.js";
-import { asString, asNumber, parseObject } from "../utils.js";
+import type { AdapterExecutionContext, AdapterExecutionResult } from "../types";
+import { asString, asNumber, parseObject } from "../utils";
 
 export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExecutionResult> {
   const { config, runId, agent, context } = ctx;

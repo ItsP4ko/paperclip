@@ -1,7 +1,7 @@
 import { loadConfig, type Config } from "@/config";
-import { createStorageProviderFromConfig } from "./provider-registry.js";
-import { createStorageService } from "./service.js";
-import type { StorageService } from "./types.js";
+import { createStorageProviderFromConfig } from "./provider-registry";
+import { createStorageService } from "./service";
+import type { StorageService } from "./types";
 
 let cachedStorageService: StorageService | null = null;
 let cachedSignature: string | null = null;
@@ -32,4 +32,4 @@ export function getStorageService(): StorageService {
   return cachedStorageService;
 }
 
-export type { StorageService, PutFileResult } from "./types.js";
+export type { StorageService, PutFileResult } from "./types";

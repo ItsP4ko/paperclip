@@ -1,4 +1,4 @@
-import type { ServerAdapterModule } from "./types.js";
+import type { ServerAdapterModule } from "./types";
 import { getAdapterSessionManagement } from "@paperclipai/adapter-utils";
 import {
   execute as claudeExecute,
@@ -54,8 +54,8 @@ import {
   agentConfigurationDoc as openclawGatewayAgentConfigurationDoc,
   models as openclawGatewayModels,
 } from "@paperclipai/adapter-openclaw-gateway";
-import { listCodexModels } from "./codex-models.js";
-import { listCursorModels } from "./cursor-models.js";
+import { listCodexModels } from "./codex-models";
+import { listCursorModels } from "./cursor-models";
 import {
   execute as piExecute,
   listPiSkills,
@@ -79,8 +79,8 @@ import {
   agentConfigurationDoc as hermesAgentConfigurationDoc,
   models as hermesModels,
 } from "hermes-paperclip-adapter";
-import { processAdapter } from "./process/index.js";
-import { httpAdapter } from "./http/index.js";
+import { processAdapter } from "./process/index";
+import { httpAdapter } from "./http/index";
 
 const claudeLocalAdapter: ServerAdapterModule = {
   type: "claude_local",

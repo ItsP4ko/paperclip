@@ -1,4 +1,4 @@
-export { getServerAdapter, listAdapterModels, listServerAdapters, findServerAdapter, detectAdapterModel } from "./registry.js";
+export { getServerAdapter, listAdapterModels, listServerAdapters, findServerAdapter, detectAdapterModel } from "./registry";
 export type {
   ServerAdapterModule,
   AdapterExecutionContext,
@@ -14,4 +14,4 @@ export type {
   AdapterAgent,
   AdapterRuntime,
 } from "@paperclipai/adapter-utils";
-export { runningProcesses } from "./utils.js";
+export { runningProcesses } from "./utils";

@@ -2,11 +2,11 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import { approvalComments, approvals } from "@paperclipai/db";
 import { notFound, unprocessable } from "@/server/errors";
-import { redactCurrentUserText } from "../log-redaction.js";
-import { agentService } from "./agents.js";
-import { budgetService } from "./budgets.js";
-import { notifyHireApproved } from "./hire-hook.js";
-import { instanceSettingsService } from "./instance-settings.js";
+import { redactCurrentUserText } from "../log-redaction";
+import { agentService } from "./agents";
+import { budgetService } from "./budgets";
+import { notifyHireApproved } from "./hire-hook";
+import { instanceSettingsService } from "./instance-settings";
 
 export function approvalService(db: Db) {
   const agentsSvc = agentService(db);

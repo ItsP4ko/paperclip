@@ -31,11 +31,11 @@ import {
   gateProjectExecutionWorkspacePolicy,
   issueExecutionWorkspaceModeForPersistedWorkspace,
   parseProjectExecutionWorkspacePolicy,
-} from "./execution-workspace-policy.js";
-import { instanceSettingsService } from "./instance-settings.js";
-import { redactCurrentUserText } from "../log-redaction.js";
-import { resolveIssueGoalId, resolveNextIssueGoalId } from "./issue-goal-fallback.js";
-import { getDefaultCompanyGoal } from "./goals.js";
+} from "./execution-workspace-policy";
+import { instanceSettingsService } from "./instance-settings";
+import { redactCurrentUserText } from "../log-redaction";
+import { resolveIssueGoalId, resolveNextIssueGoalId } from "./issue-goal-fallback";
+import { getDefaultCompanyGoal } from "./goals";
 
 const ALL_ISSUE_STATUSES = ["backlog", "todo", "in_progress", "in_review", "blocked", "done", "cancelled"];
 const MAX_ISSUE_COMMENT_PAGE_LIMIT = 500;

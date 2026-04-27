@@ -33,12 +33,12 @@ import {
 } from "@paperclipai/shared";
 import { conflict, forbidden, notFound, unauthorized, unprocessable } from "@/server/errors";
 import { logger } from "@/server/logger";
-import { issueService } from "./issues.js";
-import { secretService } from "./secrets.js";
-import { parseCron, validateCron } from "./cron.js";
-import { heartbeatService } from "./heartbeat.js";
-import { queueIssueAssignmentWakeup, type IssueAssignmentWakeupDeps } from "./issue-assignment-wakeup.js";
-import { logActivity } from "./activity-log.js";
+import { issueService } from "./issues";
+import { secretService } from "./secrets";
+import { parseCron, validateCron } from "./cron";
+import { heartbeatService } from "./heartbeat";
+import { queueIssueAssignmentWakeup, type IssueAssignmentWakeupDeps } from "./issue-assignment-wakeup";
+import { logActivity } from "./activity-log";
 
 const OPEN_ISSUE_STATUSES = ["backlog", "todo", "in_progress", "in_review", "blocked"];
 const LIVE_HEARTBEAT_RUN_STATUSES = ["queued", "running"];

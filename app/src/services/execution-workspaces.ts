@@ -13,7 +13,7 @@ import type {
   ExecutionWorkspaceConfig,
   WorkspaceRuntimeService,
 } from "@paperclipai/shared";
-import { parseProjectExecutionWorkspacePolicy } from "./execution-workspace-policy.js";
+import { parseProjectExecutionWorkspacePolicy } from "./execution-workspace-policy";
 
 type ExecutionWorkspaceRow = typeof executionWorkspaces.$inferSelect;
 type WorkspaceRuntimeServiceRow = typeof workspaceRuntimeServices.$inferSelect;

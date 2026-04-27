@@ -7,21 +7,29 @@ const pkg = (rel: string) => path.resolve(__dirname, `../packages/${rel}`)
 // Next.js needs compiled dist; point both Turbopack and webpack at it.
 const pkgAliases: Record<string, string> = {
   '@paperclipai/shared': pkg('shared/dist/index.js'),
-  '@paperclipai/db': pkg('db/dist/index.js'),
+  '@paperclipai/shared/telemetry': pkg('shared/dist/telemetry/index.js'),
   '@paperclipai/adapter-utils': pkg('adapter-utils/dist/index.js'),
+  '@paperclipai/adapter-utils/server-utils': pkg('adapter-utils/dist/server-utils.js'),
   '@paperclipai/adapter-claude-local': pkg('adapters/claude-local/dist/index.js'),
+  '@paperclipai/adapter-claude-local/server': pkg('adapters/claude-local/dist/server/index.js'),
   '@paperclipai/adapter-claude-local/ui': pkg('adapters/claude-local/dist/ui/index.js'),
   '@paperclipai/adapter-codex-local': pkg('adapters/codex-local/dist/index.js'),
+  '@paperclipai/adapter-codex-local/server': pkg('adapters/codex-local/dist/server/index.js'),
   '@paperclipai/adapter-codex-local/ui': pkg('adapters/codex-local/dist/ui/index.js'),
   '@paperclipai/adapter-cursor-local': pkg('adapters/cursor-local/dist/index.js'),
+  '@paperclipai/adapter-cursor-local/server': pkg('adapters/cursor-local/dist/server/index.js'),
   '@paperclipai/adapter-cursor-local/ui': pkg('adapters/cursor-local/dist/ui/index.js'),
   '@paperclipai/adapter-gemini-local': pkg('adapters/gemini-local/dist/index.js'),
+  '@paperclipai/adapter-gemini-local/server': pkg('adapters/gemini-local/dist/server/index.js'),
   '@paperclipai/adapter-gemini-local/ui': pkg('adapters/gemini-local/dist/ui/index.js'),
   '@paperclipai/adapter-openclaw-gateway': pkg('adapters/openclaw-gateway/dist/index.js'),
+  '@paperclipai/adapter-openclaw-gateway/server': pkg('adapters/openclaw-gateway/dist/server/index.js'),
   '@paperclipai/adapter-openclaw-gateway/ui': pkg('adapters/openclaw-gateway/dist/ui/index.js'),
   '@paperclipai/adapter-opencode-local': pkg('adapters/opencode-local/dist/index.js'),
+  '@paperclipai/adapter-opencode-local/server': pkg('adapters/opencode-local/dist/server/index.js'),
   '@paperclipai/adapter-opencode-local/ui': pkg('adapters/opencode-local/dist/ui/index.js'),
   '@paperclipai/adapter-pi-local': pkg('adapters/pi-local/dist/index.js'),
+  '@paperclipai/adapter-pi-local/server': pkg('adapters/pi-local/dist/server/index.js'),
   '@paperclipai/adapter-pi-local/ui': pkg('adapters/pi-local/dist/ui/index.js'),
 }
 
@@ -37,7 +45,19 @@ const config: NextConfig = {
   turbopack: {
     resolveAlias: turboAliases,
   },
-  serverExternalPackages: ['sharp', 'mammoth', 'postgres', 'redis', 'pino'],
+  serverExternalPackages: [
+    'sharp', 'mammoth', 'postgres', 'redis', 'pino', 'jsdom',
+    '@paperclipai/db',
+    'embedded-postgres',
+    '@embedded-postgres/darwin-arm64',
+    '@embedded-postgres/darwin-x64',
+    '@embedded-postgres/linux-arm',
+    '@embedded-postgres/linux-arm64',
+    '@embedded-postgres/linux-ia32',
+    '@embedded-postgres/linux-ppc64',
+    '@embedded-postgres/linux-x64',
+    '@embedded-postgres/windows-x64',
+  ],
   webpack(webpackConfig) {
     webpackConfig.resolve.alias = { ...webpackConfig.resolve.alias, ...pkgAliases }
     return webpackConfig

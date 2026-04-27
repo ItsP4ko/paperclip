@@ -2,7 +2,7 @@ import { and, desc, eq, gte, isNotNull, lt, lte, sql } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import { activityLog, agents, companies, costEvents, issues, projects } from "@paperclipai/db";
 import { notFound, unprocessable } from "@/server/errors";
-import { budgetService, type BudgetServiceHooks } from "./budgets.js";
+import { budgetService, type BudgetServiceHooks } from "./budgets";
 
 export interface CostDateRange {
   from?: Date;

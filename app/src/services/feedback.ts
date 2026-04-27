@@ -35,17 +35,17 @@ import {
   type FeedbackTraceTargetSummary,
   type FeedbackVoteValue,
 } from "@paperclipai/shared";
-import { resolveHomeAwarePath, resolvePaperclipInstanceRoot } from "../home-paths.js";
+import { resolveHomeAwarePath, resolvePaperclipInstanceRoot } from "../home-paths";
 import { notFound, unprocessable } from "@/server/errors";
-import { agentInstructionsService } from "./agent-instructions.js";
+import { agentInstructionsService } from "./agent-instructions";
 import {
   createFeedbackRedactionState,
   finalizeFeedbackRedactionSummary,
   sanitizeFeedbackText,
   sanitizeFeedbackValue,
   sha256Digest,
-} from "./feedback-redaction.js";
-import { getRunLogStore } from "./run-log-store.js";
+} from "./feedback-redaction";
+import { getRunLogStore } from "./run-log-store";
 
 const FEEDBACK_SCHEMA_VERSION = "paperclip-feedback-envelope-v2";
 const FEEDBACK_BUNDLE_VERSION = "paperclip-feedback-bundle-v2";

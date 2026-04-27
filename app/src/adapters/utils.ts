@@ -2,7 +2,7 @@
 // This file is kept as a convenience shim so existing in-tree
 // imports (process/, http/, heartbeat.ts) don't need rewriting.
 import type { ChildProcess } from "node:child_process";
-import { logger } from "../middleware/logger.js";
+import { logger } from "../middleware/logger";
 import * as serverUtils from "@paperclipai/adapter-utils/server-utils";
 export type { RunProcessResult } from "@paperclipai/adapter-utils/server-utils";
 

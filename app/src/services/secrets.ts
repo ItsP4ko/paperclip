@@ -4,7 +4,7 @@ import { companySecrets, companySecretVersions } from "@paperclipai/db";
 import type { AgentEnvConfig, EnvBinding, SecretProvider } from "@paperclipai/shared";
 import { envBindingSchema } from "@paperclipai/shared";
 import { conflict, notFound, unprocessable } from "@/server/errors";
-import { getSecretProvider, listSecretProviders } from "../secrets/provider-registry.js";
+import { getSecretProvider, listSecretProviders } from "../secrets/provider-registry";
 
 const ENV_KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const SENSITIVE_ENV_KEY_RE =

@@ -1,5 +1,5 @@
 import type { ProviderQuotaResult } from "@paperclipai/shared";
-import { listServerAdapters } from "../adapters/registry.js";
+import { listServerAdapters } from "../adapters/registry";
 
 const QUOTA_PROVIDER_TIMEOUT_MS = 20_000;
 

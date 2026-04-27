@@ -4,9 +4,9 @@ import { workspaceOperations } from "@paperclipai/db";
 import type { WorkspaceOperation, WorkspaceOperationPhase, WorkspaceOperationStatus } from "@paperclipai/shared";
 import { asc, desc, eq, inArray, isNull, or, and } from "drizzle-orm";
 import { notFound } from "@/server/errors";
-import { redactCurrentUserText, redactCurrentUserValue } from "../log-redaction.js";
-import { instanceSettingsService } from "./instance-settings.js";
-import { getWorkspaceOperationLogStore } from "./workspace-operation-log-store.js";
+import { redactCurrentUserText, redactCurrentUserValue } from "../log-redaction";
+import { instanceSettingsService } from "./instance-settings";
+import { getWorkspaceOperationLogStore } from "./workspace-operation-log-store";
 
 type WorkspaceOperationRow = typeof workspaceOperations.$inferSelect;
 

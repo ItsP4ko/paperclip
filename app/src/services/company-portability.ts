@@ -46,20 +46,20 @@ import {
   writePaperclipSkillSyncPreference,
 } from "@paperclipai/adapter-utils/server-utils";
 import { notFound, unprocessable } from "@/server/errors";
-import { ghFetch, gitHubApiBase, resolveRawGitHubUrl } from "./github-fetch.js";
-import type { StorageService } from "../storage/types.js";
-import { accessService } from "./access.js";
-import { agentService } from "./agents.js";
-import { agentInstructionsService } from "./agent-instructions.js";
-import { assetService } from "./assets.js";
-import { generateReadme } from "./company-export-readme.js";
-import { renderOrgChartPng, type OrgNode } from "../routes/org-chart-svg.js";
-import { companySkillService } from "./company-skills.js";
-import { companyService } from "./companies.js";
-import { validateCron } from "./cron.js";
-import { issueService } from "./issues.js";
-import { projectService } from "./projects.js";
-import { routineService } from "./routines.js";
+import { ghFetch, gitHubApiBase, resolveRawGitHubUrl } from "./github-fetch";
+import type { StorageService } from "../storage/types";
+import { accessService } from "./access";
+import { agentService } from "./agents";
+import { agentInstructionsService } from "./agent-instructions";
+import { assetService } from "./assets";
+import { generateReadme } from "./company-export-readme";
+import { renderOrgChartPng, type OrgNode } from "../routes/org-chart-svg";
+import { companySkillService } from "./company-skills";
+import { companyService } from "./companies";
+import { validateCron } from "./cron";
+import { issueService } from "./issues";
+import { projectService } from "./projects";
+import { routineService } from "./routines";
 
 /** Build OrgNode tree from manifest agent list (slug + reportsToSlug). */
 function buildOrgTreeFromManifest(agents: CompanyPortabilityManifest["agents"]): OrgNode[] {

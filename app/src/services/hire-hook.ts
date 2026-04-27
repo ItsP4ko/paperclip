@@ -2,9 +2,9 @@ import { and, eq } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import { agents } from "@paperclipai/db";
 import type { HireApprovedPayload } from "@paperclipai/adapter-utils";
-import { findServerAdapter } from "../adapters/registry.js";
+import { findServerAdapter } from "../adapters/registry";
 import { logger } from "@/server/logger";
-import { logActivity } from "./activity-log.js";
+import { logActivity } from "./activity-log";
 
 const HIRE_APPROVED_MESSAGE =
   "Tell your user that your hire was approved, now they should assign you a task in Paperclip or ask you to create issues.";

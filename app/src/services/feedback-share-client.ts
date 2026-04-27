@@ -1,5 +1,5 @@
 import type { FeedbackTraceBundle } from "@paperclipai/shared";
-import type { Config } from "../config.js";
+import type { Config } from "../config";
 
 function buildFeedbackShareObjectKey(bundle: FeedbackTraceBundle, exportedAt: Date) {
   const year = String(exportedAt.getUTCFullYear());

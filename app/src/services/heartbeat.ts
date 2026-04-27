@@ -22,21 +22,21 @@ import {
 } from "@paperclipai/db";
 import { conflict, notFound } from "@/server/errors";
 import { logger } from "@/server/logger";
-import { publishLiveEvent } from "./live-events.js";
-import { getRunLogStore, type RunLogHandle } from "./run-log-store.js";
-import { getServerAdapter, runningProcesses } from "../adapters/index.js";
-import type { AdapterExecutionResult, AdapterInvocationMeta, AdapterSessionCodec, UsageSummary } from "../adapters/index.js";
-import { createLocalAgentJwt } from "../agent-auth-jwt.js";
-import { parseObject, asBoolean, asNumber, appendWithCap, MAX_EXCERPT_BYTES } from "../adapters/utils.js";
-import { costService } from "./costs.js";
+import { publishLiveEvent } from "./live-events";
+import { getRunLogStore, type RunLogHandle } from "./run-log-store";
+import { getServerAdapter, runningProcesses } from "../adapters/index";
+import type { AdapterExecutionResult, AdapterInvocationMeta, AdapterSessionCodec, UsageSummary } from "../adapters/index";
+import { createLocalAgentJwt } from "../agent-auth-jwt";
+import { parseObject, asBoolean, asNumber, appendWithCap, MAX_EXCERPT_BYTES } from "../adapters/utils";
+import { costService } from "./costs";
 import { trackAgentFirstHeartbeat } from "@paperclipai/shared/telemetry";
-import { getTelemetryClient } from "../telemetry.js";
-import { companySkillService } from "./company-skills.js";
-import { budgetService, type BudgetEnforcementScope } from "./budgets.js";
-import { secretService } from "./secrets.js";
-import { resolveDefaultAgentWorkspaceDir, resolveManagedProjectWorkspaceDir } from "../home-paths.js";
-import { summarizeHeartbeatRunResultJson } from "./heartbeat-run-summary.js";
-import { brainService as createBrainService } from "./brain.js";
+import { getTelemetryClient } from "../telemetry";
+import { companySkillService } from "./company-skills";
+import { budgetService, type BudgetEnforcementScope } from "./budgets";
+import { secretService } from "./secrets";
+import { resolveDefaultAgentWorkspaceDir, resolveManagedProjectWorkspaceDir } from "../home-paths";
+import { summarizeHeartbeatRunResultJson } from "./heartbeat-run-summary";
+import { brainService as createBrainService } from "./brain";
 import {
   buildWorkspaceReadyComment,
   cleanupExecutionWorkspaceArtifacts,
@@ -47,10 +47,10 @@ import {
   type ExecutionWorkspaceInput,
   type RealizedExecutionWorkspace,
   sanitizeRuntimeServiceBaseEnv,
-} from "./workspace-runtime.js";
-import { issueService } from "./issues.js";
-import { executionWorkspaceService, mergeExecutionWorkspaceConfig } from "./execution-workspaces.js";
-import { workspaceOperationService } from "./workspace-operations.js";
+} from "./workspace-runtime";
+import { issueService } from "./issues";
+import { executionWorkspaceService, mergeExecutionWorkspaceConfig } from "./execution-workspaces";
+import { workspaceOperationService } from "./workspace-operations";
 import {
   buildExecutionWorkspaceAdapterConfig,
   gateProjectExecutionWorkspacePolicy,
@@ -58,10 +58,10 @@ import {
   parseIssueExecutionWorkspaceSettings,
   parseProjectExecutionWorkspacePolicy,
   resolveExecutionWorkspaceMode,
-} from "./execution-workspace-policy.js";
-import { instanceSettingsService } from "./instance-settings.js";
-import { knowledgeService } from "./knowledge.js";
-import { redactCurrentUserText, redactCurrentUserValue } from "../log-redaction.js";
+} from "./execution-workspace-policy";
+import { instanceSettingsService } from "./instance-settings";
+import { knowledgeService } from "./knowledge";
+import { redactCurrentUserText, redactCurrentUserValue } from "../log-redaction";
 import {
   hasSessionCompactionThresholds,
   resolveSessionCompactionPolicy,

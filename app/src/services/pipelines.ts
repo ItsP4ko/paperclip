@@ -8,7 +8,7 @@ import {
   issues,
 } from "@paperclipai/db";
 import { badRequest } from "@/server/errors";
-import { issueService } from "./issues.js";
+import { issueService } from "./issues";
 
 export function pipelineService(db: Db) {
   const issueSvc = issueService(db);

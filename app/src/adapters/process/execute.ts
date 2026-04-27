@@ -1,4 +1,4 @@
-import type { AdapterExecutionContext, AdapterExecutionResult } from "../types.js";
+import type { AdapterExecutionContext, AdapterExecutionResult } from "../types";
 import {
   asString,
   asNumber,
@@ -9,7 +9,7 @@ import {
   ensurePathInEnv,
   resolveCommandForLogs,
   runChildProcess,
-} from "../utils.js";
+} from "../utils";
 
 export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExecutionResult> {
   const { runId, agent, config, onLog, onMeta } = ctx;

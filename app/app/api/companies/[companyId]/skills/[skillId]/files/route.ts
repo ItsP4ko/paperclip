@@ -54,10 +54,10 @@ async function assertCanMutateCompanySkills(actor: Actor, companyId: string) {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string; skillId: string }> },
+  { params }: { params: Promise<{ companyId: string; skillId: string }> },
 ) {
   try {
-    const { id: companyId, skillId } = await params
+    const { companyId, skillId } = await params
     const relativePath = req.nextUrl.searchParams.get('path') ?? 'SKILL.md'
     const actor = await resolveActor(req)
     assertCompanyAccess(actor, companyId)
@@ -74,10 +74,10 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string; skillId: string }> },
+  { params }: { params: Promise<{ companyId: string; skillId: string }> },
 ) {
   try {
-    const { id: companyId, skillId } = await params
+    const { companyId, skillId } = await params
     const actor = await resolveActor(req)
     await assertCanMutateCompanySkills(actor, companyId)
     const body = await parseBody(req, companySkillFileUpdateSchema)

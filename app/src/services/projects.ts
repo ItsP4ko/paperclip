@@ -14,10 +14,10 @@ import {
   type ProjectWorkspace,
   type WorkspaceRuntimeService,
 } from "@paperclipai/shared";
-import { listWorkspaceRuntimeServicesForProjectWorkspaces } from "./workspace-runtime.js";
-import { parseProjectExecutionWorkspacePolicy } from "./execution-workspace-policy.js";
-import { mergeProjectWorkspaceRuntimeConfig, readProjectWorkspaceRuntimeConfig } from "./project-workspace-runtime-config.js";
-import { resolveManagedProjectWorkspaceDir } from "../home-paths.js";
+import { listWorkspaceRuntimeServicesForProjectWorkspaces } from "./workspace-runtime";
+import { parseProjectExecutionWorkspacePolicy } from "./execution-workspace-policy";
+import { mergeProjectWorkspaceRuntimeConfig, readProjectWorkspaceRuntimeConfig } from "./project-workspace-runtime-config";
+import { resolveManagedProjectWorkspaceDir } from "../home-paths";
 
 type ProjectRow = typeof projects.$inferSelect;
 type ProjectWorkspaceRow = typeof projectWorkspaces.$inferSelect;

@@ -2,7 +2,7 @@ import { and, eq, gte, sql } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import { agents, approvals, companies, costEvents, issues } from "@paperclipai/db";
 import { notFound } from "@/server/errors";
-import { budgetService } from "./budgets.js";
+import { budgetService } from "./budgets";
 
 export function dashboardService(db: Db) {
   const budgets = budgetService(db);

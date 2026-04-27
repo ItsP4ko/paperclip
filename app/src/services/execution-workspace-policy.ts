@@ -5,7 +5,7 @@ import type {
   ProjectExecutionWorkspaceDefaultMode,
   ProjectExecutionWorkspacePolicy,
 } from "@paperclipai/shared";
-import { asString, parseObject } from "../adapters/utils.js";
+import { asString, parseObject } from "../adapters/utils";
 
 type ParsedExecutionWorkspaceMode = Exclude<ExecutionWorkspaceMode, "inherit" | "reuse_existing">;
 

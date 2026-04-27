@@ -15,37 +15,44 @@ function getTrustedOrigins(): string[] {
   return Array.from(origins)
 }
 
-const baseUrl = process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-const secret = process.env.BETTER_AUTH_SECRET?.trim() ?? process.env.PAPERCLIP_AGENT_JWT_SECRET?.trim()
-if (!secret) throw new Error('BETTER_AUTH_SECRET must be set')
+type Auth = ReturnType<typeof betterAuth>
 
-const isHttpOnly = baseUrl.startsWith('http://')
+let _auth: Auth | undefined
 
-export const auth = betterAuth({
-  baseURL: baseUrl,
-  secret,
-  trustedOrigins: getTrustedOrigins(),
-  database: drizzleAdapter(db, {
-    provider: 'pg',
-    schema: {
-      user: authUsers,
-      session: authSessions,
-      account: authAccounts,
-      verification: authVerifications,
-    },
-  }),
-  emailAndPassword: {
-    enabled: true,
-  },
-  plugins: [bearer()],
-  ...(isHttpOnly
-    ? {}
-    : {
-        advanced: {
-          defaultCookieAttributes: {
-            sameSite: 'none' as const,
-            secure: true,
-          },
+function getAuth(): Auth {
+  if (!_auth) {
+    const baseUrl = process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const secret = process.env.BETTER_AUTH_SECRET?.trim() ?? process.env.PAPERCLIP_AGENT_JWT_SECRET?.trim()
+    if (!secret) throw new Error('BETTER_AUTH_SECRET must be set')
+    const isHttpOnly = baseUrl.startsWith('http://')
+    _auth = betterAuth({
+      baseURL: baseUrl,
+      secret,
+      trustedOrigins: getTrustedOrigins(),
+      database: drizzleAdapter(db, {
+        provider: 'pg',
+        schema: {
+          user: authUsers,
+          session: authSessions,
+          account: authAccounts,
+          verification: authVerifications,
         },
       }),
+      emailAndPassword: { enabled: true },
+      plugins: [bearer()],
+      ...(isHttpOnly ? {} : {
+        advanced: {
+          defaultCookieAttributes: { sameSite: 'none' as const, secure: true },
+        },
+      }),
+    })
+  }
+  return _auth
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const auth: Auth = new Proxy({} as Auth, {
+  get(_, prop) {
+    return (getAuth() as any)[prop as string]
+  },
 })

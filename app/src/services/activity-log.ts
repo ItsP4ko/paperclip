@@ -1,9 +1,9 @@
 import type { Db } from "@paperclipai/db";
 import { activityLog } from "@paperclipai/db";
-import { publishLiveEvent } from "./live-events.js";
-import { redactCurrentUserValue } from "../log-redaction.js";
-import { sanitizeRecord } from "../redaction.js";
-import { instanceSettingsService } from "./instance-settings.js";
+import { publishLiveEvent } from "./live-events";
+import { redactCurrentUserValue } from "../log-redaction";
+import { sanitizeRecord } from "../redaction";
+import { instanceSettingsService } from "./instance-settings";
 
 export interface LogActivityInput {
   companyId: string;

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { redactCurrentUserText } from "../log-redaction.js";
-import { sanitizeRecord } from "../redaction.js";
+import { redactCurrentUserText } from "../log-redaction";
+import { sanitizeRecord } from "../redaction";
 
 export type FeedbackRedactionState = {
   redactedFields: Set<string>;

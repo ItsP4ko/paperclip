@@ -22,7 +22,7 @@ import type {
   BudgetWindowKind,
 } from "@paperclipai/shared";
 import { notFound, unprocessable } from "@/server/errors";
-import { logActivity } from "./activity-log.js";
+import { logActivity } from "./activity-log";
 
 type ScopeRecord = {
   companyId: string;

@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
-import { resolvePaperclipInstanceRoot } from "../home-paths.js";
+import { resolvePaperclipInstanceRoot } from "../home-paths";
 
 const execFileAsync = promisify(execFile);
 

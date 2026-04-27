@@ -27,13 +27,13 @@ import type {
   CompanySkillUsageAgent,
 } from "@paperclipai/shared";
 import { normalizeAgentUrlKey } from "@paperclipai/shared";
-import { findServerAdapter } from "../adapters/index.js";
-import { resolvePaperclipInstanceRoot } from "../home-paths.js";
+import { findServerAdapter } from "../adapters/index";
+import { resolvePaperclipInstanceRoot } from "../home-paths";
 import { notFound, unprocessable } from "@/server/errors";
-import { ghFetch, gitHubApiBase, resolveRawGitHubUrl } from "./github-fetch.js";
-import { agentService } from "./agents.js";
-import { projectService } from "./projects.js";
-import { secretService } from "./secrets.js";
+import { ghFetch, gitHubApiBase, resolveRawGitHubUrl } from "./github-fetch";
+import { agentService } from "./agents";
+import { projectService } from "./projects";
+import { secretService } from "./secrets";
 
 type CompanySkillRow = typeof companySkills.$inferSelect;
 

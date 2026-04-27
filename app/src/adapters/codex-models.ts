@@ -1,6 +1,6 @@
-import type { AdapterModel } from "./types.js";
+import type { AdapterModel } from "./types";
 import { models as codexFallbackModels } from "@paperclipai/adapter-codex-local";
-import { readConfigFile } from "../config-file.js";
+import { readConfigFile } from "../config-file";
 
 const OPENAI_MODELS_ENDPOINT = "https://api.openai.com/v1/models";
 const OPENAI_MODELS_TIMEOUT_MS = 5000;

@@ -14,8 +14,8 @@ import {
 } from "@paperclipai/db";
 import { isUuidLike, normalizeAgentUrlKey } from "@paperclipai/shared";
 import { conflict, notFound, unprocessable } from "@/server/errors";
-import { normalizeAgentPermissions } from "./agent-permissions.js";
-import { REDACTED_EVENT_VALUE, sanitizeRecord } from "../redaction.js";
+import { normalizeAgentPermissions } from "./agent-permissions";
+import { REDACTED_EVENT_VALUE, sanitizeRecord } from "../redaction";
 
 function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");

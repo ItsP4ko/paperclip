@@ -1,5 +1,5 @@
 import { unprocessable } from "@/server/errors";
-import type { SecretProviderModule } from "./types.js";
+import type { SecretProviderModule } from "./types";
 
 function unavailableProvider(
   id: "aws_secrets_manager" | "gcp_secret_manager" | "vault",

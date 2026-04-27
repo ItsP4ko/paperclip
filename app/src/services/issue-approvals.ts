@@ -2,7 +2,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import { approvals, issueApprovals, issues } from "@paperclipai/db";
 import { notFound, unprocessable } from "@/server/errors";
-import { redactEventPayload } from "../redaction.js";
+import { redactEventPayload } from "../redaction";
 
 interface LinkActor {
   agentId?: string | null;

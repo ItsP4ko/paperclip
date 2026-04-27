@@ -52,10 +52,10 @@ async function assertCanMutateCompanySkills(actor: Actor, companyId: string) {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string; skillId: string }> },
+  { params }: { params: Promise<{ companyId: string; skillId: string }> },
 ) {
   try {
-    const { id: companyId, skillId } = await params
+    const { companyId, skillId } = await params
     const actor = await resolveActor(req)
     await assertCanMutateCompanySkills(actor, companyId)
     const svc = companySkillService(db)

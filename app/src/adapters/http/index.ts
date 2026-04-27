@@ -1,6 +1,6 @@
-import type { ServerAdapterModule } from "../types.js";
-import { execute } from "./execute.js";
-import { testEnvironment } from "./test.js";
+import type { ServerAdapterModule } from "../types";
+import { execute } from "./execute";
+import { testEnvironment } from "./test";
 
 export const httpAdapter: ServerAdapterModule = {
   type: "http",

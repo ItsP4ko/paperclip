@@ -8,8 +8,8 @@ import type { AdapterRuntimeServiceReport } from "@paperclipai/adapter-utils";
 import type { Db } from "@paperclipai/db";
 import { executionWorkspaces, projectWorkspaces, workspaceRuntimeServices } from "@paperclipai/db";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { asNumber, asString, parseObject, renderTemplate } from "../adapters/utils.js";
-import { resolveHomeAwarePath } from "../home-paths.js";
+import { asNumber, asString, parseObject, renderTemplate } from "../adapters/utils";
+import { resolveHomeAwarePath } from "../home-paths";
 import {
   createLocalServiceKey,
   findLocalServiceRegistryRecordByRuntimeServiceId,
@@ -19,10 +19,10 @@ import {
   terminateLocalService,
   touchLocalServiceRegistryRecord,
   writeLocalServiceRegistryRecord,
-} from "./local-service-supervisor.js";
-import type { WorkspaceOperationRecorder } from "./workspace-operations.js";
-import { readExecutionWorkspaceConfig } from "./execution-workspaces.js";
-import { readProjectWorkspaceRuntimeConfig } from "./project-workspace-runtime-config.js";
+} from "./local-service-supervisor";
+import type { WorkspaceOperationRecorder } from "./workspace-operations";
+import { readExecutionWorkspaceConfig } from "./execution-workspaces";
+import { readProjectWorkspaceRuntimeConfig } from "./project-workspace-runtime-config";
 
 export function resolveShell(): string {
   return process.env.SHELL?.trim() || (process.platform === "win32" ? "sh" : "/bin/sh");
