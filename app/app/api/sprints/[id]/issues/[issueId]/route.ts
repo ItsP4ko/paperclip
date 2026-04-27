@@ -13,18 +13,22 @@ async function resolveProject(projectId: string) {
   return project
 }
 
-export async function GET(
+export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> },
+  { params }: { params: Promise<{ id: string; issueId: string }> },
 ) {
   try {
     const actor = await resolveActor(req)
-    const { projectId } = await params
-    const project = await resolveProject(projectId)
-    assertCompanyAccess(actor, project.companyId)
+    const { id, issueId } = await params
     const svc = sprintService(db)
-    const metrics = await svc.getProjectMetrics(projectId)
-    return NextResponse.json(metrics)
+    const sprint = await svc.getById(id)
+    if (!sprint) {
+      return NextResponse.json({ error: 'Sprint not found' }, { status: 404 })
+    }
+    const project = await resolveProject(sprint.projectId)
+    assertCompanyAccess(actor, project.companyId)
+    await svc.removeIssue(id, issueId)
+    return NextResponse.json({ ok: true })
   } catch (err) {
     return handleError(err)
   }

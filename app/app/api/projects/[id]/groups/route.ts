@@ -9,17 +9,17 @@ export const maxDuration = 30
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const actor = await resolveActor(req)
-    const { projectId } = await params
+    const { id } = await params
     const companyIdQuery = req.nextUrl.searchParams.get('companyId')
     if (companyIdQuery) {
       assertCompanyAccess(actor, companyIdQuery)
     }
     const svc = groupService(db)
-    const result = await svc.listGroupsForProject(projectId)
+    const result = await svc.listGroupsForProject(id)
     return NextResponse.json(result)
   } catch (err) {
     return handleError(err)

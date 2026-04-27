@@ -7,20 +7,20 @@ import { sprintService, projectService, groupService, accessService } from '@/se
 
 export const maxDuration = 30
 
-async function resolveProject(projectId: string) {
-  const project = await projectService(db).getById(projectId)
+async function resolveProject(id: string) {
+  const project = await projectService(db).getById(id)
   if (!project) throw Object.assign(new Error('Project not found'), { status: 404 })
   return project
 }
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const actor = await resolveActor(req)
-    const { projectId } = await params
-    const project = await resolveProject(projectId)
+    const { id } = await params
+    const project = await resolveProject(id)
     assertCompanyAccess(actor, project.companyId)
 
     const actorInfo = getActorInfo(actor)
@@ -35,7 +35,7 @@ export async function GET(
       isAdminOrOwner = membership?.membershipRole === 'owner'
     }
 
-    const projectGroups = await groupSvc.listGroupsForProject(projectId)
+    const projectGroups = await groupSvc.listGroupsForProject(id)
     let userGroupIds: string[] = []
 
     if (userId && actorInfo.actorType === 'user' && !isAdminOrOwner) {
@@ -46,7 +46,7 @@ export async function GET(
     }
 
     const svc = sprintService(db)
-    const board = await svc.getBoard(projectId, userGroupIds, isAdminOrOwner)
+    const board = await svc.getBoard(id, userGroupIds, isAdminOrOwner)
     return NextResponse.json(board)
   } catch (err) {
     return handleError(err)

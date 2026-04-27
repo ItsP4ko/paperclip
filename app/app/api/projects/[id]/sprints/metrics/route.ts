@@ -7,24 +7,24 @@ import { sprintService, projectService } from '@/services/index'
 
 export const maxDuration = 30
 
-async function resolveProject(projectId: string) {
-  const project = await projectService(db).getById(projectId)
+async function resolveProject(id: string) {
+  const project = await projectService(db).getById(id)
   if (!project) throw Object.assign(new Error('Project not found'), { status: 404 })
   return project
 }
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const actor = await resolveActor(req)
-    const { projectId } = await params
-    const project = await resolveProject(projectId)
+    const { id } = await params
+    const project = await resolveProject(id)
     assertCompanyAccess(actor, project.companyId)
     const svc = sprintService(db)
-    const sprint = await svc.getActive(projectId)
-    return NextResponse.json(sprint ?? null)
+    const metrics = await svc.getProjectMetrics(id)
+    return NextResponse.json(metrics)
   } catch (err) {
     return handleError(err)
   }

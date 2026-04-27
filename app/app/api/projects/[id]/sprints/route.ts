@@ -9,23 +9,23 @@ import { createSprintSchema } from '@paperclipai/shared'
 
 export const maxDuration = 30
 
-async function resolveProject(projectId: string) {
-  const project = await projectService(db).getById(projectId)
+async function resolveProject(id: string) {
+  const project = await projectService(db).getById(id)
   if (!project) throw Object.assign(new Error('Project not found'), { status: 404 })
   return project
 }
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const actor = await resolveActor(req)
-    const { projectId } = await params
-    const project = await resolveProject(projectId)
+    const { id } = await params
+    const project = await resolveProject(id)
     assertCompanyAccess(actor, project.companyId)
     const svc = sprintService(db)
-    const result = await svc.list(projectId)
+    const result = await svc.list(id)
     return NextResponse.json(result)
   } catch (err) {
     return handleError(err)
@@ -34,12 +34,12 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const actor = await resolveActor(req)
-    const { projectId } = await params
-    const project = await resolveProject(projectId)
+    const { id } = await params
+    const project = await resolveProject(id)
     assertCompanyAccess(actor, project.companyId)
 
     const body = await parseBody(req, createSprintSchema)
@@ -47,7 +47,7 @@ export async function POST(
 
     if (groupId) {
       const groupSvc = groupService(db)
-      const isLinked = await groupSvc.isGroupInProject(groupId, projectId)
+      const isLinked = await groupSvc.isGroupInProject(groupId, id)
       if (!isLinked) {
         return NextResponse.json({ error: 'Group is not associated with this project' }, { status: 400 })
       }
@@ -55,7 +55,7 @@ export async function POST(
 
     const svc = sprintService(db)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sprint = await svc.create(projectId, body as any)
+    const sprint = await svc.create(id, body as any)
     const actorInfo = getActorInfo(actor)
     await logActivity(db, {
       companyId: project.companyId,

@@ -9,11 +9,11 @@ export const maxDuration = 30
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ companyId: string; principalId: string }> },
+  { params }: { params: Promise<{ companyId: string; memberId: string }> },
 ) {
   try {
     const actor = await resolveActor(req)
-    const { companyId, principalId } = await params
+    const { companyId, memberId } = await params
 
     let body: { status?: string } = {}
     try { body = await req.json() } catch { /* ignore */ }
@@ -28,12 +28,12 @@ export async function PATCH(
 
     await assertCompanyPermission(db, actor, companyId, 'users:manage_permissions')
 
-    if (actor.type === 'board' && actor.userId === principalId) {
+    if (actor.type === 'board' && actor.userId === memberId) {
       return NextResponse.json({ error: 'Cannot change your own status' }, { status: 400 })
     }
 
     const access = accessService(db)
-    const updated = await access.updateMemberStatus(companyId, principalId, status!)
+    const updated = await access.updateMemberStatus(companyId, memberId, status!)
     if (!updated) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
     }
