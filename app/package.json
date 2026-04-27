@@ -1,0 +1,38 @@
+{
+  "name": "@paperclipai/app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@paperclipai/db": "workspace:*",
+    "@paperclipai/shared": "workspace:*",
+    "better-auth": "1.4.18",
+    "drizzle-orm": "^0.38.4",
+    "postgres": "^3.4.5",
+    "redis": "^5.11.0",
+    "next": "^16.2.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.24.2",
+    "@aws-sdk/client-s3": "^3.888.0",
+    "@supabase/storage-js": "^2.7.1",
+    "sharp": "^0.34.5",
+    "mammoth": "^1.8.0",
+    "pino": "^9.6.0",
+    "express-rate-limit": "^8.3.2",
+    "rate-limit-redis": "^4.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "@types/node": "^24.6.0",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "tailwindcss": "^4.0.7",
+    "typescript": "^5.7.3"
+  }
+}
